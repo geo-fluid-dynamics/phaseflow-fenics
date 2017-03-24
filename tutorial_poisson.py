@@ -31,6 +31,9 @@ L = f*v*dx
 # Compute solution
 u = Function(V)
 
+print type(u)
+exit()
+
 solve(a == L, u, bc)
 
 
