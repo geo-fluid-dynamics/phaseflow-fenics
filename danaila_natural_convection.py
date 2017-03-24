@@ -17,8 +17,6 @@
               publisher={Academic Press}
             }
         
-        Rather than implementing the Newton linearized system derived in danaila2014newton, allow FEniCS to automatically handle the nonlinear system.
-        
         Match the notation in danaila2014newton as best as possible.
 
     
