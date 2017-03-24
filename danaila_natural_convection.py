@@ -32,6 +32,7 @@ from fenics import \
     FunctionSpace, VectorFunctionSpace, \
     Function, TestFunctions, split, \
     DirichletBC, Constant, \
+    dx, \
     dot, inner, grad, sym, div, \
     File, \
     Progress, set_log_level, PROGRESS, \
@@ -60,11 +61,11 @@ mu = 1
 
 final_time = 1.0
 
-num_time_steps = 2
+num_time_steps = 10
 
 gamma = 1.e-14
 
-global_mesh_bisection_levels = 2
+global_mesh_bisection_levels = 4
 
 pressure_order = 1
 
@@ -149,7 +150,7 @@ def f_B(_theta):
 def a(_mu, _u, _v):
 
     def D(_u):
-        return sym(grad(u))
+        return sym(grad(_u))
     
     return 2.*_mu*inner(D(_u), D(_v))
     
@@ -162,11 +163,12 @@ def c(_w, _z, _v):
     return dot(div(_w)*_z, _v)
     
     
-F = b(u, q) - gamma*p*q \
-    + dot(u, v)/dt + c(u, u, v) + a(mu, u, v) + b(v, p) - dot(f_B(theta), v) - dot(u_n, v)/dt \
-    + theta*phi/dt - dot(u, grad(phi))*theta + dot(K/Pr*grad(theta), grad(phi)) - theta_n*phi/dt
-    
-print type(F)
+F = (\
+    b(u, q) - gamma*p*q \
+    + dot(u, v)/dt + c(u, u, v) + a(mu, u, v) + b(v, p) - dot(u_n, v)/dt \
+    - dot(f_B(theta), v) \
+    + theta*phi/dt - dot(u, grad(phi))*theta + dot(K/Pr*grad(theta), grad(phi)) - theta_n*phi/dt)*dx
+
     
 # Create VTK file for visualization output
 solution_file = File('solution.pvd')
@@ -179,7 +181,7 @@ set_log_level(PROGRESS)
 for n in range(num_time_steps):
 
     t = n*dt # Update current time
-
+    
     solve(F == 0, w, bc) # Solve nonlinear problem for this time step
     
     solution_file << (w, t) # Save solution to file
