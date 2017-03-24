@@ -1,3 +1,13 @@
+'''
+
+@brief Solve the Navier-Stokes equations.
+
+@detail
+
+    This is copied from Solving PDEs in Python: The FEniCS Tutorial I.
+    
+'''
+
 from fenics import *
 from mshr import *
 import numpy as np

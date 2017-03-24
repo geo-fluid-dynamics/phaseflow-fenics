@@ -1,3 +1,13 @@
+'''
+
+@brief Solve a system of advection-diffusion-reaction equations.
+
+@detail
+
+    This is copied from Solving PDEs in Python: The FEniCS Tutorial I.
+    
+'''
+
 from fenics import *
 
 T = 1.0 # final time
