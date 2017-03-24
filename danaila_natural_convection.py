@@ -26,16 +26,18 @@
     
 '''
 
+
 from fenics import \
-    UnitSquareMesh, FiniteElement, triangle, MixedElement, \
-    FunctionSpace, Function, TestFunctions, split, \
+    UnitSquareMesh, FiniteElement, VectorElement, MixedElement, \
+    FunctionSpace, VectorFunctionSpace, \
+    Function, TestFunctions, split, \
     DirichletBC, Constant, \
-    dot, grad, sym, div, \
+    dot, inner, grad, sym, div, \
     File, \
     Progress, set_log_level, PROGRESS, \
     solve
-    
 
+    
 # Set parameters
 Ra = 1.e6
 
@@ -55,13 +57,21 @@ num_time_steps = 2
 
 gamma = 1.e-14
 
-g = (0., -1., 0.)
+g = (0., -1.)
+
+mu = 1
 
 global_mesh_bisection_levels = 2
+
+pressure_order = 1
+
+temperature_order = 1
 
 
 # Compute derived parameters
 dt = final_time / num_time_steps
+
+velocity_order = pressure_order + 1
 
 
 # Create mesh
@@ -69,24 +79,37 @@ nc = 2**global_mesh_bisection_levels
 mesh = UnitSquareMesh(nc, nc)
 
 
-# Define function space for the system
-P2 = FiniteElement('P', triangle, 2) # Velocity
+# Define function spaces for the system
+VxV = VectorFunctionSpace(mesh, 'Lagrange', velocity_order)
 
-P1 = FiniteElement('P', triangle, 1) # Pressure or Temperature; @todo: Why does danaila2014newton use space Q for pressure?
+Q = FunctionSpace(mesh, 'Lagrange', pressure_order)
 
-element = MixedElement([P2, P1, P1])
+V = FunctionSpace(mesh, 'Lagrange', temperature_order)
 
-V = FunctionSpace(mesh, element)
+'''
+MixedFunctionSpace used to be available but is now deprecated. 
+The way that fenics separates function spaces and elements is confusing.
+To create the mixed space, I'm using the approach from https://fenicsproject.org/qa/11983/mixedfunctionspace-in-2016-2-0
+'''
+VxV_ele = VectorElement('Lagrange', mesh.ufl_cell(), velocity_order)
+Q_ele = FiniteElement('Lagrange', mesh.ufl_cell(), pressure_order)
+V_ele = FiniteElement('Lagrange', mesh.ufl_cell(), temperature_order)
+
+W = FunctionSpace(mesh, MixedElement([VxV_ele, Q_ele, V_ele]))
 
 
 # Define function and test functions
-w = Function(V)
+w = Function(W)
 
-w_n = Function(V)
+w_n = Function(W)
 
-v, q, phi = TestFunctions(V)
+v, q, phi = TestFunctions(W)
 
+
+# Split solution function to access variables separately
 u, p, theta = split(w)
+
+u_n, p_n, theta_n = split(w_n)
 
 
 # Define boundaries
@@ -97,13 +120,12 @@ cold_wall = 'near(x[0],  1.)'
 adiabatic_wall = 'near(x[1],  0.) | near(x[1],  1.)'
 
 # Define boundary conditions
-element = MixedElement([P2, P1])
 
 bc = [ \
-    DirichletBC(V, Constant((0., 0., 0., theta_h)), hot_wall), \
-    DirichletBC(V, Constant((0., 0., 0., theta_c)), cold_wall), \
-    DirichletBC(V.sub(0), Constant((0., 0.)), adiabatic_wall), \
-    DirichletBC(V.sub(1), Constant((0.)), adiabatic_wall)]
+    DirichletBC(W, Constant((0., 0., 0., theta_h)), hot_wall), \
+    DirichletBC(W, Constant((0., 0., 0., theta_c)), cold_wall), \
+    DirichletBC(W.sub(0), Constant((0., 0.)), adiabatic_wall), \
+    DirichletBC(W.sub(1), Constant((0.)), adiabatic_wall)]
     
 
 # Define expressions needed for variational format
@@ -111,16 +133,22 @@ Ra = Constant(Ra)
 Pr = Constant(Pr)
 Re = Constant(Re)
 K = Constant(K)
+mu = Constant(mu)
+g = Constant(g)
+dt = Constant(dt)
+gamma = Constant(gamma)
 
-def f_b(_theta):
-    _theta*Ra/(Pr*Re*Re)
 
 # Define variational form
-def D(_u):
-    return sym(grad(u))
-   
+def f_B(_theta):
+    return _theta*Ra/(Pr*Re*Re)*g
+       
    
 def a(_mu, _u, _v):
+
+    def D(_u):
+        return sym(grad(u))
+    
     return 2.*_mu*inner(D(_u), D(_v))
     
 
@@ -132,10 +160,11 @@ def c(_w, _z, _v):
     return dot(div(_w)*_z, _v)
     
     
-F = \
-    b(u, q) - gamma*p*q \
+F = b(u, q) - gamma*p*q \
     + dot(u, v)/dt + c(u, u, v) + a(mu, u, v) + b(v, p) - dot(f_B(theta), v) - dot(u_n, v)/dt \
     + theta*phi/dt - dot(u, grad(phi))*theta + dot(K/Pr*grad(theta), grad(phi)) - theta_n*phi/dt
+    
+print type(F)
     
 # Create VTK file for visualization output
 solution_file = File('solution.pvd')
