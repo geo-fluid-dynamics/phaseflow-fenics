@@ -38,7 +38,7 @@ from fenics import \
     solve
 
     
-# Set parameters
+# Set physical parameters
 Ra = 1.e6
 
 Pr = 0.71
@@ -51,15 +51,18 @@ theta_c = -0.5
 
 K = 1
 
+g = (0., -1.)
+
+mu = 1
+
+
+# Set other parameters
+
 final_time = 1.0
 
 num_time_steps = 2
 
 gamma = 1.e-14
-
-g = (0., -1.)
-
-mu = 1
 
 global_mesh_bisection_levels = 2
 
@@ -117,15 +120,14 @@ hot_wall = 'near(x[0],  0.)'
 
 cold_wall = 'near(x[0],  1.)'
 
-adiabatic_wall = 'near(x[1],  0.) | near(x[1],  1.)'
+adiabatic_walls = 'near(x[1],  0.) | near(x[1],  1.)'
 
 # Define boundary conditions
-
 bc = [ \
     DirichletBC(W, Constant((0., 0., 0., theta_h)), hot_wall), \
     DirichletBC(W, Constant((0., 0., 0., theta_c)), cold_wall), \
-    DirichletBC(W.sub(0), Constant((0., 0.)), adiabatic_wall), \
-    DirichletBC(W.sub(1), Constant((0.)), adiabatic_wall)]
+    DirichletBC(W.sub(0), Constant((0., 0.)), adiabatic_walls), \
+    DirichletBC(W.sub(1), Constant((0.)), adiabatic_walls)]
     
 
 # Define expressions needed for variational format
