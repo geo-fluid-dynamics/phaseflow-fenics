@@ -58,13 +58,13 @@ mu = 1.
 
 # Set other parameters
 
-final_time = 1.e-5
+final_time = 0.01
 
-num_time_steps = 2
+num_time_steps = 1000
 
 gamma = 1.e-7
 
-global_mesh_bisection_levels = 4
+mesh_m = 80
 
 pressure_order = 1
 
@@ -85,9 +85,7 @@ velocity_order = pressure_order + 1
 tolerance = 0.1*gamma
 
 # Create mesh
-nc = 2**global_mesh_bisection_levels
-
-mesh = UnitSquareMesh(nc, nc)
+mesh = UnitSquareMesh(mesh_m, mesh_m)
 
 
 # Define function spaces for the system
