@@ -70,7 +70,7 @@ pressure_order = 1
 
 temperature_order = 1
 
-linearize = True
+linearize = False
 
 if linearize:
 
