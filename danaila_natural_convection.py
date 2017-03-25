@@ -60,7 +60,7 @@ mu = 1.
 
 final_time = 0.01
 
-num_time_steps = 1000
+time_step_size = 1.e-3
 
 gamma = 1.e-7
 
@@ -76,13 +76,13 @@ if linearize:
 
     max_newton_iterations = 50
 
+stop_when_steady = True
 
 # Compute derived parameters
-time_step_size = final_time / num_time_steps
-
 velocity_order = pressure_order + 1
 
-tolerance = 0.1*gamma
+tolerance = 1.e-12
+
 
 # Create mesh
 mesh = UnitSquareMesh(mesh_m, mesh_m)
@@ -161,16 +161,23 @@ else:
     
     
 # If formulating the Newton linearzed system, then we must specify the initial values
+u_n = interpolate(Constant((0., 0.)), VxV)
+
+p_n = interpolate(Constant(0.), Q)
+
 if linearize:
-    u_n = interpolate(Constant((0., 0.)), VxV)
-    
-    p_n = interpolate(Constant(0.), Q)
-    
+
+    # @todo Set left wall hot, right wall cold, and everything else to zero
     theta_iv_exp = Expression(str(theta_h) + ' + x[0]*(' + str(theta_c) + ' - ' + str(theta_h) + ')', \
-        
+    
         degree=temperature_order)
-        
-    theta_n = interpolate(theta_iv_exp, V)
+
+else:
+
+    theta_iv_exp = Constant(0.)
+
+    
+theta_n = interpolate(theta_iv_exp, V)
     
 
 # Define expressions needed for variational format
@@ -264,8 +271,13 @@ _w_w = Function(W)
 
 time_residual = Function(W)
 
-for n in range(num_time_steps):
+n = 0
+time = 0.
 
+while time < final_time:
+
+    n += 1
+    
     time = n*time_step_size
     
     if linearize:
@@ -314,9 +326,17 @@ for n in range(num_time_steps):
     
     temperature_file << (_temperature, time) 
     
+    if stop_when_steady:
+        # Check for steady state
+        time_residual.assign(w - w_n)
+    
     # Update previous solution
     w_n.assign(w)
     
     # Show the time progress
     progress.update(time / final_time)
+    
+    if stop_when_steady & (norm(time_residual, 'H1') < tolerance):
+        print 'Reached steady state at time t = ' + str(time)
+        break
     
