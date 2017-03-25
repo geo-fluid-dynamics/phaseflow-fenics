@@ -24,7 +24,6 @@
     
 '''
 
-
 from fenics import \
     UnitSquareMesh, FiniteElement, VectorElement, MixedElement, \
     FunctionSpace, VectorFunctionSpace, \
@@ -59,9 +58,9 @@ mu = 1.
 
 # Set other parameters
 
-final_time = 1.
+final_time = 1.e-5
 
-num_time_steps = 10
+num_time_steps = 2
 
 gamma = 1.e-7
 
@@ -76,8 +75,6 @@ linearize = True
 if linearize:
 
     max_newton_iterations = 50
-    
-    newton_tolerance = 0.1*gamma
 
 
 # Compute derived parameters
@@ -85,6 +82,7 @@ time_step_size = final_time / num_time_steps
 
 velocity_order = pressure_order + 1
 
+tolerance = 0.1*gamma
 
 # Create mesh
 nc = 2**global_mesh_bisection_levels
@@ -116,6 +114,8 @@ W = FunctionSpace(mesh, MixedElement([VxV_ele, Q_ele, V_ele]))
 # Define function and test functions
 w = Function(W)
 
+w_n = Function(W)
+
 if linearize:
 
     w_k = Function(W)
@@ -128,6 +128,8 @@ v, q, phi = TestFunctions(W)
     
 # Split solution function to access variables separately
 u, p, theta = split(w)
+
+u_n, p_n, theta_n = split(w_n)
 
 if linearize:
 
@@ -260,23 +262,43 @@ set_log_level(PROGRESS)
 # solve() requires the second argument to be a Function instead of a TrialFunction
 _w_w = Function(W)
 
-
 # Solve each time step
+
+time_residual = Function(W)
+
 for n in range(num_time_steps):
 
     time = n*time_step_size
     
     if linearize:
     
+        print '\nIterating Newton method'
+        
+        converged = False
+        
+        iteration_count = 0
+        
         for k in range(max_newton_iterations):
 
             solve(A == L, _w_w, bc)
             
-            w_k -= _w_w
+            w_k.assign(w_k - _w_w)
             
-            if norm(_w_w, 'L2') < newton_tolerance:
+            norm_residual = norm(_w_w, 'H1')
+
+            print '\nH1 norm residual = ' + str(norm_residual) + '\n'
+            
+            if norm_residual < tolerance:
+            
+                converged = True
+                
+                iteration_count = k + 1
+                
+                print 'Converged after ' + str(k) + ' iterations'
                 
                 break
+                
+        assert(converged)
         
         w.assign(w_k)
             
@@ -294,6 +316,8 @@ for n in range(num_time_steps):
     
     temperature_file << (_temperature, time) 
     
+    # Update previous solution
+    w_n.assign(w)
     
     # Show the time progress
     progress.update(time / final_time)
