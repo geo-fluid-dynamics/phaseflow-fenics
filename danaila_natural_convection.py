@@ -54,9 +54,9 @@ def run(
     pressure_order = 1, \
     temperature_order = 1, \
     linearize = False, \
-    newton_absolute_tolerance = 1.e-12, \
+    newton_absolute_tolerance = 1.e-8, \
     stop_when_steady = True, \
-    steady_absolute_tolerance = 1.e-12 \
+    steady_absolute_tolerance = 1.e-8 \
     ):
 
     # Compute derived parameters
@@ -100,32 +100,26 @@ def run(
     u, p, theta = split(w)
        
 
-    # Define boundaries
+    # Specify the initial values
+    w_n = project(Constant((0., 0., 0., 0.)), W)
+
+    u_n, p_n, theta_n = split(w_n)   
+    
+    
+    # Define boundary conditions
     hot_wall = 'near(x[0],  0.)'
 
     cold_wall = 'near(x[0],  1.)'
-
+    
     adiabatic_walls = 'near(x[1],  0.) | near(x[1],  1.)'
 
-
-    # Define boundary conditions
     bc = [ \
         DirichletBC(W, Constant((0., 0., 0., theta_h)), hot_wall), \
         DirichletBC(W, Constant((0., 0., 0., theta_c)), cold_wall), \
         DirichletBC(W.sub(0), Constant((0., 0.)), adiabatic_walls), \
-        DirichletBC(W.sub(1), Constant(0.), adiabatic_walls)]
-        
+        DirichletBC(W.sub(1), Constant((0.)), adiabatic_walls)]
 
-    # Specify the initial values
-    initial_values = Expression( \
-            ('0.', '0.', '0.', 'near(x[0],  0.)*' + str(theta_h) + '  + near(x[0], 1.)*' + str(theta_c)),
-            element=W_ele)
-                
-    w_n = project(initial_values, W)
-
-    u_n, p_n, theta_n = split(w_n)
-
-
+    
     # Define expressions needed for variational form
     Ra = Constant(Ra)
 
@@ -219,6 +213,7 @@ def run(
 
 
     # solve() requires the second argument to be a Function instead of a TrialFunction
+    # @todo This could be related to why my linearized implementation isn't working.
     _w_w = Function(W)
 
     # Define method for writing values, and write initial values# Create VTK file for visualization output
@@ -243,7 +238,9 @@ def run(
 
     time = 0.
 
-    write_solution(w_n, time) 
+    w.assign(w_n)
+    
+    write_solution(w, time) 
 
     # Solve each time step
 
@@ -300,6 +297,7 @@ def run(
         write_solution(w, time)
         
         if stop_when_steady:
+        
             # Check for steady state
             time_residual.assign(w - w_n)
         
@@ -313,10 +311,13 @@ def run(
             print 'Reached steady state at time t = ' + str(time)
             break
     
+    if time >= final_time:
+    
+        print 'Reached final time, t = ' + str(final_time)
     
 def test():
 
-    danaila_natural_convection()
+    run()
     
     pass
     
