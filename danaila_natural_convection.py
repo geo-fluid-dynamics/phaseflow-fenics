@@ -53,7 +53,7 @@ def run(
     mesh_M = 80, \
     pressure_order = 1, \
     temperature_order = 1, \
-    linearize = True, \
+    linearize = False, \
     newton_absolute_tolerance = 1.e-12, \
     stop_when_steady = True, \
     steady_absolute_tolerance = 1.e-12 \
