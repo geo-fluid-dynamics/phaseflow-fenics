@@ -58,9 +58,9 @@ mu = 1.
 
 # Set other parameters
 
-final_time = 0. # 0.01
+final_time = 0.5e-2
 
-time_step_size = 1.e-3
+time_step_size = 0.5e-3
 
 gamma = 1.e-7
 
@@ -70,11 +70,11 @@ pressure_order = 1
 
 temperature_order = 1
 
-linearize = True
+linearize = False
 
 if linearize:
 
-    max_newton_iterations = 50
+    max_newton_iterations = 10
 
 stop_when_steady = True
 
@@ -114,8 +114,6 @@ W = FunctionSpace(mesh, W_ele)
 # Define function and test functions
 w = Function(W)
 
-w_n = Function(W)
-
 if linearize:
 
     w_k = Function(W)
@@ -128,8 +126,6 @@ v, q, phi = TestFunctions(W)
     
 # Split solution function to access variables separately
 u, p, theta = split(w)
-
-u_n, p_n, theta_n = split(w_n)
 
 if linearize:
 
@@ -168,6 +164,8 @@ initial_values = Expression( \
             
 w_n = project(initial_values, W)
 
+u_n, p_n, theta_n = split(w_n)
+
 
 # Define method for writing values, and write initial values# Create VTK file for visualization output
 output_dir = 'output_danaila_natural_convection'
@@ -194,7 +192,7 @@ time = 0.
 write_solution(w_n, time) 
 
 
-# Define expressions needed for variational format
+# Define expressions needed for variational form
 Ra = Constant(Ra)
 
 Pr = Constant(Pr)
