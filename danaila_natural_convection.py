@@ -35,7 +35,7 @@ from fenics import \
     File, \
     Progress, set_log_level, PROGRESS, \
     project, interpolate, \
-    solve
+    solve, parameters, info
 
     
 # Set physical parameters
@@ -58,9 +58,9 @@ mu = 1.
 
 # Set other parameters
 
-final_time = 0.5e-2
+final_time = 1.
 
-time_step_size = 0.5e-3
+time_step_size = 1.e-3
 
 gamma = 1.e-7
 
@@ -77,6 +77,7 @@ if linearize:
     max_newton_iterations = 10
 
 stop_when_steady = True
+
 
 # Compute derived parameters
 velocity_order = pressure_order + 1
@@ -146,8 +147,7 @@ adiabatic_walls = 'near(x[1],  0.) | near(x[1],  1.)'
 bc = [ \
     DirichletBC(W, Constant((0., 0., 0., theta_h)), hot_wall), \
     DirichletBC(W, Constant((0., 0., 0., theta_c)), cold_wall), \
-    DirichletBC(W.sub(0), Constant((0., 0.)), adiabatic_walls), \
-    DirichletBC(W.sub(1), Constant((0.)), adiabatic_walls)]
+    DirichletBC(W, Constant((0., 0., 0., 0.)), adiabatic_walls)]
     
 if linearize:
 
@@ -159,8 +159,8 @@ if linearize:
     
 # Specify the initial values
 initial_values = Expression( \
-            ('0.', '0.', '0.', 'near(x[0],  0.)*' + str(theta_h) + '  + near(x[0], 1.)*' + str(theta_c)),
-            element=W_ele)
+        ('0.', '0.', '0.', 'near(x[0],  0.)*' + str(theta_h) + '  + near(x[0], 1.)*' + str(theta_c)),
+        element=W_ele)
             
 w_n = project(initial_values, W)
 
@@ -275,13 +275,9 @@ _w_w = Function(W)
 
 time_residual = Function(W)
 
-n = 0
-
 while time < final_time:
 
-    n += 1
-    
-    time = n*time_step_size
+    time += time_step_size
     
     if linearize:
     
@@ -314,10 +310,10 @@ while time < final_time:
         assert(converged)
         
         w.assign(w_k)
-            
+
     else:
     
-        solve(F == 0, w, bc) # Solve nonlinear problem for this time step
+        solve(F == 0, w, bc)
     
     
     # Save solution to files
