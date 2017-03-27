@@ -58,7 +58,7 @@ mu = 1.
 
 # Set other parameters
 
-final_time = 0.01
+final_time = 0. # 0.01
 
 time_step_size = 1.e-3
 
@@ -70,7 +70,7 @@ pressure_order = 1
 
 temperature_order = 1
 
-linearize = False
+linearize = True
 
 if linearize:
 
@@ -106,7 +106,9 @@ Q_ele = FiniteElement('Lagrange', mesh.ufl_cell(), pressure_order)
 
 V_ele = FiniteElement('Lagrange', mesh.ufl_cell(), temperature_order)
 
-W = FunctionSpace(mesh, MixedElement([VxV_ele, Q_ele, V_ele]))
+W_ele = MixedElement([VxV_ele, Q_ele, V_ele])
+
+W = FunctionSpace(mesh, W_ele)
 
 
 # Define function and test functions
@@ -143,42 +145,54 @@ cold_wall = 'near(x[0],  1.)'
 
 adiabatic_walls = 'near(x[1],  0.) | near(x[1],  1.)'
 
+
 # Define boundary conditions
+bc = [ \
+    DirichletBC(W, Constant((0., 0., 0., theta_h)), hot_wall), \
+    DirichletBC(W, Constant((0., 0., 0., theta_c)), cold_wall), \
+    DirichletBC(W.sub(0), Constant((0., 0.)), adiabatic_walls), \
+    DirichletBC(W.sub(1), Constant((0.)), adiabatic_walls)]
+    
 if linearize:
 
     def boundary(x, on_boundary):
         return on_boundary
-        
-    bc = DirichletBC(W, Constant((0., 0., 0., 0.)), boundary)
-
-else:
-
-    bc = [ \
-        DirichletBC(W, Constant((0., 0., 0., theta_h)), hot_wall), \
-        DirichletBC(W, Constant((0., 0., 0., theta_c)), cold_wall), \
-        DirichletBC(W.sub(0), Constant((0., 0.)), adiabatic_walls), \
-        DirichletBC(W.sub(1), Constant((0.)), adiabatic_walls)]
+    
+    bc_dot = DirichletBC(W, Constant((0., 0., 0., 0.)), boundary)
     
     
-# If formulating the Newton linearzed system, then we must specify the initial values
-u_n = interpolate(Constant((0., 0.)), VxV)
+# Specify the initial values
+initial_values = Expression( \
+            ('0.', '0.', '0.', 'near(x[0],  0.)*' + str(theta_h) + '  + near(x[0], 1.)*' + str(theta_c)),
+            element=W_ele)
+            
+w_n = project(initial_values, W)
 
-p_n = interpolate(Constant(0.), Q)
 
-if linearize:
+# Define method for writing values, and write initial values# Create VTK file for visualization output
+output_dir = 'output_danaila_natural_convection'
 
-    # @todo Set left wall hot, right wall cold, and everything else to zero
-    theta_iv_exp = Expression(str(theta_h) + ' + x[0]*(' + str(theta_c) + ' - ' + str(theta_h) + ')', \
+velocity_file = File(output_dir + '/velocity.pvd')
+
+pressure_file = File(output_dir + '/pressure.pvd')
+
+temperature_file = File(output_dir + '/temperature.pvd')
+
+def write_solution(_w, time):
+
+    _velocity, _pressure, _temperature = _w.split()
     
-        degree=temperature_order)
-
-else:
-
-    theta_iv_exp = Constant(0.)
-
+    velocity_file << (_velocity, time) 
     
-theta_n = interpolate(theta_iv_exp, V)
+    pressure_file << (_pressure, time) 
     
+    temperature_file << (_temperature, time) 
+
+
+time = 0.
+
+write_solution(w_n, time) 
+
 
 # Define expressions needed for variational format
 Ra = Constant(Ra)
@@ -249,14 +263,6 @@ else: # Implement the nonlinear form, which will allow FEniCS to automatically d
         + theta*phi/dt - dot(u, grad(phi))*theta + dot(K/Pr*grad(theta), grad(phi)) - theta_n*phi/dt \
         )*dx
 
-    
-# Create VTK file for visualization output
-velocity_file = File('danaila_natural_convection/velocity.pvd')
-
-pressure_file = File('danaila_natural_convection/pressure.pvd')
-
-temperature_file = File('danaila_natural_convection/temperature.pvd')
-
 
 # Create progress bar
 progress = Progress('Time-stepping')
@@ -272,7 +278,6 @@ _w_w = Function(W)
 time_residual = Function(W)
 
 n = 0
-time = 0.
 
 while time < final_time:
 
@@ -290,7 +295,7 @@ while time < final_time:
         
         for k in range(max_newton_iterations):
 
-            solve(A == L, _w_w, bc)
+            solve(A == L, _w_w, bc_dot)
             
             w_k.assign(w_k - _w_w)
             
@@ -318,13 +323,7 @@ while time < final_time:
     
     
     # Save solution to files
-    _velocity, _pressure, _temperature = w.split()
-    
-    velocity_file << (_velocity, time) 
-    
-    pressure_file << (_pressure, time) 
-    
-    temperature_file << (_temperature, time) 
+    write_solution(w, time)
     
     if stop_when_steady:
         # Check for steady state
