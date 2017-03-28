@@ -30,7 +30,7 @@ from fenics import \
     Function, TrialFunction, TestFunctions, split, \
     DirichletBC, Constant, Expression, \
     dx, \
-    dot, inner, grad, sym, div, \
+    dot, inner, grad, nabla_grad, sym, div, \
     errornorm, norm, \
     File, \
     Progress, set_log_level, PROGRESS, \
@@ -39,6 +39,7 @@ from fenics import \
 
 
 def run(
+    output_dir = 'output/', \
     Ra = 1.e6, \
     Pr = 0.71, \
     Re = 1., \
@@ -59,6 +60,8 @@ def run(
     steady_absolute_tolerance = 1.e-8 \
     ):
 
+    dim = 2
+    
     # Compute derived parameters
     velocity_order = pressure_order + 1
     
@@ -68,22 +71,30 @@ def run(
 
 
     # Define function spaces for the system
-    VxV = VectorFunctionSpace(mesh, 'Lagrange', velocity_order)
+    VxV = VectorFunctionSpace(mesh, 'P', velocity_order)
 
-    Q = FunctionSpace(mesh, 'Lagrange', pressure_order)
+    Q = FunctionSpace(mesh, 'P', pressure_order) # @todo mixing up test function space
 
-    V = FunctionSpace(mesh, 'Lagrange', temperature_order)
+    V = FunctionSpace(mesh, 'P', temperature_order)
 
     '''
     MixedFunctionSpace used to be available but is now deprecated. 
     The way that fenics separates function spaces and elements is confusing.
     To create the mixed space, I'm using the approach from https://fenicsproject.org/qa/11983/mixedfunctionspace-in-2016-2-0
     '''
-    VxV_ele = VectorElement('Lagrange', mesh.ufl_cell(), velocity_order)
+    VxV_ele = VectorElement('P', mesh.ufl_cell(), velocity_order)
 
-    Q_ele = FiniteElement('Lagrange', mesh.ufl_cell(), pressure_order)
+    '''
+    @todo How can we use the space $Q = \left{q \in L^2(\Omega) | \int{q = 0}\right}$ ?
+    
+    All Navier-Stokes FEniCS examples I've found simply use P2P1. danaila2014newton says that
+    they are using the "classical Hilbert spaces" for velocity and pressure, but then they write
+    down the space Q with less restrictions than H^1_0.
+    
+    '''
+    Q_ele = FiniteElement('P', mesh.ufl_cell(), pressure_order)
 
-    V_ele = FiniteElement('Lagrange', mesh.ufl_cell(), temperature_order)
+    V_ele = FiniteElement('P', mesh.ufl_cell(), temperature_order)
 
     W_ele = MixedElement([VxV_ele, Q_ele, V_ele])
 
@@ -102,9 +113,8 @@ def run(
 
     # Specify the initial values
     w_n = project(Constant((0., 0., 0., 0.)), W)
-
-    u_n, p_n, theta_n = split(w_n)   
-    
+        
+    u_n, p_n, theta_n = split(w_n)
     
     # Define boundary conditions
     hot_wall = 'near(x[0],  0.)'
@@ -159,8 +169,8 @@ def run(
         
 
     def c(_w, _z, _v):
-        
-        return dot(div(_w)*_z, _v)
+       
+        return dot(dot(_w, nabla_grad(_z)), _v)
         
         
     # Implement the nonlinear form, which will allow FEniCS to automatically derive the Newton linearized form.
@@ -184,7 +194,25 @@ def run(
         def boundary(x, on_boundary):
             return on_boundary
         
-        bc_dot = DirichletBC(W, Constant((0., 0., 0., 0.)), boundary)
+        '''
+        danaila2014newton sets homogeneous Dirichlet BC's on all residuals, including theta.
+        I don't see how this could be consistent with Neumann BC's for the nonlinear problem.
+        A solution for the Neumann BVP can't be constructed by adding a series of residuals which 
+        use a homogeneous Dirichlet BC.
+        '''
+        bc_dot = [ \
+            DirichletBC(W, Constant((0., 0., 0., 0.)), hot_wall), \
+            DirichletBC(W, Constant((0., 0., 0., 0.)), cold_wall), \
+            DirichletBC(W.sub(0), Constant((0., 0.)), adiabatic_walls), \
+            DirichletBC(W.sub(1), Constant((0.)), adiabatic_walls)]
+        
+        w_n = interpolate( \
+            Expression(('0.', '0.', '0.', \
+                str(theta_h) + ' + x[0]*(' + str(theta_c) + ' - ' + str(theta_h) + ')'), \
+                element=W_ele), \
+            W)
+        
+        u_n, p_n, theta_n = split(w_n)
         
         w_k = project(Constant((0., 0., 0., 0.)), W)
         
@@ -210,15 +238,9 @@ def run(
     progress = Progress('Time-stepping')
 
     set_log_level(PROGRESS)
-
-
-    # solve() requires the second argument to be a Function instead of a TrialFunction
-    # @todo This could be related to why my linearized implementation isn't working.
-    _w_w = Function(W)
+    
 
     # Define method for writing values, and write initial values# Create VTK file for visualization output
-    output_dir = 'output_danaila_natural_convection'
-
     velocity_file = File(output_dir + '/velocity.pvd')
 
     pressure_file = File(output_dir + '/pressure.pvd')
@@ -243,6 +265,8 @@ def run(
     write_solution(w, time) 
 
     # Solve each time step
+    
+    w_w = Function(W) # w_w was previously a TrialFunction, but must be a Function when calling solve()
 
     time_residual = Function(W)
 
@@ -262,11 +286,11 @@ def run(
             
             for k in range(max_newton_iterations):
 
-                solve(A == L, _w_w, bc_dot)
+                solve(A == L, w_w, bc_dot)
                 
-                w_k.assign(w_k - _w_w)
+                w_k.assign(w_k - w_w)
                 
-                norm_residual = norm(_w_w, 'H1')
+                norm_residual = norm(w_w, 'H1')
 
                 print '\nH1 norm residual = ' + str(norm_residual) + '\n'
                 
