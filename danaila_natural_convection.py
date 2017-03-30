@@ -127,11 +127,13 @@ def run(
         
        
     # Specify the initial values
+    # @todo: Ramp temperature on adiabatic walls
     w_n = interpolate( \
         Expression(
             ('0.', \
              '0.', \
              '0.', \
+             
              hot_wall + '*' + str(theta_h) + ' + ' + cold_wall + '*' + str(theta_c)), \
             element=W_ele), \
         W)
