@@ -23,7 +23,6 @@ def run(
     gamma = 1.e-7, \
     mesh_M = 80, \
     pressure_order = 1, \
-    linearize = False, \
     newton_absolute_tolerance = 1.e-8, \
     ):
 
@@ -119,98 +118,18 @@ def run(
         
     # Implement the nonlinear form, which will allow FEniCS to automatically derive the Newton linearized form.
     F = (\
-            b(u, q) - gamma*p*q \
-            + c(u, u, v) + a(mu, u, v) + b(v, p) \
-            )*dx
+        b(u, q) - gamma*p*q \
+        + c(u, u, v) + a(mu, u, v) + b(v, p) \
+        )*dx
 
+    solve(F == 0, w, bc)
 
-    # Implement the Newton linearized form published in danaila2014newton
-    if linearize: 
-
-        max_newton_iterations = 10
-
-        w_w = TrialFunction(W)
-        
-        u_w, p_w = split(w_w)
-
-        def boundary(x, on_boundary):
-        
-            return on_boundary
-        
-        
-        '''
-        danaila2014newton sets homogeneous Dirichlet BC's on all residuals, including theta.
-        I don't see how this could be consistent with Neumann BC's for the nonlinear problem.
-        A solution for the Neumann BVP can't be constructed by adding a series of residuals which 
-        use a homogeneous Dirichlet BC.
-        '''
-        bc_dot = DirichletBC(W, Constant((0., 0., 0.)), boundary)
-        
-        w_k = project(Constant((0., 0., 0.)), W)
-        
-        u_k, p_k = split(w_k)
-        
-        A = (\
-            b(u_w,q) - gamma*p_w*q \
-            + c(u_w, u_k, v) + c(u_k, u_w, v) + a(mu, u_w, v) + b(v, p_w) \
-            )*dx
-            
-        L = (\
-            b(u_k,q) + gamma*p_k*q \
-            + c(u_k, u_k, v) + a(mu, u_k, v) + b(v, p_k) \
-            )*dx  
-
-
-    # Define method for writing values, and write initial values# Create VTK file for visualization output
+    
+    # Save solution to files
     velocity_file = File(output_dir + '/velocity.pvd')
 
-    pressure_file = File(output_dir + '/pressure.pvd')       
-        
-    w_w = Function(W) # w_w was previously a TrialFunction, but must be a Function when calling solve()
-        
-    if linearize:
+    pressure_file = File(output_dir + '/pressure.pvd')    
     
-        print '\nIterating Newton method'
-        
-        converged = False
-        
-        iteration_count = 0
-        
-        old_residual = 1e32
-        
-        for k in range(max_newton_iterations):
-
-            solve(A == L, w_w, bc_dot)
-            
-            w_k.assign(w_k - w_w)
-            
-            norm_residual = norm(w_w, 'H1')
-
-            print '\nH1 norm residual = ' + str(norm_residual) + '\n'
-            
-            assert(norm_residual < old_residual)
-            
-            old_residual = norm_residual
-            
-            if norm_residual < newton_absolute_tolerance:
-            
-                converged = True
-                
-                iteration_count = k + 1
-                
-                print 'Converged after ' + str(k) + ' iterations'
-                
-                break
-                
-        assert(converged)
-        
-        w.assign(w_k)
-
-    else:
-        
-        solve(F == 0, w, bc)
-                
-    # Save solution to files
     _velocity, _pressure = w.split()
     
     velocity_file << _velocity
