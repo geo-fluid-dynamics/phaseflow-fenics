@@ -179,7 +179,7 @@ def run(
 
     def c(_w, _z, _v):
        
-        return dot(dot(_w, nabla_grad(_z)), _v)
+        return dot(dot(_w, nabla_grad(_z)), _v) # @todo Is this use of nabla_grad correct?
         
         
     # Implement the nonlinear form, which will allow FEniCS to automatically derive the Newton linearized form.
@@ -225,9 +225,9 @@ def run(
             )*dx
             
         L = (\
-            b(u_k,q) + gamma*p_k*q \
+            b(u_k,q) - gamma*p_k*q \
             + dot(u_k - u_n, v)/dt + c(u_k, u_k, v) + a(mu, u_k, v) + b(v, p_k) + dot(f_B(theta_k), v) \
-            + (theta_k - theta_n)*phi/dt - dot(u_k, grad(phi))*theta_k - dot(K/Pr*grad(theta_k), grad(phi)) \
+            + (theta_k - theta_n)*phi/dt - dot(u_k, grad(phi))*theta_k + dot(K/Pr*grad(theta_k), grad(phi)) \
             )*dx  
 
 
