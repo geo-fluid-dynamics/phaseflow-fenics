@@ -154,8 +154,6 @@ def run(
 
     g = Constant(g)
 
-    dt = Constant(time_step_size)
-
     gamma = Constant(gamma)
 
 
@@ -183,15 +181,19 @@ def run(
        
         return dot(dot(_w, nabla_grad(_z)), _v) # @todo Is this use of nabla_grad correct?
         
+    
+    def nonlinear_variational_form(dt):
+    
+        dt = Constant(dt)
         
-    # Implement the nonlinear form, which will allow FEniCS to automatically derive the Newton linearized form.
-    F = (\
-            b(u, q) - gamma*p*q \
-            + dot(u, v)/dt + c(u, u, v) + a(mu, u, v) + b(v, p) - dot(u_n, v)/dt \
-            + dot(f_B(theta), v) \
-            + theta*phi/dt - dot(u, grad(phi))*theta + dot(K/Pr*grad(theta), grad(phi)) - theta_n*phi/dt \
-            )*dx
-
+        F = (\
+                b(u, q) - gamma*p*q \
+                + dot(u, v)/dt + c(u, u, v) + a(mu, u, v) + b(v, p) - dot(u_n, v)/dt \
+                + dot(f_B(theta), v) \
+                + theta*phi/dt - dot(u, grad(phi))*theta + dot(K/Pr*grad(theta), grad(phi)) - theta_n*phi/dt \
+                )*dx
+        
+        return F
 
     # Implement the Newton linearized form published in danaila2014newton
     if linearize: 
@@ -199,6 +201,12 @@ def run(
         w_w = TrialFunction(W)
         
         u_w, p_w, theta_w = split(w_w)
+        
+        w_k = Function(W)
+        
+        w_k.assign(w_n)
+    
+        u_k, p_k, theta_k = split(w_k)
 
         def boundary(x, on_boundary):
             return on_boundary
@@ -211,26 +219,26 @@ def run(
         '''
         bc_dot = DirichletBC(W, Constant((0., 0., 0., 0.)), boundary)
         
-        w_k = Function(W)
-        
-        w_k.assign(w_n)
-        
-        u_k, p_k, theta_k = split(w_k)
-
         df_B_dtheta = Ra/(Pr*Re*Re)*g
         
-        A = (\
-            b(u_w,q) - gamma*p_w*q \
-            + dot(u_w, v)/dt + c(u_w, u_k, v) + c(u_k, u_w, v) + a(mu, u_w, v) + b(v, p_w) \
-            + dot(theta_w*df_B_dtheta, v) \
-            + theta_w*phi/dt - dot(u_k, grad(phi))*theta_w - dot(u_w, grad(phi))*theta_k + dot(K/Pr*grad(theta_w), grad(phi)) \
-            )*dx
-            
-        L = (\
-            b(u_k,q) - gamma*p_k*q \
-            + dot(u_k - u_n, v)/dt + c(u_k, u_k, v) + a(mu, u_k, v) + b(v, p_k) + dot(f_B(theta_k), v) \
-            + (theta_k - theta_n)*phi/dt - dot(u_k, grad(phi))*theta_k + dot(K/Pr*grad(theta_k), grad(phi)) \
-            )*dx  
+        def linear_variational_form(dt):
+        
+            dt = Constant(dt)
+        
+            A = (\
+                b(u_w,q) - gamma*p_w*q \
+                + dot(u_w, v)/dt + c(u_w, u_k, v) + c(u_k, u_w, v) + a(mu, u_w, v) + b(v, p_w) \
+                + dot(theta_w*df_B_dtheta, v) \
+                + theta_w*phi/dt - dot(u_k, grad(phi))*theta_w - dot(u_w, grad(phi))*theta_k + dot(K/Pr*grad(theta_w), grad(phi)) \
+                )*dx
+                
+            L = (\
+                b(u_k,q) - gamma*p_k*q \
+                + dot(u_k - u_n, v)/dt + c(u_k, u_k, v) + a(mu, u_k, v) + b(v, p_k) + dot(f_B(theta_k), v) \
+                + (theta_k - theta_n)*phi/dt - dot(u_k, grad(phi))*theta_k + dot(K/Pr*grad(theta_k), grad(phi)) \
+                )*dx  
+                
+            return A, L
 
 
     # Create progress bar
@@ -268,11 +276,9 @@ def run(
     w_w = Function(W) # w_w was previously a TrialFunction, but must be a Function when calling solve()
 
     time_residual = Function(W)
-
-    while time < final_time:
-
-        time += time_step_size
-        
+    
+    def solve_time_step(dt):
+    
         if linearize:
         
             print '\nIterating Newton method'
@@ -282,8 +288,12 @@ def run(
             iteration_count = 0
             
             old_residual = 1e32
+        
+            w_k.assign(w_n)
             
             for k in range(max_newton_iterations):
+            
+                A, L = linear_variational_form(dt)
 
                 solve(A == L, w_w, bc_dot)
                 
@@ -293,7 +303,11 @@ def run(
 
                 print '\nH1 norm residual = ' + str(norm_residual) + '\n'
                 
-                assert(norm_residual < old_residual)
+                if norm_residual > old_residual:
+                
+                    diverging = True
+                    
+                    return diverging
                 
                 old_residual = norm_residual
                 
@@ -310,11 +324,41 @@ def run(
             assert(converged)
             
             w.assign(w_k)
+            
+            diverging = False
+            
+            return diverging
 
         else:
         
-            solve(F == 0, w, bc)
+            F = nonlinear_variational_form(dt)
         
+            solve(F == 0, w, bc)
+    
+            # @todo How to check if solve() diverged?
+        
+
+    while time < final_time:
+
+        remaining_time = final_time - time
+    
+        if time_step_size > remaining_time:
+            
+            time_step_size = remaining_time        
+    
+        diverging = True
+        
+        while diverging:
+        
+            diverging = solve_time_step(time_step_size)
+            
+            if diverging:
+            
+                time_step_size /= 2.
+    
+        time += time_step_size
+        
+        time_step_size *= 2.
         
         # Save solution to files
         write_solution(w, time)
