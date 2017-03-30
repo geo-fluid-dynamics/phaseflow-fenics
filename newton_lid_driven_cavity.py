@@ -36,8 +36,8 @@ def run(
     final_time = 1., \
     time_step_size = 1.e-1, \
     gamma = 1.e-7, \
-    mesh_M = 80, \
-    pressure_order = 1, \
+    mesh_M = 40, \
+    pressure_degree = 1, \
     linearize = False, \
     newton_absolute_tolerance = 1.e-8, \
     stop_when_steady = True, \
@@ -51,7 +51,7 @@ def run(
     Re = 1.
     
     # Compute derived parameters
-    velocity_order = pressure_order + 1
+    velocity_degree = pressure_degree + 1
     
 
     # Create mesh
@@ -59,26 +59,13 @@ def run(
 
 
     # Define function spaces for the system
-    VxV = VectorFunctionSpace(mesh, 'P', velocity_order)
+    VxV = VectorFunctionSpace(mesh, 'P', velocity_degree)
 
-    Q = FunctionSpace(mesh, 'P', pressure_order) # @todo mixing up test function space
+    Q = FunctionSpace(mesh, 'P', pressure_degree) # @todo mixing up test function space
 
-    '''
-    MixedFunctionSpace used to be available but is now deprecated. 
-    The way that fenics separates function spaces and elements is confusing.
-    To create the mixed space, I'm using the approach from https://fenicsproject.org/qa/11983/mixedfunctionspace-in-2016-2-0
-    '''
-    VxV_ele = VectorElement('P', mesh.ufl_cell(), velocity_order)
+    VxV_ele = VectorElement('P', mesh.ufl_cell(), velocity_degree)
 
-    '''
-    @todo How can we use the space $Q = \left{q \in L^2(\Omega) | \int{q = 0}\right}$ ?
-    
-    All Navier-Stokes FEniCS examples I've found simply use P2P1. danaila2014newton says that
-    they are using the "classical Hilbert spaces" for velocity and pressure, but then they write
-    down the space Q with less restrictions than H^1_0.
-    
-    '''
-    Q_ele = FiniteElement('P', mesh.ufl_cell(), pressure_order)
+    Q_ele = FiniteElement('P', mesh.ufl_cell(), pressure_degree)
 
     W_ele = MixedElement([VxV_ele, Q_ele])
 
@@ -94,13 +81,8 @@ def run(
     # Split solution function to access variables separately
     u, p = split(w)
        
-
-    # Specify the initial values
-    w_n = project(Constant((0., 0., 0.)), W)
-        
-    u_n, p_n = split(w_n)
-    
-    # Define boundary conditions
+       
+    # Specify boundary conditions
     lid = 'near(x[1],  1.)'
     
     fixed_walls = 'near(x[0],  0.) | near(x[0],  1.) | near(x[1],  0.)'
@@ -111,7 +93,13 @@ def run(
         DirichletBC(W.sub(0), Constant((1., 0.)), lid), \
         DirichletBC(W.sub(0), Constant((0., 0.)), fixed_walls), \
         DirichletBC(W.sub(1), Constant(0.), bottom_left_corner, method='pointwise')]
-
+        
+        
+    # Specify the initial values
+    w_n = interpolate(Expression((lid+'*1.', '0.', '0.'), degree=1), W)
+        
+    u_n, p_n = split(w_n)
+    
     
     # Define expressions needed for variational form
     Re = Constant(Re)
@@ -143,9 +131,9 @@ def run(
         
     # Implement the nonlinear form, which will allow FEniCS to automatically derive the Newton linearized form.
     F = (\
-            b(u, q) - gamma*p*q \
-            + dot(u, v)/dt + c(u, u, v) + a(mu, u, v) + b(v, p) - dot(u_n, v)/dt \
-            )*dx
+        b(u, q) - gamma*p*q \
+        + dot(u, v)/dt + c(u, u, v) + a(mu, u, v) + b(v, p) - dot(u_n, v)/dt \
+        )*dx
 
 
     # Implement the Newton linearized form published in danaila2014newton
@@ -168,11 +156,9 @@ def run(
         '''
         bc_dot = DirichletBC(W, Constant((0., 0., 0.)), boundary)
         
-        w_n = project(bc, W)
+        w_k = Function(W)
         
-        u_n, p_n = split(w_n)
-        
-        w_k = project(Constant((0., 0., 0.)), W)
+        w_k.assign(w_n)
         
         u_k, p_k = split(w_k)
         
