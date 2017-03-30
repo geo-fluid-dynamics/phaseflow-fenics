@@ -11,6 +11,6 @@ import newton_lid_driven_cavity
 
 #danaila_natural_convection.run(mesh_M=20, time_step_size=1.e-3, final_time=0., output_dir='t0_M20')
 
-#newton_lid_driven_cavity.run(mesh_M=20, time_step_size=1.e-3, final_time=1.)
+newton_lid_driven_cavity.run(mesh_M=32, time_step_size=1.e-3, final_time=1.)
 
-newton_steady_lid_driven_cavity.run(mesh_M=32)
+#newton_steady_lid_driven_cavity.run(mesh_M=32)
