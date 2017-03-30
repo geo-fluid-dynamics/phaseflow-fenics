@@ -39,7 +39,7 @@ from fenics import \
 
 
 def run(
-    output_dir = 'output/', \
+    output_dir = 'output_danaila_natural_convection/', \
     Ra = 1.e6, \
     Pr = 0.71, \
     Re = 1., \
@@ -51,11 +51,12 @@ def run(
     final_time = 1., \
     time_step_size = 1.e-3, \
     gamma = 1.e-7, \
-    mesh_M = 80, \
-    pressure_order = 1, \
-    temperature_order = 1, \
+    mesh_M = 40, \
+    pressure_degree = 1, \
+    temperature_degree = 1, \
     linearize = False, \
     newton_absolute_tolerance = 1.e-8, \
+    max_newton_iterations = 50, \
     stop_when_steady = True, \
     steady_absolute_tolerance = 1.e-8 \
     ):
@@ -63,7 +64,7 @@ def run(
     dim = 2
     
     # Compute derived parameters
-    velocity_order = pressure_order + 1
+    velocity_degree = pressure_degree + 1
     
 
     # Create mesh
@@ -71,18 +72,18 @@ def run(
 
 
     # Define function spaces for the system
-    VxV = VectorFunctionSpace(mesh, 'P', velocity_order)
+    VxV = VectorFunctionSpace(mesh, 'P', velocity_degree)
 
-    Q = FunctionSpace(mesh, 'P', pressure_order) # @todo mixing up test function space
+    Q = FunctionSpace(mesh, 'P', pressure_degree) # @todo mixing up test function space
 
-    V = FunctionSpace(mesh, 'P', temperature_order)
+    V = FunctionSpace(mesh, 'P', temperature_degree)
 
     '''
     MixedFunctionSpace used to be available but is now deprecated. 
     The way that fenics separates function spaces and elements is confusing.
     To create the mixed space, I'm using the approach from https://fenicsproject.org/qa/11983/mixedfunctionspace-in-2016-2-0
     '''
-    VxV_ele = VectorElement('P', mesh.ufl_cell(), velocity_order)
+    VxV_ele = VectorElement('P', mesh.ufl_cell(), velocity_degree)
 
     '''
     @todo How can we use the space $Q = \left{q \in L^2(\Omega) | \int{q = 0}\right}$ ?
@@ -92,9 +93,9 @@ def run(
     down the space Q with less restrictions than H^1_0.
     
     '''
-    Q_ele = FiniteElement('P', mesh.ufl_cell(), pressure_order)
+    Q_ele = FiniteElement('P', mesh.ufl_cell(), pressure_degree)
 
-    V_ele = FiniteElement('P', mesh.ufl_cell(), temperature_order)
+    V_ele = FiniteElement('P', mesh.ufl_cell(), temperature_degree)
 
     W_ele = MixedElement([VxV_ele, Q_ele, V_ele])
 
@@ -111,11 +112,6 @@ def run(
     u, p, theta = split(w)
        
 
-    # Specify the initial values
-    w_n = project(Constant((0., 0., 0., 0.)), W)
-        
-    u_n, p_n, theta_n = split(w_n)
-    
     # Define boundary conditions
     hot_wall = 'near(x[0],  0.)'
 
@@ -128,6 +124,19 @@ def run(
         DirichletBC(W, Constant((0., 0., 0., theta_c)), cold_wall), \
         DirichletBC(W.sub(0), Constant((0., 0.)), adiabatic_walls), \
         DirichletBC(W.sub(1), Constant((0.)), adiabatic_walls)]
+        
+       
+    # Specify the initial values
+    w_n = interpolate( \
+        Expression(
+            ('0.', \
+             '0.', \
+             '0.', \
+             hot_wall + '*' + str(theta_h) + ' + ' + cold_wall + '*' + str(theta_c)), \
+            element=W_ele), \
+        W)
+    
+    u_n, p_n, theta_n = split(w_n)
 
     
     # Define expressions needed for variational form
@@ -177,15 +186,13 @@ def run(
     F = (\
             b(u, q) - gamma*p*q \
             + dot(u, v)/dt + c(u, u, v) + a(mu, u, v) + b(v, p) - dot(u_n, v)/dt \
-            - dot(f_B(theta), v) \
+            + dot(f_B(theta), v) \
             + theta*phi/dt - dot(u, grad(phi))*theta + dot(K/Pr*grad(theta), grad(phi)) - theta_n*phi/dt \
             )*dx
 
 
     # Implement the Newton linearized form published in danaila2014newton
     if linearize: 
-
-        max_newton_iterations = 10
 
         w_w = TrialFunction(W)
         
@@ -200,21 +207,11 @@ def run(
         A solution for the Neumann BVP can't be constructed by adding a series of residuals which 
         use a homogeneous Dirichlet BC.
         '''
-        bc_dot = [ \
-            DirichletBC(W, Constant((0., 0., 0., 0.)), hot_wall), \
-            DirichletBC(W, Constant((0., 0., 0., 0.)), cold_wall), \
-            DirichletBC(W.sub(0), Constant((0., 0.)), adiabatic_walls), \
-            DirichletBC(W.sub(1), Constant((0.)), adiabatic_walls)]
+        bc_dot = DirichletBC(W, Constant((0., 0., 0., 0.)), boundary)
         
-        w_n = interpolate( \
-            Expression(('0.', '0.', '0.', \
-                str(theta_h) + ' + x[0]*(' + str(theta_c) + ' - ' + str(theta_h) + ')'), \
-                element=W_ele), \
-            W)
+        w_k = Function(W)
         
-        u_n, p_n, theta_n = split(w_n)
-        
-        w_k = project(Constant((0., 0., 0., 0.)), W)
+        w_k.assign(w_n)
         
         u_k, p_k, theta_k = split(w_k)
 
@@ -223,13 +220,13 @@ def run(
         A = (\
             b(u_w,q) - gamma*p_w*q \
             + dot(u_w, v)/dt + c(u_w, u_k, v) + c(u_k, u_w, v) + a(mu, u_w, v) + b(v, p_w) \
-            - dot(theta_w*df_B_dtheta, v) \
+            + dot(theta_w*df_B_dtheta, v) \
             + theta_w*phi/dt - dot(u_k, grad(phi))*theta_w - dot(u_w, grad(phi))*theta_k + dot(K/Pr*grad(theta_w), grad(phi)) \
             )*dx
             
         L = (\
             b(u_k,q) + gamma*p_k*q \
-            + dot(u_k - u_n, v)/dt + c(u_k, u_k, v) + a(mu, u_k, v) + b(v, p_k) - dot(f_B(theta_k), v) \
+            + dot(u_k - u_n, v)/dt + c(u_k, u_k, v) + a(mu, u_k, v) + b(v, p_k) + dot(f_B(theta_k), v) \
             + (theta_k - theta_n)*phi/dt - dot(u_k, grad(phi))*theta_k - dot(K/Pr*grad(theta_k), grad(phi)) \
             )*dx  
 
