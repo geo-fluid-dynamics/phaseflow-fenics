@@ -51,7 +51,8 @@ def run(
     final_time = 1., \
     time_step_size = 1.e-3, \
     gamma = 1.e-7, \
-    mesh_M = 40, \
+    initial_mesh_M = 10, \
+    wall_refinement_cycles = 3, \
     pressure_degree = 1, \
     temperature_degree = 1, \
     linearize = False, \
@@ -68,8 +69,28 @@ def run(
     
 
     # Create mesh
-    mesh = UnitSquareMesh(mesh_M, mesh_M)
+    mesh = UnitSquareMesh(mesh_M, mesh_M, "crossed")
+    
+    # Refine mesh near walls
+    class Wall(SubDomain):
+        
+        def inside(self, x, on_boundary):
+        
+            return on_boundary and (near(x[0], 0.) or near(x[0], 1.) or near(x[1], 0.) or near(x[1], 1.))
 
+            
+    Wall = Wall()
+
+    for i in range(wall_refinement_cycles):
+    
+        edge_markers = EdgeFunction("bool", mesh)
+        
+        Wall.mark(edge_markers, True)
+
+        adapt(mesh, edge_markers)
+        
+        mesh = mesh.child()
+        
 
     # Define function spaces for the system
     VxV = VectorFunctionSpace(mesh, 'P', velocity_degree)
@@ -127,18 +148,10 @@ def run(
         
        
     # Specify the initial values
-    # @todo: Ramp temperature on adiabatic walls
-    w_n = interpolate( \
-        Expression(
-            ('0.', \
-             '0.', \
-             '0.', \
-             
-             hot_wall + '*' + str(theta_h) + ' + ' + cold_wall + '*' + str(theta_c)), \
-            element=W_ele), \
-        W)
+    w_n = Function(W)
     
     u_n, p_n, theta_n = split(w_n)
+
 
     
     # Define expressions needed for variational form
@@ -210,6 +223,17 @@ def run(
         use a homogeneous Dirichlet BC.
         '''
         bc_dot = DirichletBC(W, Constant((0., 0., 0., 0.)), boundary)
+        
+        w_n = interpolate( \
+        Expression(
+            ('0.', \
+             '0.', \
+             '0.', \
+             hot_wall + '*' + str(theta_h) + ' + ' + cold_wall + '*' + str(theta_c)), \
+            element=W_ele), \
+        W)
+    
+        u_n, p_n, theta_n = split(w_n)
         
         w_k = Function(W)
         
