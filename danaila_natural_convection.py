@@ -35,7 +35,8 @@ from fenics import \
     File, \
     Progress, set_log_level, PROGRESS, \
     project, interpolate, \
-    solve, parameters, info, derivative, NonlinearVariationalProblem, NonlinearVariationalSolver
+    solve, parameters, info, derivative, NonlinearVariationalProblem, NonlinearVariationalSolver, \
+    SubDomain, EdgeFunction, near, adapt
 
 
 def run(
@@ -70,7 +71,7 @@ def run(
     
 
     # Create mesh
-    mesh = UnitSquareMesh(mesh_M, mesh_M, "crossed")
+    mesh = UnitSquareMesh(initial_mesh_M, initial_mesh_M, "crossed")
     
     # Refine mesh near walls
     class Wall(SubDomain):
@@ -402,6 +403,8 @@ def run(
         else:
             
             solve_time_step(time_step_size)
+            
+            time += time_step_size
             
         # Save solution to files
         write_solution(w, time)
