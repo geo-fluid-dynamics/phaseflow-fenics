@@ -35,7 +35,7 @@ from fenics import \
     File, \
     Progress, set_log_level, PROGRESS, \
     project, interpolate, \
-    solve, parameters, info
+    solve, parameters, info, derivative, NonlinearVariationalProblem, NonlinearVariationalSolver
 
 
 def run(
@@ -50,6 +50,7 @@ def run(
     mu = 1., \
     final_time = 1., \
     time_step_size = 1.e-3, \
+    adaptive_time = False, \
     gamma = 1.e-7, \
     mesh_M = 40, \
     pressure_degree = 1, \
@@ -307,6 +308,10 @@ def run(
                 
                     diverging = True
                     
+                    if not adaptive_time:
+                    
+                        assert(not diverging)
+                    
                     return diverging
                 
                 old_residual = norm_residual
@@ -331,35 +336,48 @@ def run(
 
         else:
         
+            assert(not adaptive_time) # @todo How to get residual from solver.solve() to check if diverging?
+        
             F = nonlinear_variational_form(dt)
         
-            solve(F == 0, w, bc)
-    
-            # @todo How to check if solve() diverged?
+            problem = NonlinearVariationalProblem(F, w, bc, derivative(F, w))
+            
+            solver = NonlinearVariationalSolver(problem)
+            
+            iteration_count, converged = solver.solve()
+            
+            assert(converged)
+
         
 
     while time < final_time:
 
-        remaining_time = final_time - time
+        if adaptive_time:
     
-        if time_step_size > remaining_time:
+            remaining_time = final_time - time
+        
+            if time_step_size > remaining_time:
+                
+                time_step_size = remaining_time        
+        
+            diverging = True
             
-            time_step_size = remaining_time        
-    
-        diverging = True
-        
-        while diverging:
-        
-            diverging = solve_time_step(time_step_size)
+            while diverging:
             
-            if diverging:
+                diverging = solve_time_step(time_step_size)
+                
+                if diverging:
+                
+                    time_step_size /= 2.
+        
+            time += time_step_size
             
-                time_step_size /= 2.
-    
-        time += time_step_size
-        
-        time_step_size *= 2.
-        
+            time_step_size *= 2.
+
+        else:
+            
+            solve_time_step(time_step_size)
+            
         # Save solution to files
         write_solution(w, time)
         

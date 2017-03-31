@@ -8,7 +8,7 @@ import danaila_natural_convection
 
 #danaila_natural_convection.run(mesh_M=40, time_step_size=1.e-4, output_dir='M40')
 
-danaila_natural_convection.run(linearize=True, mesh_M=20, time_step_size=1., output_dir='linearized_M20')
+danaila_natural_convection.run(adaptive_time=True, linearize=True, mesh_M=20, time_step_size=1., output_dir='linearized_M20')
 
 #danaila_natural_convection.run(linearize=True, mesh_M=40, time_step_size=0.5e-3, output_dir='linearized_M40')
 
