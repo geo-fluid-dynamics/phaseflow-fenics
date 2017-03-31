@@ -2,27 +2,31 @@
 
 from dolfin import *
 
-mesh = UnitSquareMesh(20, 20, "crossed")
+initial_grid_M = 10
 
-# Break point
-p   = Point(0.0, 0.5)
-tol = 0.05
+mesh = UnitSquareMesh(initial_grid_M, initial_grid_M, "crossed")
 
 # Selecting edges to refine
-class Border(SubDomain):
+class Wall(SubDomain):
+    
     def inside(self, x, on_boundary):
-        return near(x[0], p.x(), tol) and near(x[1], p.y(), tol) and on_boundary
+    
+        return on_boundary and (near(x[0], 0.) or near(x[0], 1.) or near(x[1], 0.) or near(x[1], 1.))
 
-Border = Border()
+        
+Wall = Wall()
 
 # Number of refinements
-nor = 3
+refinement_cycles = 3
 
-for i in range(nor):
+for i in range(refinement_cycles):
+    
     edge_markers = EdgeFunction("bool", mesh)
-    Border.mark(edge_markers, True)
+    
+    Wall.mark(edge_markers, True)
 
     adapt(mesh, edge_markers)
+    
     mesh = mesh.child()
 
     
