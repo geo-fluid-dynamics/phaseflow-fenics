@@ -35,7 +35,8 @@ from fenics import \
     File, \
     Progress, set_log_level, PROGRESS, \
     project, interpolate, \
-    solve, parameters, info, derivative, NonlinearVariationalProblem, NonlinearVariationalSolver, \
+    solve, parameters, info, derivative, \
+    LinearVariationalProblem, LinearVariationalSolver, NonlinearVariationalProblem, NonlinearVariationalSolver, \
     SubDomain, EdgeFunction, near, adapt
 
 
@@ -51,48 +52,25 @@ def run(
     mu = 1., \
     final_time = 1., \
     time_step_size = 1.e-3, \
-    adaptive_time = False, \
     gamma = 1.e-7, \
-    initial_mesh_M = 10, \
-    wall_refinement_cycles = 3, \
+    mesh_M = 10, \
     pressure_degree = 1, \
     temperature_degree = 1, \
-    linearize = False, \
     newton_absolute_tolerance = 1.e-8, \
-    max_newton_iterations = 50, \
-    stop_when_steady = True, \
-    steady_absolute_tolerance = 1.e-8 \
+    max_newton_iterations = 50
     ):
 
-    dim = 2
     
+    dim = 2
+
     # Compute derived parameters
     velocity_degree = pressure_degree + 1
     
 
     # Create mesh
-    mesh = UnitSquareMesh(initial_mesh_M, initial_mesh_M, "crossed")
+    mesh = UnitSquareMesh(mesh_M, mesh_M, "crossed")
     
-    # Refine mesh near walls
-    class Wall(SubDomain):
-        
-        def inside(self, x, on_boundary):
-        
-            return on_boundary and (near(x[0], 0.) or near(x[0], 1.) or near(x[1], 0.) or near(x[1], 1.))
-
-            
-    Wall = Wall()
-
-    for i in range(wall_refinement_cycles):
-    
-        edge_markers = EdgeFunction("bool", mesh)
-        
-        Wall.mark(edge_markers, True)
-
-        adapt(mesh, edge_markers)
-        
-        mesh = mesh.child()
-        
+    ''' @todo  Delaunay triangulation'''
 
     # Define function spaces for the system
     VxV = VectorFunctionSpace(mesh, 'P', velocity_degree)
@@ -133,28 +111,46 @@ def run(
         
     # Split solution function to access variables separately
     u, p, theta = split(w)
-       
 
-    # Define boundary conditions
+    
+    # Implement the Newton linearized form published in danaila2014newton
+    w_w = TrialFunction(W)
+    
+    u_w, p_w, theta_w = split(w_w)
+
+    def boundary(x, on_boundary):
+    
+        return on_boundary
+    
+    '''
+    danaila2014newton sets homogeneous Dirichlet BC's on all residuals, including theta.
+    I don't see how this could be consistent with Neumann BC's for the nonlinear problem.
+    A solution for the Neumann BVP can't be constructed by adding a series of residuals which 
+    use a homogeneous Dirichlet BC.
+    '''
+    bc_dot = DirichletBC(W, Constant((0., 0., 0., 0.)), boundary)
+    
     hot_wall = 'near(x[0],  0.)'
 
     cold_wall = 'near(x[0],  1.)'
     
-    adiabatic_walls = 'near(x[1],  0.) | near(x[1],  1.)'
+    w_n = interpolate( \
+        Expression(
+            ('0.', \
+             '0.', \
+             '0.', \
+             hot_wall + '*' + str(theta_h) + ' + ' + cold_wall + '*' + str(theta_c)), \
+            element=W_ele), \
+        W)
 
-    bc = [ \
-        DirichletBC(W, Constant((0., 0., 0., theta_h)), hot_wall), \
-        DirichletBC(W, Constant((0., 0., 0., theta_c)), cold_wall), \
-        DirichletBC(W.sub(0), Constant((0., 0.)), adiabatic_walls), \
-        DirichletBC(W.sub(1), Constant((0.)), adiabatic_walls)]
-        
-       
-    # Specify the initial values
-    w_n = Function(W)
-    
     u_n, p_n, theta_n = split(w_n)
+    
+    w_k = Function(W)
+    
+    w_k.assign(w_n)
 
-
+    u_k, p_k, theta_k = split(w_k)
+    
     
     # Define expressions needed for variational form
     Ra = Constant(Ra)
@@ -170,6 +166,8 @@ def run(
     g = Constant(g)
 
     gamma = Constant(gamma)
+    
+    dt = Constant(time_step_size)
 
 
     # Define variational form
@@ -196,76 +194,21 @@ def run(
        
         return dot(dot(_w, nabla_grad(_z)), _v) # @todo Is this use of nabla_grad correct?
         
+
+    df_B_dtheta = Ra/(Pr*Re*Re)*g
     
-    def nonlinear_variational_form(dt):
-    
-        dt = Constant(dt)
+    A = (\
+        b(u_w,q) - gamma*p_w*q \
+        + dot(u_w, v)/dt + c(u_w, u_k, v) + c(u_k, u_w, v) + a(mu, u_w, v) + b(v, p_w) \
+        + dot(theta_w*df_B_dtheta, v) \
+        + theta_w*phi/dt - dot(u_k, grad(phi))*theta_w - dot(u_w, grad(phi))*theta_k + dot(K/Pr*grad(theta_w), grad(phi)) \
+        )*dx
         
-        F = (\
-                b(u, q) - gamma*p*q \
-                + dot(u, v)/dt + c(u, u, v) + a(mu, u, v) + b(v, p) - dot(u_n, v)/dt \
-                + dot(f_B(theta), v) \
-                + theta*phi/dt - dot(u, grad(phi))*theta + dot(K/Pr*grad(theta), grad(phi)) - theta_n*phi/dt \
-                )*dx
-        
-        return F
-
-    # Implement the Newton linearized form published in danaila2014newton
-    if linearize: 
-
-        w_w = TrialFunction(W)
-        
-        u_w, p_w, theta_w = split(w_w)
-
-        def boundary(x, on_boundary):
-        
-            return on_boundary
-        
-        '''
-        danaila2014newton sets homogeneous Dirichlet BC's on all residuals, including theta.
-        I don't see how this could be consistent with Neumann BC's for the nonlinear problem.
-        A solution for the Neumann BVP can't be constructed by adding a series of residuals which 
-        use a homogeneous Dirichlet BC.
-        '''
-        bc_dot = DirichletBC(W, Constant((0., 0., 0., 0.)), boundary)
-        
-        w_n = interpolate( \
-            Expression(
-                ('0.', \
-                 '0.', \
-                 '0.', \
-                 hot_wall + '*' + str(theta_h) + ' + ' + cold_wall + '*' + str(theta_c)), \
-                element=W_ele), \
-            W)
-    
-        u_n, p_n, theta_n = split(w_n)
-        
-        w_k = Function(W)
-        
-        w_k.assign(w_n)
-    
-        u_k, p_k, theta_k = split(w_k)
-
-        df_B_dtheta = Ra/(Pr*Re*Re)*g
-
-        def linear_variational_form(dt):
-        
-            dt = Constant(dt)
-        
-            A = (\
-                b(u_w,q) - gamma*p_w*q \
-                + dot(u_w, v)/dt + c(u_w, u_k, v) + c(u_k, u_w, v) + a(mu, u_w, v) + b(v, p_w) \
-                + dot(theta_w*df_B_dtheta, v) \
-                + theta_w*phi/dt - dot(u_k, grad(phi))*theta_w - dot(u_w, grad(phi))*theta_k + dot(K/Pr*grad(theta_w), grad(phi)) \
-                )*dx
-                
-            L = (\
-                b(u_k,q) - gamma*p_k*q \
-                + dot(u_k - u_n, v)/dt + c(u_k, u_k, v) + a(mu, u_k, v) + b(v, p_k) + dot(f_B(theta_k), v) \
-                + (theta_k - theta_n)*phi/dt - dot(u_k, grad(phi))*theta_k + dot(K/Pr*grad(theta_k), grad(phi)) \
-                )*dx  
-                
-            return A, L
+    L = (\
+        b(u_k,q) - gamma*p_k*q \
+        + dot(u_k - u_n, v)/dt + c(u_k, u_k, v) + a(mu, u_k, v) + b(v, p_k) + dot(f_B(theta_k), v) \
+        + (theta_k - theta_n)*phi/dt - dot(u_k, grad(phi))*theta_k + dot(K/Pr*grad(theta_k), grad(phi)) \
+        )*dx  
 
 
     # Create progress bar
@@ -301,132 +244,60 @@ def run(
     # Solve each time step
     
     w_w = Function(W) # w_w was previously a TrialFunction, but must be a Function when calling solve()
-
-    time_residual = Function(W)
-    
-    def solve_time_step(dt):
-    
-        if linearize:
         
-            print '\nIterating Newton method'
-            
-            converged = False
-            
-            iteration_count = 0
-            
-            old_residual = 1e32
-        
-            w_k.assign(w_n)
-            
-            for k in range(max_newton_iterations):
-            
-                A, L = linear_variational_form(dt)
-
-                solve(A == L, w_w, bc_dot)
-                
-                w_k.assign(w_k - w_w)
-                
-                norm_residual = norm(w_w, 'H1')
-
-                print '\nH1 norm residual = ' + str(norm_residual) + '\n'
-                
-                if norm_residual > old_residual:
-                
-                    diverging = True
-                    
-                    if not adaptive_time:
-                    
-                        assert(not diverging)
-                    
-                    return diverging
-                
-                old_residual = norm_residual
-                
-                if norm_residual < newton_absolute_tolerance:
-                
-                    converged = True
-                    
-                    iteration_count = k + 1
-                    
-                    print 'Converged after ' + str(k) + ' iterations'
-                    
-                    break
-                    
-            assert(converged)
-            
-            w.assign(w_k)
-            
-            diverging = False
-            
-            return diverging
-
-        else:
-        
-            assert(not adaptive_time) # @todo How to get residual from solver.solve() to check if diverging?
-        
-            F = nonlinear_variational_form(dt)
-        
-            problem = NonlinearVariationalProblem(F, w, bc, derivative(F, w))
-            
-            solver = NonlinearVariationalSolver(problem)
-            
-            iteration_count, converged = solver.solve()
-            
-            assert(converged)
-
-        
-
     while time < final_time:
 
-        if adaptive_time:
+        print '\nIterating Newton method'
+            
+        converged = False
+        
+        iteration_count = 0
+        
+        old_residual = 1e32
     
-            remaining_time = final_time - time
+        w_k.assign(w_n)
         
-            if time_step_size > remaining_time:
-                
-                time_step_size = remaining_time        
-        
-            diverging = True
+        for k in range(max_newton_iterations):
             
-            while diverging:
+            solve(A == L, w_w, bcs=bc_dot)
             
-                diverging = solve_time_step(time_step_size)
-                
-                if diverging:
-                
-                    time_step_size /= 2.
-        
-            time += time_step_size
+            w_k.assign(w_k - w_w)
             
-            time_step_size *= 2.
+            norm_residual = norm(w_w, 'H1')
 
-        else:
+            print '\nH1 norm residual = ' + str(norm_residual) + '\n'
             
-            solve_time_step(time_step_size)
+            assert(norm_residual < old_residual)
             
-            time += time_step_size
+            old_residual = norm_residual
+            
+            if norm_residual < newton_absolute_tolerance:
+            
+                converged = True
+                
+                iteration_count = k + 1
+                
+                print 'Converged after ' + str(k) + ' iterations'
+                
+                break
+                
+        assert(converged)
+        
+        w.assign(w_k)
+        
+        time += time_step_size
             
         # Save solution to files
         write_solution(w, time)
         
-        if stop_when_steady:
-        
-            # Check for steady state
-            time_residual.assign(w - w_n)
         
         # Update previous solution
         w_n.assign(w)
         
+        
         # Show the time progress
         progress.update(time / final_time)
         
-        if stop_when_steady & (norm(time_residual, 'H1') < steady_absolute_tolerance):
-            print 'Reached steady state at time t = ' + str(time)
-            break
-    
-    if time >= final_time:
-    
-        print 'Reached final time, t = ' + str(final_time)
     
 def test():
 
