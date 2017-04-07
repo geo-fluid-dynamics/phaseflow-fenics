@@ -55,7 +55,7 @@ def run(
     adaptive_time = False, \
     gamma = 1.e-7, \
     initial_mesh_M = 10, \
-    wall_refinement_cycles = 3, \
+    wall_refinement_cycles = 0, \
     pressure_degree = 1, \
     temperature_degree = 1, \
     linearize = False, \
@@ -195,7 +195,7 @@ def run(
 
     def c(_w, _z, _v):
        
-        return dot(dot(_w, nabla_grad(_z)), _v) # @todo Is this use of nabla_grad correct?
+        return dot(dot(_v, nabla_grad(_z)), _w) # @todo Is this use of nabla_grad correct?
         
     
     def nonlinear_variational_form(dt):
@@ -322,18 +322,8 @@ def run(
             for k in range(max_newton_iterations):
             
                 A, L = linear_variational_form(dt)
-                
-                #problem = LinearVariationalProblem(A, L, w_w, bc_dot)
-                
-                #solver = LinearVariationalSolver(problem)
-                
-                #solver.parameters["linear_solver"] = "mumps"
 
-                #solver.solve()
-                
                 solve(A == L, w_w, bcs=bc_dot)
-                
-                exit()
                 
                 w_k.assign(w_k - w_w)
                 

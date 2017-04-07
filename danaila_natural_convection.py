@@ -192,7 +192,7 @@ def run(
 
     def c(_w, _z, _v):
        
-        return dot(dot(_w, nabla_grad(_z)), _v) # @todo Is this use of nabla_grad correct?
+        return dot(dot(_v, nabla_grad(_z)), _w) # @todo Is this use of nabla_grad correct?
         
 
     df_B_dtheta = Ra/(Pr*Re*Re)*g
