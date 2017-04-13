@@ -59,10 +59,10 @@ def run(
     pressure_degree = 1, \
     temperature_degree = 1, \
     linearize = False, \
-    newton_absolute_tolerance = 1.e-8, \
-    max_newton_iterations = 50, \
+    newton_relative_tolerance = 1.e-10, \
+    max_newton_iterations = 10, \
     stop_when_steady = True, \
-    steady_absolute_tolerance = 1.e-8 \
+    steady_relative_tolerance = 1.e-8 \
     ):
 
     dim = 2
@@ -142,19 +142,29 @@ def run(
     cold_wall = 'near(x[0],  1.)'
     
     adiabatic_walls = 'near(x[1],  0.) | near(x[1],  1.)'
+    
+    all_walls = adiabatic_walls + ' | ' + hot_wall + ' | ' + cold_wall
 
+    # @todo Try not constraining pressure at all (homogeneous Neumann, should also keep pressure at zero)
+    # @todo Try just constraining the pressure at a point in the middle of one adiabatic wall 
+    
     bc = [ \
-        DirichletBC(W, Constant((0., 0., 0., theta_h)), hot_wall), \
-        DirichletBC(W, Constant((0., 0., 0., theta_c)), cold_wall), \
-        DirichletBC(W.sub(0), Constant((0., 0.)), adiabatic_walls), \
-        DirichletBC(W.sub(1), Constant((0.)), adiabatic_walls)]
+        DirichletBC(W.sub(0), Constant((0., 0.)), all_walls), \
+        DirichletBC(W.sub(2), Constant(theta_h), hot_wall), \
+        DirichletBC(W.sub(2), Constant(theta_c), cold_wall)]
         
        
     # Specify the initial values
-    w_n = Function(W)
+    w_n = interpolate( \
+            Expression(
+                ('0.', \
+                 '0.', \
+                 '0.', \
+                 hot_wall + '*' + str(theta_h) + ' + ' + cold_wall + '*' + str(theta_c)), \
+                element=W_ele), \
+            W)
     
     u_n, p_n, theta_n = split(w_n)
-
 
     
     # Define expressions needed for variational form
@@ -228,18 +238,10 @@ def run(
         A solution for the Neumann BVP can't be constructed by adding a series of residuals which 
         use a homogeneous Dirichlet BC.
         '''
-        bc_dot = DirichletBC(W, Constant((0., 0., 0., 0.)), boundary)
-        
-        w_n = interpolate( \
-            Expression(
-                ('0.', \
-                 '0.', \
-                 '0.', \
-                 hot_wall + '*' + str(theta_h) + ' + ' + cold_wall + '*' + str(theta_c)), \
-                element=W_ele), \
-            W)
-    
-        u_n, p_n, theta_n = split(w_n)
+        bc_dot = [ \
+            DirichletBC(W.sub(0), Constant((0., 0.)), all_walls), \
+            DirichletBC(W.sub(2), Constant(0.), hot_wall), \
+            DirichletBC(W.sub(2), Constant(0.), cold_wall)]
         
         w_k = Function(W)
         
@@ -327,9 +329,9 @@ def run(
                 
                 w_k.assign(w_k - w_w)
                 
-                norm_residual = norm(w_w, 'H1')
+                norm_residual = norm(w_w, 'L2')/norm(w_k, 'L2')
 
-                print '\nH1 norm residual = ' + str(norm_residual) + '\n'
+                print '\nL2 norm of relative residual, || w_w || / || w_k || = ' + str(norm_residual) + '\n'
                 
                 if norm_residual > old_residual:
                 
@@ -343,7 +345,7 @@ def run(
                 
                 old_residual = norm_residual
                 
-                if norm_residual < newton_absolute_tolerance:
+                if norm_residual < newton_relative_tolerance:
                 
                     converged = True
                     
@@ -397,6 +399,8 @@ def run(
                 
                 if diverging:
                 
+                    # @todo Report chanages in time step size. Expose parameters for maximum and minimum size.
+                
                     time_step_size /= 2.
         
             time += time_step_size
@@ -423,9 +427,15 @@ def run(
         # Show the time progress
         progress.update(time / final_time)
         
-        if stop_when_steady & (norm(time_residual, 'H1') < steady_absolute_tolerance):
-            print 'Reached steady state at time t = ' + str(time)
-            break
+        if stop_when_steady:
+        
+            unsteadiness = norm(time_residual, 'L2')/norm(w_n, 'L2')
+            
+            print 'Unsteadiness (L2 norm of relative time residual), || w_{n+1} || / || w_n || = ' + str(unsteadiness)
+        
+            if (unsteadiness < steady_relative_tolerance):
+                print 'Reached steady state at time t = ' + str(time)
+                break
     
     if time >= final_time:
     
