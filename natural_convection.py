@@ -402,16 +402,22 @@ def run(
                     # @todo Report chanages in time step size. Expose parameters for maximum and minimum size.
                 
                     time_step_size /= 2.
+                    
+                    print 'Set time step size to dt = ' + str(time_step_size)
         
             time += time_step_size
             
             time_step_size *= 2.
+            
+            print 'Set time step size to dt = ' + str(time_step_size)
 
         else:
             
             solve_time_step(time_step_size)
             
             time += time_step_size
+            
+        print 'Reached time t = ' + str(time)
             
         # Save solution to files
         write_solution(w, time)
