@@ -41,7 +41,7 @@ from fenics import \
 
     
 def run(
-    output_dir = 'nsb_pcm_output', \
+    output_dir = 'output_nsb_pcm', \
     Ra = 1.e6, \
     Pr = 0.71, \
     Re = 1., \
