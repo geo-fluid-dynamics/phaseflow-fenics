@@ -83,7 +83,8 @@ def run(
     newton_relative_tolerance = 1.e-9, \
     max_newton_iterations = 10, \
     stop_when_steady = True, \
-    steady_relative_tolerance = 1.e-8 \
+    steady_relative_tolerance = 1.e-8, \
+    exact_solution_expression = [] \
     ):
 
     #
@@ -424,6 +425,16 @@ def run(
     if time >= final_time:
     
         print 'Reached final time, t = ' + str(final_time)
+        
+    
+    if exact_solution_expression:
+    
+        w_e = Expression(exact_solution_expression, element=W_ele)
+    
+        error = errornorm(w_e, w_n, 'L2')
+    
+    print("Error = " + str(error))
+    
     
 def test():
 
