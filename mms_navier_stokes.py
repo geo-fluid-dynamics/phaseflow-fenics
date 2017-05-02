@@ -2,9 +2,13 @@ import sympy as sp
 from sympy import physics as spp
 from sympy.physics import vector as sppv
 
+from fenics import Point, RectangleMesh
+
+import nsb_pcm as ns
+
 
 # Set manufactured solution
-r0, beta = sp.symbols('r0, beta')
+u0, v0, p0, epsilon = sp.symbols('u0, v0, p0, epsilon')
 
 t = sp.symbols('t')
 
@@ -16,17 +20,11 @@ y = R[1]
 
 u = [0, 0]
 
-u[0] = -(sp.exp(-beta*t**2) - 1)*(sp.sqrt(x**2 + y**2) - r0)*sp.sin(sp.atan2(y, x))
+u[0] = u0*(sp.sin(x**2 + y**2) + epsilon)
 
-u[1] = (sp.exp(-beta*t**2) - 1)*(sp.sqrt(x**2 + y**2) - r0)*sp.cos(sp.atan2(y, x))
+u[1] = v0*(sp.cos(x**2 + y**2) + epsilon)
 
-p = -(sp.exp(-beta*t**2) - 1)*(sp.sqrt(x**2 + y**2) - r0)**2
-
-
-# Print in muparser format
-print("\nManufactured solution:")
-
-print(("Function expression = "+str(u[0])+"; "+str(u[1])+"; "+str(p)).replace('**', '^').replace('R_', ''))
+p = p0*(sp.sin(x**2 + y**2) + 2)
 
 
 # Derive manufactured source term
@@ -39,12 +37,33 @@ grad_p = sppv.gradient(p, R).to_matrix(R)
 
 f0 = sp.diff(u[0], t) + sppv.dot(u[0]*R.x + u[1]*R.y, sppv.gradient(u[0], R)) - sppv.divergence(mu*sppv.gradient(u[0], R), R) + grad_p[0]
 
-f1 = sp.diff(u[1], t) + sppv.dot(u[0]*R.x + u[1]*R.y, sppv.gradient(u[1], R)) - sppv.divergence(mu*sppv.gradient(u[1], R), R) + grad_p[1]
+f1 = sp.diff(u[0], t) + sppv.dot(u[0]*R.x + u[1]*R.y, sppv.gradient(u[1], R)) - sppv.divergence(mu*sppv.gradient(u[1], R), R) + grad_p[1]
 
 f2 = sppv.divergence(u[0]*R.x + u[1]*R.y, R) + gamma*p
 
 
-# Print in muparser format
-print("\nDerived manufactured source:")
+# Substitute values for parameters
+symbolic_expressions = [u[0], u[1], p, f0, f1, f2]
 
-print(("Function expression = "+str(f0)+"; "+str(f1)+"; "+str(f2)).replace('**', '^').replace('R_', ''))
+sub_symbolic_expressions = [e.subs(u0, 1.).subs(v0, 1.).subs(p0, 1.).subs(epsilon, 0.001).subs(Re, 1.).subs(mu, 1.).subs(gamma, 1.e-7) for e in symbolic_expressions]
+
+
+# Convert to strings that can later be converted to UFL expressions for fenics
+ufl_strings = [str(e).replace('R_x', 'x[0]').replace('R_y', 'x[1]') for e in sub_symbolic_expressions]
+u0, u1, p, f0, f1, f2 = ufl_strings
+
+# Set initial value expressions
+iv_strings = [str(0.01*e) for e in symbolic_expressions]
+u00, u10, p0 = iv_strings[0:3]
+    
+# Run the FE solver
+on_wall = 'near(x[0],  0.) | near(x[0],  1.) | near(x[1], 0.) | near(x[1],  1.)'
+     
+ns.run(linearize=False, \
+    output_dir="output/mms_navier_stokes", \
+    mesh=RectangleMesh(Point(-0.1, 0.2), Point(0.7, 0.8), 20, 20, "crossed"), \
+    s_u= (f0, f1), \
+    s_p= f1, \
+    s_theta='0.', \
+    initial_values_expression=(u00, u10, p0, '0.'), \
+    bc_expressions=[[0, (u0, u1), on_wall], [1, p, on_wall]]) 

@@ -39,36 +39,44 @@ from fenics import \
     LinearVariationalProblem, LinearVariationalSolver, NonlinearVariationalProblem, NonlinearVariationalSolver, \
     SubDomain, EdgeFunction, near, adapt
 
+
+def arguments():
+    """Returns tuple containing dictionary of calling function's
+       named arguments and a list of calling function's unnamed
+       positional arguments.
+    """
+    from inspect import getargvalues, stack
+    posname, kwname, args = getargvalues(stack()[1][0])[-3:]
+    posargs = args.pop(posname, [])
+    args.update(args.pop(kwname, []))
+    return args, posargs
+
     
 def run(
     output_dir = 'output_nsb_pcm', \
     Ra = 1.e6, \
     Pr = 0.71, \
     Re = 1., \
-    theta_h = 0.5, \
-    theta_c = -0.5, \
     K = 1., \
     g = (0., -1.), \
     mu = 1., \
     mesh = UnitSquareMesh(20, 20, "crossed"), \
-    s_u = Constant((0., 0.)), \
-    s_p = Constant(0.), \
-    s_theta = Constant(0.), \
+    s_u = ('0.', '0.'), \
+    s_p = '0.', \
+    s_theta = '0.', \
     initial_values_expression = ( \
-            '0.', \
-            '0.', \
-            '0.', \
-            '0.5*near(x[0],  0.) -0.5*near(x[0],  1.)'), \
-    bc_expressions = \
-        [[0, Constant((0., 0.)),
-            'near(x[0],  0.) | near(x[0],  1.) | near(x[1], 0.) | near(x[1],  1.)'], \
-         [2, Constant(0.5), 'near(x[0],  0.)'], \
-         [2, Constant(-0.5), 'near(x[0],  1.)']], \
-    linearized_bc_expressions = \
-        [[0, Constant((0., 0.)),
-            'near(x[0],  0.) | near(x[0],  1.) | near(x[1], 0.) | near(x[1],  1.)'], \
-         [2, Constant(0.5), 'near(x[0],  0.)'], \
-         [2, Constant(-0.5), 'near(x[0],  1.)']], \
+        '0.', \
+        '0.', \
+        '0.', \
+        '0.5*near(x[0],  0.) -0.5*near(x[0],  1.)'), \
+    bc_expressions = [ \
+        [0, ('0.', '0.'), 'near(x[0],  0.) | near(x[0],  1.) | near(x[1], 0.) | near(x[1],  1.)'], \
+        [2, '0.5', 'near(x[0],  0.)'], \
+        [2, '-0.5', 'near(x[0],  1.)']], \
+    linearized_bc_expressions = [ \
+        [0, ('0.', '0.'), 'near(x[0],  0.) | near(x[0],  1.) | near(x[1], 0.) | near(x[1],  1.)'], \
+        [2, '0.', 'near(x[0],  0.)'], \
+        [2, '0.', 'near(x[0],  1.)']], \
     final_time = 1., \
     time_step_size = 1.e-3, \
     adaptive_time = True, \
@@ -82,7 +90,14 @@ def run(
     steady_relative_tolerance = 1.e-8 \
     ):
 
+    #
+    print("Running nsb_pcm with the following arguments: \n")
+    
+    print(arguments())
+    
+    #
     dim = 2
+    
     
     # Compute derived parameters
     velocity_degree = pressure_degree + 1
@@ -126,16 +141,14 @@ def run(
         
     # Split solution function to access variables separately
     u, p, theta = split(w)
-       
     
-    # Specify boundary conditions
-    bc = []
     
-    bce = bc_expressions
+    # Set source term expressions
+    s_u = Expression(s_u, element=VxV_ele)
     
-    for subspace, expression, coordinates, in bc_expressions:
+    s_p = Expression(s_p, element=Q_ele)
     
-        bc.append(DirichletBC(W.sub(subspace), expression, coordinates))
+    s_theta = Expression(s_theta, element=V_ele)
         
        
     # Specify the initial values
@@ -185,20 +198,29 @@ def run(
         return dot(dot(_v, nabla_grad(_z)), _w) # @todo Is this use of nabla_grad correct?
         
     
-    def nonlinear_variational_form(dt):
-    
-        dt = Constant(dt)
+    if not linearize:
+        # Specify boundary conditions
+        bc = []
         
-        F = (\
-                b(u, q) - gamma*p*q - s_p*q \
-                + dot(u, v)/dt + c(u, u, v) + a(mu, u, v) + b(v, p) - dot(u_n, v)/dt + dot(f_B(theta), v) - dot(s_u, v) \
-                + theta*phi/dt - dot(u, grad(phi))*theta + dot(K/Pr*grad(theta), grad(phi)) - theta_n*phi/dt - s_theta*phi \
-                )*dx
+        bce = bc_expressions
         
-        return F
-
+        for subspace, expression, coordinates, in bc_expressions:
+        
+            bc.append(DirichletBC(W.sub(subspace), expression, coordinates))
+            
+        def nonlinear_variational_form(dt):
+        
+            dt = Constant(dt)
+            
+            F = (\
+                    b(u, q) - gamma*p*q - s_p*q \
+                    + dot(u, v)/dt + c(u, u, v) + a(mu, u, v) + b(v, p) - dot(u_n, v)/dt + dot(f_B(theta), v) - dot(s_u, v) \
+                    + theta*phi/dt - dot(u, grad(phi))*theta + dot(K/Pr*grad(theta), grad(phi)) - theta_n*phi/dt - s_theta*phi \
+                    )*dx
+            
+            return F
     # Implement the Newton linearized form published in danaila2014newton
-    if linearize: 
+    elif linearize: 
 
         w_w = TrialFunction(W)
         
@@ -207,9 +229,7 @@ def run(
         # Specify boundary conditions
         linearized_bc = []
         
-        lbce = linearized_bc_expressions
-        
-        for subspace, expression, coordinates, in bc_expressions:
+        for subspace, expression, coordinates, in linearized_bc_expressions:
     
             linearized_bc.append(DirichletBC(W.sub(subspace), expression, coordinates))
         
