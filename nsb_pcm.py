@@ -70,13 +70,9 @@ def run(
         '0.', \
         '0.5*near(x[0],  0.) -0.5*near(x[0],  1.)'), \
     bc_expressions = [ \
-        [0, ('0.', '0.'), 'near(x[0],  0.) | near(x[0],  1.) | near(x[1], 0.) | near(x[1],  1.)'], \
-        [2, '0.5', 'near(x[0],  0.)'], \
-        [2, '-0.5', 'near(x[0],  1.)']], \
-    linearized_bc_expressions = [ \
-        [0, ('0.', '0.'), 'near(x[0],  0.) | near(x[0],  1.) | near(x[1], 0.) | near(x[1],  1.)'], \
-        [2, '0.', 'near(x[0],  0.)'], \
-        [2, '0.', 'near(x[0],  1.)']], \
+        [0, ('0.', '0.'), 3, 'near(x[0],  0.) | near(x[0],  1.) | near(x[1], 0.) | near(x[1],  1.)'], \
+        [2, '0.', 2, 'near(x[0],  0.)'], \
+        [2, '0.', 2, 'near(x[0],  1.)']], \
     final_time = 1., \
     time_step_size = 1.e-3, \
     adaptive_time = True, \
@@ -197,16 +193,13 @@ def run(
        
         return dot(dot(_v, nabla_grad(_z)), _w) # @todo Is this use of nabla_grad correct?
         
+    bc = []
     
     if not linearize:
         # Specify boundary conditions
-        bc = []
+        for subspace, expression, degree, coordinates, in bc_expressions:
         
-        bce = bc_expressions
-        
-        for subspace, expression, coordinates, in bc_expressions:
-        
-            bc.append(DirichletBC(W.sub(subspace), expression, coordinates))
+            bc.append(DirichletBC(W.sub(subspace), Expression(expression, degree=degree), coordinates))
             
         def nonlinear_variational_form(dt):
         
@@ -227,11 +220,9 @@ def run(
         u_w, p_w, theta_w = split(w_w)
 
         # Specify boundary conditions
-        linearized_bc = []
+        for subspace, expression, degree, coordinates, in bc_expressions:
         
-        for subspace, expression, coordinates, in linearized_bc_expressions:
-    
-            linearized_bc.append(DirichletBC(W.sub(subspace), expression, coordinates))
+            bc.append(DirichletBC(W.sub(subspace), Expression(expression, degree=degree), coordinates))
         
         w_k = Function(W)
         
@@ -314,7 +305,7 @@ def run(
             
                 A, L = linear_variational_form(dt)
 
-                solve(A == L, w_w, bcs=linearized_bc)
+                solve(A == L, w_w, bcs=bc)
                 
                 w_k.assign(w_k - w_w)
                 

@@ -7,6 +7,9 @@ from fenics import Point, RectangleMesh
 import nsb_pcm as ns
 
 
+dim = 2
+
+
 # Set manufactured solution
 u0, v0, p0, epsilon = sp.symbols('u0, v0, p0, epsilon')
 
@@ -48,22 +51,30 @@ symbolic_expressions = [u[0], u[1], p, f0, f1, f2]
 sub_symbolic_expressions = [e.subs(u0, 1.).subs(v0, 1.).subs(p0, 1.).subs(epsilon, 0.001).subs(Re, 1.).subs(mu, 1.).subs(gamma, 1.e-7) for e in symbolic_expressions]
 
 
-# Convert to strings that can later be converted to UFL expressions for fenics
-ufl_strings = [str(e).replace('R_x', 'x[0]').replace('R_y', 'x[1]') for e in sub_symbolic_expressions]
-u0, u1, p, f0, f1, f2 = ufl_strings
-
 # Set initial value expressions
-iv_strings = [str(0.01*e) for e in symbolic_expressions]
-u00, u10, p0 = iv_strings[0:3]
+iv_expressions = [0.01*e for e in sub_symbolic_expressions[0:3]]
+
+
+# Convert to strings that can later be converted to UFL expressions for fenics
+ufl_strings = [str(e).replace('R_x', 'x[0]').replace('R_y', 'x[1]') for e in sub_symbolic_expressions+iv_expressions]
+
+for d in range(dim):
+    ufl_strings = [e.replace('x['+str(d)+']**2', 'pow(x['+str(d)+'], 2)') for e in ufl_strings]
+    
+u0, u1, p, f0, f1, f2, u00, u10, p0 = ufl_strings
+
     
 # Run the FE solver
 on_wall = 'near(x[0],  0.) | near(x[0],  1.) | near(x[1], 0.) | near(x[1],  1.)'
      
 ns.run(linearize=False, \
+    adaptive_time=False, \
+    final_time = 100., \
+    time_step_size = 10., \
     output_dir="output/mms_navier_stokes", \
     mesh=RectangleMesh(Point(-0.1, 0.2), Point(0.7, 0.8), 20, 20, "crossed"), \
     s_u= (f0, f1), \
     s_p= f1, \
     s_theta='0.', \
     initial_values_expression=(u00, u10, p0, '0.'), \
-    bc_expressions=[[0, (u0, u1), on_wall], [1, p, on_wall]]) 
+    bc_expressions=[[0, (u0, u1), 3, on_wall], [1, p, 2, on_wall]]) 
