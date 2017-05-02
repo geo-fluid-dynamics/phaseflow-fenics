@@ -67,16 +67,18 @@ u0, u1, p, f0, f1, f2, u00, u10, p0 = ufl_strings
 # Run the FE solver
 on_wall = 'near(x[0],  0.) | near(x[0],  1.) | near(x[1], 0.) | near(x[1],  1.)'
      
-ns.run(linearize = False, \
-    adaptive_time = False, \
-    final_time = 100., \
-    time_step_size = 10., \
-    output_dir="output/mms_navier_stokes", \
-    mesh=RectangleMesh(Point(-0.1, 0.2), Point(0.7, 0.8), 20, 20, "crossed"), \
-    mu = 0.5,\
-    s_u = (f0, f1), \
-    s_p = f1, \
-    s_theta ='0.', \
-    initial_values_expression = (u00, u10, p0, '0.'), \
-    bc_expressions = [[0, (u0, u1), 3, on_wall], [1, p, 2, on_wall]], \
-    exact_solution_expression = (u0, u1, p, '0.')) 
+for m in (4, 8, 16):
+    
+    ns.run(linearize = False, \
+        adaptive_time = False, \
+        final_time = 100., \
+        time_step_size = 10., \
+        output_dir="output/mms_navier_stokes_m"+str(m), \
+        mesh=RectangleMesh(Point(-0.1, 0.2), Point(0.7, 0.8), m, m, "crossed"), \
+        mu = 0.5,\
+        s_u = (f0, f1), \
+        s_p = f1, \
+        s_theta ='0.', \
+        initial_values_expression = (u00, u10, p0, '0.'), \
+        bc_expressions = [[0, (u0, u1), 3, on_wall], [1, p, 2, on_wall]], \
+        exact_solution_expression = (u0, u1, p, '0.')) 
