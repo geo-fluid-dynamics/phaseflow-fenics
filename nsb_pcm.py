@@ -41,7 +41,7 @@ from fenics import \
 
     
 def run(
-    output_dir = 'output_danaila_natural_convection/', \
+    output_dir = 'nsb_pcm_output', \
     Ra = 1.e6, \
     Pr = 0.71, \
     Re = 1., \
@@ -50,7 +50,10 @@ def run(
     K = 1., \
     g = (0., -1.), \
     mu = 1., \
-    mesh = UnitSquareMesh(10, 10, "crossed"), \
+    mesh = UnitSquareMesh(20, 20, "crossed"), \
+    s_u = Constant((0., 0.)), \
+    s_p = Constant(0.), \
+    s_theta = Constant(0.), \
     initial_values_expression = ( \
             '0.', \
             '0.', \
@@ -68,13 +71,12 @@ def run(
          [2, Constant(-0.5), 'near(x[0],  1.)']], \
     final_time = 1., \
     time_step_size = 1.e-3, \
-    adaptive_time = False, \
+    adaptive_time = True, \
     gamma = 1.e-7, \
-    wall_refinement_cycles = 0, \
     pressure_degree = 1, \
     temperature_degree = 1, \
-    linearize = False, \
-    newton_relative_tolerance = 1.e-10, \
+    linearize = True, \
+    newton_relative_tolerance = 1.e-9, \
     max_newton_iterations = 10, \
     stop_when_steady = True, \
     steady_relative_tolerance = 1.e-8 \
@@ -127,11 +129,11 @@ def run(
        
     
     # Specify boundary conditions
-    bc = ()
+    bc = []
     
     bce = bc_expressions
     
-    for subspace, expression, coordinates, in range(len(bc_expressions)):
+    for subspace, expression, coordinates, in bc_expressions:
     
         bc.append(DirichletBC(W.sub(subspace), expression, coordinates))
         
@@ -203,13 +205,13 @@ def run(
         u_w, p_w, theta_w = split(w_w)
 
         # Specify boundary conditions
-        linearized_bc = ()
+        linearized_bc = []
         
         lbce = linearized_bc_expressions
         
-        for i in range(len(bc_expressions)):
-        
-            linearized_bc.append(DirichletBC(W.sub(lbce[i][0]), lbce[1], lbce[2]))
+        for subspace, expression, coordinates, in bc_expressions:
+    
+            linearized_bc.append(DirichletBC(W.sub(subspace), expression, coordinates))
         
         w_k = Function(W)
         
