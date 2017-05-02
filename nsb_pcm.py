@@ -433,7 +433,7 @@ def run(
     
         error = errornorm(w_e, w_n, 'L2')
     
-    print("Error = " + str(error))
+        print("Error = " + str(error))
     
     
 def test():
