@@ -48,7 +48,7 @@ f2 = sppv.divergence(u[0]*R.x + u[1]*R.y, R) + gamma*p
 # Substitute values for parameters
 symbolic_expressions = [u[0], u[1], p, f0, f1, f2]
 
-sub_symbolic_expressions = [e.subs(u0, 1.).subs(v0, 1.).subs(p0, 1.).subs(epsilon, 0.001).subs(Re, 1.).subs(mu, 0.5).subs(gamma, 1.e-7) for e in symbolic_expressions]
+sub_symbolic_expressions = [e.subs(u0, 1.).subs(v0, 1.).subs(p0, 1.).subs(epsilon, 0.001) for e in symbolic_expressions]
 
 
 # Set initial value expressions
@@ -61,7 +61,7 @@ ufl_strings = [str(e).replace('R_x', 'x[0]').replace('R_y', 'x[1]') for e in sub
 for d in range(dim):
     ufl_strings = [e.replace('x['+str(d)+']**2', 'pow(x['+str(d)+'], 2)') for e in ufl_strings]
     
-u0, u1, p, f0, f1, f2, u00, u10, p0 = ufl_strings
+ux, uy, p, f0, f1, f2, uxi, uyi, pi = ufl_strings
 
     
 # Run the FE solver
@@ -75,10 +75,12 @@ for m in (4, 8, 16):
         time_step_size = 10., \
         output_dir="output/mms_navier_stokes_m"+str(m), \
         mesh=RectangleMesh(Point(-0.1, 0.2), Point(0.7, 0.8), m, m, "crossed"), \
-        mu = 0.5,\
+        Re = 1., \
+        mu = 0.5, \
+        gamma = 1.e-7, \
         s_u = (f0, f1), \
-        s_p = f1, \
+        s_p = f2, \
         s_theta ='0.', \
-        initial_values_expression = (u00, u10, p0, '0.'), \
-        bc_expressions = [[0, (u0, u1), 3, on_wall], [1, p, 2, on_wall]], \
-        exact_solution_expression = (u0, u1, p, '0.')) 
+        initial_values_expression = (uxi, uyi, pi, '0.'), \
+        bc_expressions = [[0, (ux, uy), 3, on_wall], [1, p, 2, on_wall]], \
+        exact_solution_expression = (ux, uy, p, '0.')) 

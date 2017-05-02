@@ -141,9 +141,9 @@ def run(
     
     
     # Set source term expressions
-    s_u = Expression(s_u, element=VxV_ele)
+    s_u = Expression(s_u, element=VxV_ele, Re=Re, mu=mu, gamma=gamma)
     
-    s_p = Expression(s_p, element=Q_ele)
+    s_p = Expression(s_p, element=Q_ele, Re=Re, mu=mu, gamma=gamma)
     
     s_theta = Expression(s_theta, element=V_ele)
         
