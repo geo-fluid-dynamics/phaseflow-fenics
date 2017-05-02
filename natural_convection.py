@@ -39,7 +39,7 @@ from fenics import \
     LinearVariationalProblem, LinearVariationalSolver, NonlinearVariationalProblem, NonlinearVariationalSolver, \
     SubDomain, EdgeFunction, near, adapt
 
-
+    
 def run(
     output_dir = 'output_danaila_natural_convection/', \
     Ra = 1.e6, \
@@ -50,11 +50,26 @@ def run(
     K = 1., \
     g = (0., -1.), \
     mu = 1., \
+    mesh = UnitSquareMesh(10, 10, "crossed"), \
+    initial_values_expression = ( \
+            '0.', \
+            '0.', \
+            '0.', \
+            '0.5*near(x[0],  0.) -0.5*near(x[0],  1.)'), \
+    bc_expressions = \
+        [[0, Constant((0., 0.)),
+            'near(x[0],  0.) | near(x[0],  1.) | near(x[1], 0.) | near(x[1],  1.)'], \
+         [2, Constant(0.5), 'near(x[0],  0.)'], \
+         [2, Constant(-0.5), 'near(x[0],  1.)']], \
+    linearized_bc_expressions = \
+        [[0, Constant((0., 0.)),
+            'near(x[0],  0.) | near(x[0],  1.) | near(x[1], 0.) | near(x[1],  1.)'], \
+         [2, Constant(0.5), 'near(x[0],  0.)'], \
+         [2, Constant(-0.5), 'near(x[0],  1.)']], \
     final_time = 1., \
     time_step_size = 1.e-3, \
     adaptive_time = False, \
     gamma = 1.e-7, \
-    initial_mesh_M = 10, \
     wall_refinement_cycles = 0, \
     pressure_degree = 1, \
     temperature_degree = 1, \
@@ -70,30 +85,6 @@ def run(
     # Compute derived parameters
     velocity_degree = pressure_degree + 1
     
-
-    # Create mesh
-    mesh = UnitSquareMesh(initial_mesh_M, initial_mesh_M, "crossed")
-    
-    # Refine mesh near walls
-    class Wall(SubDomain):
-        
-        def inside(self, x, on_boundary):
-        
-            return on_boundary and (near(x[0], 0.) or near(x[0], 1.) or near(x[1], 0.) or near(x[1], 1.))
-
-            
-    Wall = Wall()
-
-    for i in range(wall_refinement_cycles):
-    
-        edge_markers = EdgeFunction("bool", mesh)
-        
-        Wall.mark(edge_markers, True)
-
-        adapt(mesh, edge_markers)
-        
-        mesh = mesh.child()
-        
 
     # Define function spaces for the system
     VxV = VectorFunctionSpace(mesh, 'P', velocity_degree)
@@ -111,11 +102,11 @@ def run(
 
     '''
     @todo How can we use the space $Q = \left{q \in L^2(\Omega) | \int{q = 0}\right}$ ?
-    
+
     All Navier-Stokes FEniCS examples I've found simply use P2P1. danaila2014newton says that
     they are using the "classical Hilbert spaces" for velocity and pressure, but then they write
     down the space Q with less restrictions than H^1_0.
-    
+
     '''
     Q_ele = FiniteElement('P', mesh.ufl_cell(), pressure_degree)
 
@@ -123,9 +114,8 @@ def run(
 
     W_ele = MixedElement([VxV_ele, Q_ele, V_ele])
 
-    W = FunctionSpace(mesh, W_ele)
-
-
+    W = FunctionSpace(mesh, W_ele)    
+        
     # Define function and test functions
     w = Function(W)   
 
@@ -135,34 +125,19 @@ def run(
     # Split solution function to access variables separately
     u, p, theta = split(w)
        
-
-    # Define boundary conditions
-    hot_wall = 'near(x[0],  0.)'
-
-    cold_wall = 'near(x[0],  1.)'
     
-    adiabatic_walls = 'near(x[1],  0.) | near(x[1],  1.)'
+    # Specify boundary conditions
+    bc = ()
     
-    all_walls = adiabatic_walls + ' | ' + hot_wall + ' | ' + cold_wall
-
-    # @todo Try not constraining pressure at all (homogeneous Neumann, should also keep pressure at zero)
-    # @todo Try just constraining the pressure at a point in the middle of one adiabatic wall 
+    bce = bc_expressions
     
-    bc = [ \
-        DirichletBC(W.sub(0), Constant((0., 0.)), all_walls), \
-        DirichletBC(W.sub(2), Constant(theta_h), hot_wall), \
-        DirichletBC(W.sub(2), Constant(theta_c), cold_wall)]
+    for subspace, expression, coordinates, in range(len(bc_expressions)):
+    
+        bc.append(DirichletBC(W.sub(subspace), expression, coordinates))
         
        
     # Specify the initial values
-    w_n = interpolate( \
-            Expression(
-                ('0.', \
-                 '0.', \
-                 '0.', \
-                 hot_wall + '*' + str(theta_h) + ' + ' + cold_wall + '*' + str(theta_c)), \
-                element=W_ele), \
-            W)
+    w_n = interpolate(Expression(initial_values_expression, element=W_ele), W)
     
     u_n, p_n, theta_n = split(w_n)
 
@@ -213,10 +188,9 @@ def run(
         dt = Constant(dt)
         
         F = (\
-                b(u, q) - gamma*p*q \
-                + dot(u, v)/dt + c(u, u, v) + a(mu, u, v) + b(v, p) - dot(u_n, v)/dt \
-                + dot(f_B(theta), v) \
-                + theta*phi/dt - dot(u, grad(phi))*theta + dot(K/Pr*grad(theta), grad(phi)) - theta_n*phi/dt \
+                b(u, q) - gamma*p*q - s_p*q \
+                + dot(u, v)/dt + c(u, u, v) + a(mu, u, v) + b(v, p) - dot(u_n, v)/dt + dot(f_B(theta), v) - dot(s_u, v) \
+                + theta*phi/dt - dot(u, grad(phi))*theta + dot(K/Pr*grad(theta), grad(phi)) - theta_n*phi/dt - s_theta*phi \
                 )*dx
         
         return F
@@ -228,20 +202,14 @@ def run(
         
         u_w, p_w, theta_w = split(w_w)
 
-        def boundary(x, on_boundary):
+        # Specify boundary conditions
+        linearized_bc = ()
         
-            return on_boundary
+        lbce = linearized_bc_expressions
         
-        '''
-        danaila2014newton sets homogeneous Dirichlet BC's on all residuals, including theta.
-        I don't see how this could be consistent with Neumann BC's for the nonlinear problem.
-        A solution for the Neumann BVP can't be constructed by adding a series of residuals which 
-        use a homogeneous Dirichlet BC.
-        '''
-        bc_dot = [ \
-            DirichletBC(W.sub(0), Constant((0., 0.)), all_walls), \
-            DirichletBC(W.sub(2), Constant(0.), hot_wall), \
-            DirichletBC(W.sub(2), Constant(0.), cold_wall)]
+        for i in range(len(bc_expressions)):
+        
+            linearized_bc.append(DirichletBC(W.sub(lbce[i][0]), lbce[1], lbce[2]))
         
         w_k = Function(W)
         
@@ -257,15 +225,14 @@ def run(
         
             A = (\
                 b(u_w,q) - gamma*p_w*q \
-                + dot(u_w, v)/dt + c(u_w, u_k, v) + c(u_k, u_w, v) + a(mu, u_w, v) + b(v, p_w) \
-                + dot(theta_w*df_B_dtheta, v) \
+                + dot(u_w, v)/dt + c(u_w, u_k, v) + c(u_k, u_w, v) + a(mu, u_w, v) + b(v, p_w) + dot(theta_w*df_B_dtheta, v) \
                 + theta_w*phi/dt - dot(u_k, grad(phi))*theta_w - dot(u_w, grad(phi))*theta_k + dot(K/Pr*grad(theta_w), grad(phi)) \
                 )*dx
                 
             L = (\
-                b(u_k,q) - gamma*p_k*q \
-                + dot(u_k - u_n, v)/dt + c(u_k, u_k, v) + a(mu, u_k, v) + b(v, p_k) + dot(f_B(theta_k), v) \
-                + (theta_k - theta_n)*phi/dt - dot(u_k, grad(phi))*theta_k + dot(K/Pr*grad(theta_k), grad(phi)) \
+                b(u_k,q) - gamma*p_k*q + s_p*q \
+                + dot(u_k - u_n, v)/dt + c(u_k, u_k, v) + a(mu, u_k, v) + b(v, p_k) + dot(f_B(theta_k), v) + dot(s_u, v) \
+                + (theta_k - theta_n)*phi/dt - dot(u_k, grad(phi))*theta_k + dot(K/Pr*grad(theta_k), grad(phi)) + s_theta*phi \
                 )*dx  
                 
             return A, L
@@ -325,7 +292,7 @@ def run(
             
                 A, L = linear_variational_form(dt)
 
-                solve(A == L, w_w, bcs=bc_dot)
+                solve(A == L, w_w, bcs=linearized_bc)
                 
                 w_k.assign(w_k - w_w)
                 
@@ -368,8 +335,6 @@ def run(
             assert(not adaptive_time) # @todo How to get residual from solver.solve() to check if diverging?
         
             F = nonlinear_variational_form(dt)
-            
-            # @todo set MUMPS direct solver for linear sub-solves of nonlinear solve
         
             problem = NonlinearVariationalProblem(F, w, bc, derivative(F, w))
             
@@ -399,7 +364,7 @@ def run(
                 
                 if diverging:
                 
-                    # @todo Report chanages in time step size. Expose parameters for maximum and minimum size.
+                    # @todo Expose parameters for maximum and minimum size.
                 
                     time_step_size /= 2.
                     
