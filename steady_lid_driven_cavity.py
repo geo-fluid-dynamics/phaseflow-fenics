@@ -3,7 +3,7 @@ import nsb_pcm as ns
 from fenics import UnitSquareMesh
 
 
-def run(linearize = False, Re = 1., m=8):
+def run(linearize = False, Re = 1., mu = 1., v = 1., m=32):
 
     lid = 'near(x[1],  1.)'
 
@@ -16,11 +16,11 @@ def run(linearize = False, Re = 1., m=8):
         mesh = UnitSquareMesh(m, m, "crossed"), \
         final_time = 1.e12, \
         time_step_size = 1.e12, \
-        mu = 1./Re, \
-        output_dir="output/steady_lid_driven_cavity_Re"+str(Re)+"_m"+str(m), \
+        mu = mu, \
+        output_dir="output/steady_lid_driven_cavity_mu"+str(mu)+"_v"+str(v)+"_m"+str(m), \
         s_theta ='0.', \
         initial_values_expression = ('0.', '0.', '0.', '0.'), \
-        bc_expressions = [[0, ('1.', '0.'), 3, lid, "topological"], [0, ('0.', '0.'), 3, fixed_walls, "topological"], [1, '0.', 2, bottom_left_corner, "pointwise"]])
+        bc_expressions = [[0, (str(v), '0.'), 3, lid, "topological"], [0, ('0.', '0.'), 3, fixed_walls, "topological"], [1, '0.', 2, bottom_left_corner, "pointwise"]])
         
         
 def test():
