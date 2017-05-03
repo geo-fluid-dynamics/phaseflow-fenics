@@ -83,8 +83,8 @@ def run(
     max_newton_iterations = 10, \
     stop_when_steady = True, \
     steady_relative_tolerance = 1.e-8, \
-    debug_b_factor = 1., \ # For debugging, should also set gamma accordingly
-    debug_c_factor = 1., \ # For debugging
+    debug_b_factor = 1., \
+    debug_c_factor = 1., \
     exact_solution_expression = [] \
     ):
 
@@ -273,6 +273,12 @@ def run(
     def write_solution(_w, time):
 
         _velocity, _pressure, _temperature = _w.split()
+        
+        _velocity.rename("u", "velocity")
+        
+        _pressure.rename("p", "pressure")
+        
+        _temperature.rename("theta", "temperature")
         
         velocity_file << (_velocity, time) 
         
