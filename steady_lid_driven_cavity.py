@@ -3,19 +3,15 @@ import nsb_pcm as ns
 from fenics import UnitSquareMesh
 
 
-lid = 'near(x[1],  1.)'
+def run(linearize = False, Re = 1., m=8):
 
-fixed_walls = 'near(x[0],  0.) | near(x[0],  1.) | near(x[1],  0.)'
+    lid = 'near(x[1],  1.)'
 
-bottom_left_corner = 'near(x[0], 0.) && near(x[1], 0.)'
+    fixed_walls = 'near(x[0],  0.) | near(x[0],  1.) | near(x[1],  0.)'
 
-Re = 100.
+    bottom_left_corner = 'near(x[0], 0.) && near(x[1], 0.)'
 
-for m in (8, 16):
-    
-    print("m = "+str(m)+"\n")
-    
-    ns.run(linearize = False, \
+    ns.run(linearize = linearize, \
         adaptive_time = False, \
         mesh = UnitSquareMesh(m, m, "crossed"), \
         final_time = 1.e12, \
@@ -25,3 +21,15 @@ for m in (8, 16):
         s_theta ='0.', \
         initial_values_expression = ('0.', '0.', '0.', '0.'), \
         bc_expressions = [[0, ('1.', '0.'), 3, lid], [0, ('0.', '0.'), 3, fixed_walls], [1, '0.', 2, bottom_left_corner]])
+        
+        
+def test():
+
+    run()
+    
+    pass
+    
+    
+if __name__=='__main__':
+
+    test()

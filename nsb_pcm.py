@@ -56,7 +56,6 @@ def run(
     output_dir = 'output_nsb_pcm', \
     Ra = 1.e6, \
     Pr = 0.71, \
-    Re = 1., \
     K = 1., \
     g = (0., -1.), \
     mu = 1., \
@@ -84,6 +83,8 @@ def run(
     max_newton_iterations = 10, \
     stop_when_steady = True, \
     steady_relative_tolerance = 1.e-8, \
+    debug_b_factor = 1., \ # For debugging, should also set gamma accordingly
+    debug_c_factor = 1., \ # For debugging
     exact_solution_expression = [] \
     ):
 
@@ -92,9 +93,13 @@ def run(
     
     print(arguments())
     
-    #
+    # @todo Try 3D
     dim = 2
     
+    '''
+    Per Equation 8 from danaila2014newton, we implement an equation scaled with v_ref = nu_liquid/H => t_ref = nu_liquid/H^2 => Re = 1.
+    ''' 
+    Re = 1.
     
     # Compute derived parameters
     velocity_degree = pressure_degree + 1
@@ -141,9 +146,9 @@ def run(
     
     
     # Set source term expressions
-    s_u = Expression(s_u, element=VxV_ele, Re=Re, mu=mu, gamma=gamma)
+    s_u = Expression(s_u, element=VxV_ele, mu=mu, gamma=gamma)
     
-    s_p = Expression(s_p, element=Q_ele, Re=Re, mu=mu, gamma=gamma)
+    s_p = Expression(s_p, element=Q_ele, mu=mu, gamma=gamma)
     
     s_theta = Expression(s_theta, element=V_ele)
         
@@ -187,12 +192,12 @@ def run(
 
     def b(_u, _q):
         
-        return -div(_u)*_q
+        return -div(_u)*_q*debug_b_factor
         
 
     def c(_w, _z, _v):
        
-        return dot(dot(_v, nabla_grad(_z)), _w) # @todo Is this use of nabla_grad correct?
+        return dot(dot(_v, nabla_grad(_z)), _w)*debug_c_factor # @todo Is this use of nabla_grad correct?
         
     bc = []
     
