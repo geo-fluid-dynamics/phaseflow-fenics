@@ -197,7 +197,7 @@ def run(
 
     def c(_w, _z, _v):
        
-        return dot(dot(_v, nabla_grad(_z)), _w)*debug_c_factor # @todo Is this use of nabla_grad correct?
+        return dot(dot(_w, nabla_grad(_z)), _v)*debug_c_factor # @todo Is this use of nabla_grad correct?
     
     # Specify boundary conditions
     bc = []
