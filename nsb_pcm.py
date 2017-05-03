@@ -198,15 +198,18 @@ def run(
     def c(_w, _z, _v):
        
         return dot(dot(_v, nabla_grad(_z)), _w)*debug_c_factor # @todo Is this use of nabla_grad correct?
-        
+    
+    # Specify boundary conditions
     bc = []
     
-    if not linearize:
-        # Specify boundary conditions
-        for subspace, expression, degree, coordinates, in bc_expressions:
+    for subspace, expression, degree, coordinates, method in bc_expressions:
+    
+        bc.append(DirichletBC(W.sub(subspace), Expression(expression, degree=degree), coordinates, method=method))
         
-            bc.append(DirichletBC(W.sub(subspace), Expression(expression, degree=degree), coordinates))
-            
+
+    # Implement the nonlinear variational form
+    if not linearize:
+        
         def nonlinear_variational_form(dt):
         
             dt = Constant(dt)
@@ -224,11 +227,6 @@ def run(
         w_w = TrialFunction(W)
         
         u_w, p_w, theta_w = split(w_w)
-
-        # Specify boundary conditions
-        for subspace, expression, degree, coordinates, in bc_expressions:
-        
-            bc.append(DirichletBC(W.sub(subspace), Expression(expression, degree=degree), coordinates))
         
         w_k = Function(W)
         

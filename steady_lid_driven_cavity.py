@@ -20,7 +20,7 @@ def run(linearize = False, Re = 1., m=8):
         output_dir="output/steady_lid_driven_cavity_Re"+str(Re)+"_m"+str(m), \
         s_theta ='0.', \
         initial_values_expression = ('0.', '0.', '0.', '0.'), \
-        bc_expressions = [[0, ('1.', '0.'), 3, lid], [0, ('0.', '0.'), 3, fixed_walls], [1, '0.', 2, bottom_left_corner]])
+        bc_expressions = [[0, ('1.', '0.'), 3, lid, "topological"], [0, ('0.', '0.'), 3, fixed_walls, "topological"], [1, '0.', 2, bottom_left_corner, "pointwise"]])
         
         
 def test():
