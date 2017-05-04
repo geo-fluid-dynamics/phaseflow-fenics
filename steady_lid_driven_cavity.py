@@ -3,7 +3,7 @@ import nsb_pcm as ns
 from fenics import UnitSquareMesh
 
 
-def run(linearize = False, Re = 1., mu = 1., v = 1., m=32):
+def run(linearize = False, mu = 1., v = 1., m=32):
 
     lid = 'near(x[1],  1.)'
 
