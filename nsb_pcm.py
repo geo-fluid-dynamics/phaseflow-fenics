@@ -53,25 +53,25 @@ def arguments():
 
     
 def run(
-    output_dir = 'output_nsb_pcm', \
+    output_dir = "output/natural_convection", \
     Ra = 1.e6, \
     Pr = 0.71, \
     K = 1., \
     g = (0., -1.), \
     mu = 1., \
     mesh = UnitSquareMesh(20, 20, "crossed"), \
-    s_u = ('0.', '0.'), \
-    s_p = '0.', \
-    s_theta = '0.', \
+    s_u = ("0.", "0."), \
+    s_p = "0.", \
+    s_theta = "0.", \
     initial_values_expression = ( \
-        '0.', \
-        '0.', \
-        '0.', \
-        '0.5*near(x[0],  0.) -0.5*near(x[0],  1.)'), \
+        "0.", \
+        "0.", \
+        "0.", \
+        "0.5*near(x[0],  0.) -0.5*near(x[0],  1.)"), \
     bc_expressions = [ \
-        [0, ('0.', '0.'), 3, 'near(x[0],  0.) | near(x[0],  1.) | near(x[1], 0.) | near(x[1],  1.)'], \
-        [2, '0.', 2, 'near(x[0],  0.)'], \
-        [2, '0.', 2, 'near(x[0],  1.)']], \
+        [0, ("0.", "0."), 3, "near(x[0],  0.) | near(x[0],  1.) | near(x[1], 0.) | near(x[1],  1.)","topological"], \
+        [2, "0.", 2, "near(x[0],  0.)", "topological"], \
+        [2, "0.", 2, "near(x[0],  1.)", "topological"]], \
     final_time = 1., \
     time_step_size = 1.e-3, \
     adaptive_time = True, \
