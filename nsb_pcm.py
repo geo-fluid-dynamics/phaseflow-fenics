@@ -89,7 +89,7 @@ def run(
     ):
 
     #
-    print("Running nsb_pcm with the following arguments: \n")
+    print("Running nsb_pcm with the following arguments:")
     
     print(arguments())
     
