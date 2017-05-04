@@ -367,9 +367,9 @@ def run(
             
             assert(converged)
 
-        
+    EPSILON = 1.e-12
 
-    while time < final_time:
+    while time < final_time - EPSILON:
 
         if adaptive_time:
     
