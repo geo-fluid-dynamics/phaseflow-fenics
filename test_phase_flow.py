@@ -1,11 +1,11 @@
-import nsb_pcm as ns
+import phase_flow
 
 from fenics import UnitSquareMesh
 
 
 def default():
 
-    ns.run()
+    phase_flow.run()
 
 
 def steady_lid_driven_cavity(linearize = False, mu = 1., v = 1., m=32):
@@ -16,7 +16,7 @@ def steady_lid_driven_cavity(linearize = False, mu = 1., v = 1., m=32):
 
     bottom_left_corner = 'near(x[0], 0.) && near(x[1], 0.)'
 
-    ns.run(linearize = linearize, \
+    phase_flow.run(linearize = linearize, \
         adaptive_time = False, \
         mesh = UnitSquareMesh(m, m, "crossed"), \
         final_time = 1.e12, \
@@ -36,7 +36,7 @@ def heat(m=16):
 
     adiabatic_walls = 'near(x[1],  0.) | near(x[1], 1.)'
 
-    ns.run(linearize = True, \
+    phase_flow.run(linearize = True, \
         adaptive_time = True, \
         mesh = UnitSquareMesh(m, m, "crossed"), \
         final_time = 1., \
@@ -57,7 +57,7 @@ def natural_convection(linearize = True, adaptive_time = True, m=20):
     
         hot = cold = 0.
 
-    ns.run( \
+    phase_flow.run( \
         output_dir = "output/natural_convection_linearize"+str(linearize)+"_adaptivetime"+str(adaptive_time)+"_m"+str(m), \
         mesh = UnitSquareMesh(m, m, "crossed"), \
         linearize = linearize, adaptive_time = adaptive_time, \
