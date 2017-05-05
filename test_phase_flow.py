@@ -47,7 +47,7 @@ def heat(m=16):
         bc_expressions = [[2, ('0.'), 2, hot_wall, "topological"], [2, ('-0.'), 2, cold_wall, "topological"]])
         
 
-def natural_convection(linearize = True, adaptive_time = True, m=20):
+def natural_convection(linearize = True, adaptive_time = True, m=20, time_step_size = 1.e-3):
 
     hot = 0.5
     
@@ -60,7 +60,11 @@ def natural_convection(linearize = True, adaptive_time = True, m=20):
     phase_flow.run( \
         output_dir = "output/natural_convection_linearize"+str(linearize)+"_adaptivetime"+str(adaptive_time)+"_m"+str(m), \
         mesh = UnitSquareMesh(m, m, "crossed"), \
-        linearize = linearize, adaptive_time = adaptive_time, \
+        time_step_size = time_step_size, \
+        final_time = 10., \
+        stop_when_steady = True, \
+        linearize = linearize,
+        adaptive_time = adaptive_time, \
         bc_expressions = [ \
         [0, ("0.", "0."), 3, "near(x[0],  0.) | near(x[0],  1.) | near(x[1], 0.) | near(x[1],  1.)","topological"], \
         [2, str(hot), 2, "near(x[0],  0.)", "topological"], \
