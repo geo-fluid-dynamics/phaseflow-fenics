@@ -1,26 +1,19 @@
-'''
-
-    @brief  Solve the benchmark "differentially heated cavity" natural convection problem using finite elements.
-
-    @detail
+''' Solve the benchmark "differentially heated cavity" natural convection problem using finite elements.
         
-        Solve the natural convection test problem from
+    Solve the natural convection test problem from
 
-            @article
-            {danaila2014newton,
-              title={A Newton method with adaptive finite elements for solving phase-change problems with natural convection},
-              author={Danaila, Ionut and Moglan, Raluca and Hecht, Fr{\'e}d{\'e}ric and Le Masson, St{\'e}phane},
-              journal={Journal of Computational Physics},
-              volume={274},
-              pages={826--840},
-              year={2014},
-              publisher={Academic Press}
-            }
-        
-        Match the notation in danaila2014newton as best as possible.
-
+        @article
+        {danaila2014newton,
+          title={A Newton method with adaptive finite elements for solving phase-change problems with natural convection},
+          author={Danaila, Ionut and Moglan, Raluca and Hecht, Fr{\'e}d{\'e}ric and Le Masson, St{\'e}phane},
+          journal={Journal of Computational Physics},
+          volume={274},
+          pages={826--840},
+          year={2014},
+          publisher={Academic Press}
+        }
     
-    @author Alexander G. Zimmerman <zimmerman@aices.rwth-aachen.de>
+    Match the notation in danaila2014newton as best as possible.
     
 '''
 
