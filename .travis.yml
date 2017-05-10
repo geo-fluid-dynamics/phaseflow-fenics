@@ -1,0 +1,18 @@
+language: python
+
+services:
+  - docker
+
+branches:
+    only:
+        - master
+  
+notifications:
+  email: false
+  slack: aices-pcm-cfd:ShncJAFCJzx48zt8hrXpRwGw
+
+before_install:
+- docker pull quay.io/fenicsproject/stable:latest
+
+script:
+- docker run -P -v `pwd`:/home/fenics/phaseflow-fenics:rw quay.io/fenicsproject/stable:latest /bin/sh -c "pip install -U pytest; pytest phaseflow-fenics/phaseflow.py"
