@@ -11,3 +11,42 @@ Author: Alexander G. Zimmerman <alex.g.zimmerman@gmail.com>
 - Incompressible Navier-Stokes (steady and unsteady), lid-driven cavity benchmark
 - Heat conduction
 - Not yet successfully verified: Natural convection, where the momentum equation includes temperature-based bouyancy forces per the Boussinesq approximation
+
+# For users:
+## Run with [Docker](https://www.docker.com)
+
+We have a [Docker image](quay.io/fenicsproject/stable:latest) with a pre-configured Python environment and pre-built FEniCS, courtesy of the FEniCS developers.
+
+Get the [free community edition of Docker](https://www.docker.com/community-edition).
+
+Pull the [image](https://hub.docker.com/r/zimmerman/phaseflow-fenics/) and run the container with Docker
+
+    docker run -ti zimmerman/phaseflow-fenics:latest
+    
+Or run the container with access to a shared folder (shared between the host and the container)
+
+    docker run -ti -v $(pwd):/home/fenics/shared zimmerman/phaseflow-fenics:latest
+    
+As of this writing, zimmerman/phaseflow-fenics:latest only adds pytest to the [FEniCS Docker image](quay.io/fenicsproject/stable:latest) , as shown in our [Dockerfile](https://github.com/alexanderzimmerman/phaseflow-fenics/blob/master/Dockerfile).
+
+If you plan to use this container repeatedly, then instead use this command to also give it a name
+
+    docker run -ti -v $(pwd):/home/fenics/shared --name phaseflow-fenics zimmerman/phaseflow-fenics:latest
+
+After exiting the container, you can start it again with
+
+    docker start phaseflow-fenics
+    
+You can confirm that the container is running with
+
+    docker ps
+    
+or list all containers (running or not) with
+
+    docker ps -a
+
+To enter a bash terminal inside of the running container
+
+    docker start phaseflow-fenics
+    
+    docker exec -ti -u dealii phaseflow-fenics /bin/bash -l
