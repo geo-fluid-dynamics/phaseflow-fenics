@@ -1,0 +1,21 @@
+language: python
+
+python:
+  - "2.7"
+  
+services:
+  - docker
+
+branches:
+    only:
+        - master
+  
+notifications:
+  email: false
+  slack: aices-pcm-cfd:ShncJAFCJzx48zt8hrXpRwGw
+
+before_install:
+- docker pull zimmerman/fenics-pytest:latest
+
+script:
+- docker run --rm -P -v `pwd`:/home/fenics/shared -w /home/fenics/shared zimmerman/fenics-pytest:latest "pytest"
