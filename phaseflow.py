@@ -32,7 +32,9 @@ from fenics import \
     LinearVariationalProblem, LinearVariationalSolver, NonlinearVariationalProblem, NonlinearVariationalSolver, \
     SubDomain, EdgeFunction, near, adapt
 
+import test_phaseflow
 
+    
 def arguments():
     """Returns tuple containing dictionary of calling function's
        named arguments and a list of calling function's unnamed
@@ -97,7 +99,6 @@ def run(
     # Compute derived parameters
     velocity_degree = pressure_degree + 1
     
-
     # Define function spaces for the system
     VxV = VectorFunctionSpace(mesh, 'P', velocity_degree)
 
@@ -126,7 +127,7 @@ def run(
 
     W_ele = MixedElement([VxV_ele, Q_ele, V_ele])
 
-    W = FunctionSpace(mesh, W_ele)    
+    W = FunctionSpace(mesh, W_ele)   
         
     # Define function and test functions
     w = Function(W)   
@@ -436,15 +437,14 @@ def run(
         error = errornorm(w_e, w_n, 'L2')
     
         print("Error = " + str(error))
-    
-    
-def test():
-
-    run()
-    
-    pass
+        
+    w_n.rename("w", "state")
+        
+    fe_field_interpolant = interpolate(w_n, W)
+        
+    return fe_field_interpolant
     
     
 if __name__=='__main__':
 
-    test()
+    run()
