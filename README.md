@@ -3,7 +3,9 @@ Phaseflow simulates the unsteady conservation of mass, momentum, and energy for 
 
 Currently only a homogeneous fluid is supported. The project is currently under heavy development to support phase-change materials, particularly the melting and freezing of water-ice.
 
-Author: Alexander G. Zimmerman zimmerman@aices.rwth-aachen.de
+Author: Alexander G. Zimmerman <alex.g.zimmerman@gmail.com>
+
+[![Build Status](https://travis-ci.org/alexanderzimmerman/phaseflow-fenics.svg?branch=master)](https://travis-ci.org/alexanderzimmerman/phaseflow-fenics) (<b>Continuous integration status</b>; click the button to go to Travis-CI)
 
 ## Current capabilities
 - Incompressible Navier-Stokes (steady and unsteady), lid-driven cavity benchmark
