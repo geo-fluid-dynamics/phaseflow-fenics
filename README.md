@@ -19,7 +19,7 @@ We have a [Docker image](quay.io/fenicsproject/stable:latest) with a pre-configu
 
 Get the [free community edition of Docker](https://www.docker.com/community-edition).
 
-Pull the [image](https://hub.docker.com/r/zimmerman/phaseflow-fenics/) and run the container with Docker
+Pull the [image](https://hub.docker.com/r/zimmerman/phaseflow-fenics/latest) and run the container with Docker
 
     docker run -ti zimmerman/phaseflow-fenics:latest
     
@@ -27,7 +27,7 @@ Or run the container with access to a shared folder (shared between the host and
 
     docker run -ti -v $(pwd):/home/fenics/shared zimmerman/phaseflow-fenics:latest
     
-As of this writing, zimmerman/phaseflow-fenics:latest only adds pytest to the [FEniCS Docker image](quay.io/fenicsproject/stable:latest) , as shown in our [Dockerfile](https://github.com/alexanderzimmerman/phaseflow-fenics/blob/master/Dockerfile).
+Note that our [Docker image](https://hub.docker.com/r/zimmerman/phaseflow-fenics/latest) only adds pytest to the [FEniCS Docker image](quay.io/fenicsproject/stable:latest) and clones this repository, as shown in our [Dockerfile](https://github.com/alexanderzimmerman/phaseflow-fenics/blob/master/Dockerfile). So for the most part, everything you need to know is [here in the "FEniCS in Docker" manual](https://fenics.readthedocs.io/projects/containers/en/latest/).
 
 If you plan to use this container repeatedly, then instead use this command to also give it a name
 
@@ -49,4 +49,4 @@ To enter a bash terminal inside of the running container
 
     docker start phaseflow-fenics
     
-    docker exec -ti -u dealii phaseflow-fenics /bin/bash -l
+    docker exec -ti -u fenics phaseflow-fenics /bin/bash -l
