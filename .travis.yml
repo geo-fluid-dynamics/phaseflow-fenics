@@ -18,4 +18,5 @@ before_install:
 - docker pull zimmerman/fenics-pytest:latest
 
 script:
-- docker run --rm -P -v 'pwd':/home/fenics/shared/phaseflow-fenics -w /home/fenics/shared/phaseflow-fenics zimmerman/fenics-pytest:latest "pytest"
+- ls
+- docker run --rm -P -v 'pwd':/home/fenics/shared/phaseflow-fenics -w /home/fenics/shared/phaseflow-fenics zimmerman/fenics-pytest:latest "ls; pytest"
