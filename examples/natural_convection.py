@@ -21,6 +21,11 @@ def run(linearize = True, adaptive_time = True, m=20, time_step_size = 1.e-3):
         stop_when_steady = True, \
         linearize = linearize,
         adaptive_time = adaptive_time, \
+        initial_values_expression = ( \
+            "0.", \
+            "0.", \
+            "0.", \
+            "0.5*near(x[0],  0.) -0.5*near(x[0],  1.)"), \
         bc_expressions = [ \
         [0, ("0.", "0."), 3, "near(x[0],  0.) | near(x[0],  1.) | near(x[1], 0.) | near(x[1],  1.)","topological"], \
         [2, str(hot), 2, "near(x[0],  0.)", "topological"], \
