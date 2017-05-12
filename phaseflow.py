@@ -49,16 +49,20 @@ def arguments():
 
  
 Re = 1.
+
+default_Ra = 1.e6
     
+default_Pr = 0.71
+
 def run(
     output_dir = "output/natural_convection", \
-    Ra = 1.e6, \
-    Pr = 0.71, \
+    Ra = default_Ra, \
+    Pr = default_Pr, \
     K = 1., \
     mu = 1., \
     g = (0., -1.), \
-    m_B = lambda theta : theta*Ra/(Pr*Re*Re), \
-    dm_B_dtheta = lambda theta : Ra/(Pr*Re*Re), \
+    m_B = lambda theta : theta*default_Ra/(default_Pr*Re*Re), \
+    dm_B_dtheta = lambda theta : default_Ra/(default_Pr*Re*Re), \
     mesh = UnitSquareMesh(20, 20, "crossed"), \
     s_u = ("0.", "0."), \
     s_p = "0.", \
