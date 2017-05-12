@@ -46,6 +46,14 @@ def arguments():
     args.update(args.pop(kwname, []))
     return args, posargs
 
+''' @todo How should the interface look for the bouyancy force? 
+The code really just needs K, Pr, g, mu(theta), and f_B(theta).
+Ra and Re shouldn't be shown at this scope.
+'''   
+def default_f_B(_theta):
+        
+    return _theta*Ra/(Pr*Re*Re)*g
+    
     
 def run(
     output_dir = "output/natural_convection", \
@@ -98,6 +106,7 @@ def run(
     
     # Compute derived parameters
     velocity_degree = pressure_degree + 1
+
     
     # Define function spaces for the system
     VxV = VectorFunctionSpace(mesh, 'P', velocity_degree)
@@ -169,12 +178,7 @@ def run(
     gamma = Constant(gamma)
 
 
-    # Define variational form
-    def f_B(_theta):
-        
-        return _theta*Ra/(Pr*Re*Re)*g
-           
-       
+    # Define variational form   
     def a(_mu, _u, _v):
 
         def D(_u):
