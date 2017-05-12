@@ -30,6 +30,7 @@ from fenics import \
     project, interpolate, \
     solve, parameters, info, derivative, \
     LinearVariationalProblem, LinearVariationalSolver, NonlinearVariationalProblem, NonlinearVariationalSolver, \
+    AdaptiveLinearVariationalSolver, \
     SubDomain, EdgeFunction, near, adapt
 
 import test_phaseflow
@@ -46,22 +47,18 @@ def arguments():
     args.update(args.pop(kwname, []))
     return args, posargs
 
-''' @todo How should the interface look for the bouyancy force? 
-The code really just needs K, Pr, g, mu(theta), and f_B(theta).
-Ra and Re shouldn't be shown at this scope.
-'''   
-def default_f_B(_theta):
-        
-    return _theta*Ra/(Pr*Re*Re)*g
-    
+ 
+Re = 1.
     
 def run(
     output_dir = "output/natural_convection", \
     Ra = 1.e6, \
     Pr = 0.71, \
     K = 1., \
-    g = (0., -1.), \
     mu = 1., \
+    g = (0., -1.), \
+    m_B = lambda theta : theta*Ra/(Pr*Re*Re), \
+    dm_B_dtheta = lambda theta : Ra/(Pr*Re*Re), \
     mesh = UnitSquareMesh(20, 20, "crossed"), \
     s_u = ("0.", "0."), \
     s_p = "0.", \
@@ -78,6 +75,7 @@ def run(
     final_time = 1., \
     time_step_size = 1.e-3, \
     adaptive_time = True, \
+    adaptive_space = False, \
     gamma = 1.e-7, \
     pressure_degree = 1, \
     temperature_degree = 1, \
@@ -172,7 +170,7 @@ def run(
     K = Constant(K)
 
     mu = Constant(mu)
-
+    
     g = Constant(g)
 
     gamma = Constant(gamma)
@@ -214,7 +212,7 @@ def run(
             
             F = (\
                     b(u, q) - gamma*p*q - s_p*q \
-                    + dot(u, v)/dt + c(u, u, v) + a(mu, u, v) + b(v, p) - dot(u_n, v)/dt + dot(f_B(theta), v) - dot(s_u, v) \
+                    + dot(u, v)/dt + c(u, u, v) + a(mu, u, v) + b(v, p) - dot(u_n, v)/dt + dot(m_B(theta)*g, v) - dot(s_u, v) \
                     + theta*phi/dt - dot(u, grad(phi))*theta + dot(K/Pr*grad(theta), grad(phi)) - theta_n*phi/dt - s_theta*phi \
                     )*dx
             
@@ -232,25 +230,27 @@ def run(
     
         u_k, p_k, theta_k = split(w_k)
 
-        df_B_dtheta = Ra/(Pr*Re*Re)*g
-
         def linear_variational_form(dt):
         
             dt = Constant(dt)
         
             A = (\
                 b(u_w,q) - gamma*p_w*q \
-                + dot(u_w, v)/dt + c(u_w, u_k, v) + c(u_k, u_w, v) + a(mu, u_w, v) + b(v, p_w) + dot(theta_w*df_B_dtheta, v) \
+                + dot(u_w, v)/dt + c(u_w, u_k, v) + c(u_k, u_w, v) + a(mu, u_w, v) + b(v, p_w) + dot(theta_w*dm_B_dtheta(theta)*g, v) \
                 + theta_w*phi/dt - dot(u_k, grad(phi))*theta_w - dot(u_w, grad(phi))*theta_k + dot(K/Pr*grad(theta_w), grad(phi)) \
                 )*dx
                 
             L = (\
                 b(u_k,q) - gamma*p_k*q + s_p*q \
-                + dot(u_k - u_n, v)/dt + c(u_k, u_k, v) + a(mu, u_k, v) + b(v, p_k) + dot(f_B(theta_k), v) + dot(s_u, v) \
+                + dot(u_k - u_n, v)/dt + c(u_k, u_k, v) + a(mu, u_k, v) + b(v, p_k) + dot(m_B(theta_k)*g, v) + dot(s_u, v) \
                 + (theta_k - theta_n)*phi/dt - dot(u_k, grad(phi))*theta_k + dot(K/Pr*grad(theta_k), grad(phi)) + s_theta*phi \
                 )*dx  
                 
             return A, L
+            
+        if adaptive_space:
+        
+            M = theta_w*dx
 
 
     # Create progress bar
@@ -313,8 +313,24 @@ def run(
             
                 A, L = linear_variational_form(dt)
 
-                solve(A == L, w_w, bcs=bc)
+                if not adaptive_space:
                 
+                    solve(A == L, w_w, bcs=bc)
+                    
+                else:
+                        
+                    problem = LinearVariationalProblem(A, L, w_w, bcs=bc)
+
+                    solver = AdaptiveLinearVariationalSolver(problem, M)
+
+                    solver.parameters["error_control"]["dual_variational_solver"]["linear_solver"] = "cg"
+
+                    solver.parameters["error_control"]["dual_variational_solver"]["symmetric"] = True
+
+                    solver.solve(tol)
+
+                    solver.summary()
+
                 w_k.assign(w_k - w_w)
                 
                 norm_residual = norm(w_w, 'L2')/norm(w_k, 'L2')
@@ -342,8 +358,6 @@ def run(
                     print 'Converged after ' + str(k) + ' iterations'
                     
                     break
-                    
-            assert(converged)
             
             w.assign(w_k)
             
@@ -391,6 +405,8 @@ def run(
                     
                     print 'Set time step size to dt = ' + str(time_step_size)
         
+            assert(not diverging)
+            
             time += time_step_size
             
             time_step_size *= 2.
