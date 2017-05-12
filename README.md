@@ -9,8 +9,7 @@ Author: Alexander G. Zimmerman <alex.g.zimmerman@gmail.com>
 
 ## Current capabilities
 - Incompressible Navier-Stokes (steady and unsteady), lid-driven cavity benchmark
-- Heat conduction
-- Not yet successfully verified: Natural convection, where the momentum equation includes temperature-based bouyancy forces per the Boussinesq approximation
+- Natural convection, where the momentum equation includes temperature-based bouyancy forces per the Boussinesq approximation
 
 # For users:
 ## Run with [Docker](https://www.docker.com)
