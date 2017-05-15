@@ -12,10 +12,9 @@ def run(m=16):
     adiabatic_walls = 'near(x[1],  0.) | near(x[1], 1.)'
 
     phaseflow.run(linearize = True, \
-        adaptive_time = True, \
         mesh = UnitSquareMesh(m, m, "crossed"), \
         final_time = 1., \
-        time_step_size = 0.1, \
+        time_step_size = phaseflow.BoundedValue(0.1, 0.1, 1.), \
         g = (0., 0.), \
         output_dir="output/heat", \
         initial_values_expression = ('0.', '0.', '0.', '0.5*'+hot_wall+' - 0.5*'+cold_wall), \

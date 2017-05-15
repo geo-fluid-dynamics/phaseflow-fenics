@@ -56,6 +56,33 @@ default_Ra = 1.e6
     
 default_Pr = 0.71
 
+class BoundedValue(object):
+
+    def __init__(self, min=0., value=0., max=0.):
+        self.min = min
+        self.value = value
+        self.max = max
+    
+    def set(self, value):
+        if value > self.max:
+            value = self.max
+        elif value < self.min:
+            value = self.min
+    
+class TimeStepSize(BoundedValue):
+
+    def __init__(self, bounded_value):
+        super(TimeStepSize, self).__init__(bounded_value.min, bounded_value.value, bounded_value.max)
+
+    def set(self, value):
+    
+        old_value = value
+        
+        super(TimeStepSize, self).set(value)
+        
+        if abs(self.value - old_value) > DOLFIN_EPS:
+            print 'Set time step size to dt = ' + str(value)
+
 def run(
     output_dir = "output/natural_convection", \
     Ra = default_Ra, \
@@ -79,7 +106,7 @@ def run(
         [2, "0.", 2, "near(x[0],  0.)", "topological"], \
         [2, "0.", 2, "near(x[0],  1.)", "topological"]], \
     final_time = 1., \
-    time_step_size = (1.e-3, 1.e-3, 1.), \
+    time_step_size = BoundedValue(1.e-3, 1.e-3, 1.), \
     adaptive_space = False, \
     gamma = 1.e-7, \
     pressure_degree = 1, \
@@ -98,6 +125,9 @@ def run(
     print("Running nsb_pcm with the following arguments:")
     
     print(arguments())
+    
+    # Validate inputs
+    assert type(time_step_size) == type(BoundedValue())
     
     # @todo Try 3D
     dim = 2
@@ -298,26 +328,7 @@ def run(
     
     w_w = Function(W) # w_w was previously a TrialFunction, but must be a Function when calling solve()
 
-    time_residual = Function(W)
-    
-    class TimeStepSize():
-    
-        def __init__(self, min, value=min, max=min):
-            self.min = min
-            self.value = value
-            self.max = max
-            
-        def set(self, value):
-            if value > self.max:
-                value = self.max
-            elif value < self.min:
-                value = self.min
-            
-            if abs(value - self.value) > DOLFIN_EPS:
-                print 'Set time step size to dt = ' + str(value)
-            
-            self.value = value
-            
+    time_residual = Function(W)        
     
     def solve_time_step(dt):
     
@@ -398,7 +409,7 @@ def run(
 
     EPSILON = 1.e-12
     
-    time_step_size = TimeStepSize(time_step_size[0], time_step_size[1], time_step_size[2])
+    time_step_size = TimeStepSize(time_step_size)
 
     while time < final_time - EPSILON:
 

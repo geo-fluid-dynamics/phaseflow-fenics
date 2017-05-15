@@ -2,7 +2,7 @@ import phaseflow
 
 from fenics import UnitSquareMesh
 
-from ufl import *
+from ufl import sign
 
     
 def run(m=20):
@@ -66,7 +66,7 @@ def run(m=20):
         m_B = lambda theta : Ra/(Pr*Re*Re)/(beta*(T_h - T_c))*(rho(theta_f) - rho(theta))/rho(theta_f), \
         dm_B_dtheta = lambda theta : -Ra/(Pr*Re*Re)/(beta*(T_h - T_c))*(ddtheta_rho(theta))/rho(theta_f), \
         mesh = UnitSquareMesh(m, m, "crossed"), \
-        time_step_size = (0.001, 0.004, 10.), \
+        time_step_size = phaseflow.BoundedValue(0.001, 0.004, 10.), \
         final_time = 10., \
         linearize = linearize, \
         initial_values_expression = ( \

@@ -12,10 +12,9 @@ def run(linearize = False, mu = 0.01, v = 1., m=20):
     bottom_left_corner = 'near(x[0], 0.) && near(x[1], 0.)'
 
     phaseflow.run(linearize = linearize, \
-        adaptive_time = linearize, \
         mesh = UnitSquareMesh(m, m, "crossed"), \
         final_time = 1.e12, \
-        time_step_size = 1.e12, \
+        time_step_size = phaseflow.BoundedValue(1.e12, 1.e12, 1.e12), \
         mu = mu, \
         output_dir="output/steady_lid_driven_cavity_mu"+str(mu)+"_v"+str(v)+"_m"+str(m), \
         s_theta ='0.', \
