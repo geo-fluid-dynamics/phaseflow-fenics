@@ -33,6 +33,8 @@ from fenics import \
     AdaptiveLinearVariationalSolver, \
     SubDomain, EdgeFunction, near, adapt
 
+from dolfin import DOLFIN_EPS
+    
 import test_phaseflow
 
     
@@ -77,8 +79,7 @@ def run(
         [2, "0.", 2, "near(x[0],  0.)", "topological"], \
         [2, "0.", 2, "near(x[0],  1.)", "topological"]], \
     final_time = 1., \
-    time_step_size = 1.e-3, \
-    adaptive_time = True, \
+    time_step_size = (1.e-3, 1.e-3, 1.), \
     adaptive_space = False, \
     gamma = 1.e-7, \
     pressure_degree = 1, \
@@ -299,13 +300,30 @@ def run(
 
     time_residual = Function(W)
     
+    class TimeStepSize():
+    
+        def __init__(self, min, value=min, max=min):
+            self.min = min
+            self.value = value
+            self.max = max
+            
+        def set(self, value):
+            if value > self.max:
+                value = self.max
+            elif value < self.min:
+                value = self.min
+            
+            if abs(value - self.value) > DOLFIN_EPS:
+                print 'Set time step size to dt = ' + str(value)
+            
+            self.value = value
+            
+    
     def solve_time_step(dt):
     
         if linearize:
         
             print '\nIterating Newton method'
-            
-            converged = False
             
             iteration_count = 0
             
@@ -345,17 +363,11 @@ def run(
                 
                     diverging = True
                     
-                    if not adaptive_time:
-                    
-                        assert(not diverging)
-                    
                     return diverging
                 
                 old_residual = norm_residual
                 
                 if norm_residual < newton_relative_tolerance:
-                
-                    converged = True
                     
                     iteration_count = k + 1
                     
@@ -371,7 +383,8 @@ def run(
 
         else:
         
-            assert(not adaptive_time) # @todo How to get residual from solver.solve() to check if diverging?
+            '''  @todo Implement adaptive time for nonlinear version.
+            How to get residual from solver.solve() to check if diverging? '''
         
             F = nonlinear_variational_form(dt)
         
@@ -384,44 +397,36 @@ def run(
             assert(converged)
 
     EPSILON = 1.e-12
+    
+    time_step_size = TimeStepSize(time_step_size[0], time_step_size[1], time_step_size[2])
 
     while time < final_time - EPSILON:
 
-        if adaptive_time:
+        remaining_time = final_time - time
     
-            remaining_time = final_time - time
-        
-            if time_step_size > remaining_time:
-                
-                time_step_size = remaining_time        
-        
-            diverging = True
+        if time_step_size.value > remaining_time:
             
-            while diverging:
+            time_step_size.set(remaining_time)
+    
+        diverging = True
+        
+        while diverging:
+        
+            diverging = solve_time_step(time_step_size.value)
             
-                diverging = solve_time_step(time_step_size)
-                
-                if diverging:
-                
-                    # @todo Expose parameters for maximum and minimum size.
-                
-                    time_step_size /= 2.
+            if time_step_size.value <= time_step_size.min + DOLFIN_EPS:
                     
-                    print 'Set time step size to dt = ' + str(time_step_size)
+                assert(not diverging)
+            
+            if diverging:
+            
+                time_step_size.set(time_step_size.value/2.)
+    
+        assert(not diverging)
         
-            assert(not diverging)
-            
-            time += time_step_size
-            
-            time_step_size *= 2.
-            
-            print 'Set time step size to dt = ' + str(time_step_size)
-
-        else:
-            
-            solve_time_step(time_step_size)
-            
-            time += time_step_size
+        time += time_step_size.value
+        
+        time_step_size.set(2*time_step_size.value)
             
         print 'Reached time t = ' + str(time)
             
