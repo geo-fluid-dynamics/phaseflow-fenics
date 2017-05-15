@@ -3,7 +3,7 @@ import phaseflow
 from fenics import UnitSquareMesh
 
     
-def run(linearize = True, adaptive_time = True, m=20, time_step_size = 1.e-3):
+def run(linearize = True, m=20):
 
     hot = 0.5
     
@@ -14,13 +14,12 @@ def run(linearize = True, adaptive_time = True, m=20, time_step_size = 1.e-3):
         hot = cold = 0.
 
     phaseflow.run( \
-        output_dir = "output/natural_convection_linearize"+str(linearize)+"_adaptivetime"+str(adaptive_time)+"_m"+str(m), \
+        output_dir = "output/natural_convection_linearize"+str(linearize)+"_m"+str(m), \
         mesh = UnitSquareMesh(m, m, "crossed"), \
-        time_step_size = time_step_size, \
+        time_step_size = phaseflow.BoundedValue(1.e-3, 1.e-3, 10.), \
         final_time = 10., \
         stop_when_steady = True, \
         linearize = linearize,
-        adaptive_time = adaptive_time, \
         initial_values_expression = ( \
             "0.", \
             "0.", \

@@ -30,8 +30,11 @@ from fenics import \
     project, interpolate, \
     solve, parameters, info, derivative, \
     LinearVariationalProblem, LinearVariationalSolver, NonlinearVariationalProblem, NonlinearVariationalSolver, \
+    AdaptiveLinearVariationalSolver, \
     SubDomain, EdgeFunction, near, adapt
 
+from dolfin import DOLFIN_EPS
+    
 import test_phaseflow
 
     
@@ -46,14 +49,49 @@ def arguments():
     args.update(args.pop(kwname, []))
     return args, posargs
 
+ 
+Re = 1.
+
+default_Ra = 1.e6
     
+default_Pr = 0.71
+
+class BoundedValue(object):
+
+    def __init__(self, min=0., value=0., max=0.):
+        self.min = min
+        self.value = value
+        self.max = max
+    
+    def set(self, value):
+        if value > self.max:
+            value = self.max
+        elif value < self.min:
+            value = self.min
+    
+class TimeStepSize(BoundedValue):
+
+    def __init__(self, bounded_value):
+        super(TimeStepSize, self).__init__(bounded_value.min, bounded_value.value, bounded_value.max)
+
+    def set(self, value):
+    
+        old_value = value
+        
+        super(TimeStepSize, self).set(value)
+        
+        if abs(self.value - old_value) > DOLFIN_EPS:
+            print 'Set time step size to dt = ' + str(value)
+
 def run(
     output_dir = "output/natural_convection", \
-    Ra = 1.e6, \
-    Pr = 0.71, \
+    Ra = default_Ra, \
+    Pr = default_Pr, \
     K = 1., \
-    g = (0., -1.), \
     mu = 1., \
+    g = (0., -1.), \
+    m_B = lambda theta : theta*default_Ra/(default_Pr*Re*Re), \
+    dm_B_dtheta = lambda theta : default_Ra/(default_Pr*Re*Re), \
     mesh = UnitSquareMesh(20, 20, "crossed"), \
     s_u = ("0.", "0."), \
     s_p = "0.", \
@@ -68,8 +106,8 @@ def run(
         [2, "0.", 2, "near(x[0],  0.)", "topological"], \
         [2, "0.", 2, "near(x[0],  1.)", "topological"]], \
     final_time = 1., \
-    time_step_size = 1.e-3, \
-    adaptive_time = True, \
+    time_step_size = BoundedValue(1.e-3, 1.e-3, 1.), \
+    adaptive_space = False, \
     gamma = 1.e-7, \
     pressure_degree = 1, \
     temperature_degree = 1, \
@@ -88,6 +126,9 @@ def run(
     
     print(arguments())
     
+    # Validate inputs
+    assert type(time_step_size) == type(BoundedValue())
+    
     # @todo Try 3D
     dim = 2
     
@@ -98,6 +139,7 @@ def run(
     
     # Compute derived parameters
     velocity_degree = pressure_degree + 1
+
     
     # Define function spaces for the system
     VxV = VectorFunctionSpace(mesh, 'P', velocity_degree)
@@ -163,18 +205,13 @@ def run(
     K = Constant(K)
 
     mu = Constant(mu)
-
+    
     g = Constant(g)
 
     gamma = Constant(gamma)
 
 
-    # Define variational form
-    def f_B(_theta):
-        
-        return _theta*Ra/(Pr*Re*Re)*g
-           
-       
+    # Define variational form   
     def a(_mu, _u, _v):
 
         def D(_u):
@@ -210,7 +247,7 @@ def run(
             
             F = (\
                     b(u, q) - gamma*p*q - s_p*q \
-                    + dot(u, v)/dt + c(u, u, v) + a(mu, u, v) + b(v, p) - dot(u_n, v)/dt + dot(f_B(theta), v) - dot(s_u, v) \
+                    + dot(u, v)/dt + c(u, u, v) + a(mu, u, v) + b(v, p) - dot(u_n, v)/dt + dot(m_B(theta)*g, v) - dot(s_u, v) \
                     + theta*phi/dt - dot(u, grad(phi))*theta + dot(K/Pr*grad(theta), grad(phi)) - theta_n*phi/dt - s_theta*phi \
                     )*dx
             
@@ -228,25 +265,27 @@ def run(
     
         u_k, p_k, theta_k = split(w_k)
 
-        df_B_dtheta = Ra/(Pr*Re*Re)*g
-
         def linear_variational_form(dt):
         
             dt = Constant(dt)
         
             A = (\
                 b(u_w,q) - gamma*p_w*q \
-                + dot(u_w, v)/dt + c(u_w, u_k, v) + c(u_k, u_w, v) + a(mu, u_w, v) + b(v, p_w) + dot(theta_w*df_B_dtheta, v) \
+                + dot(u_w, v)/dt + c(u_w, u_k, v) + c(u_k, u_w, v) + a(mu, u_w, v) + b(v, p_w) + dot(theta_w*dm_B_dtheta(theta)*g, v) \
                 + theta_w*phi/dt - dot(u_k, grad(phi))*theta_w - dot(u_w, grad(phi))*theta_k + dot(K/Pr*grad(theta_w), grad(phi)) \
                 )*dx
                 
             L = (\
                 b(u_k,q) - gamma*p_k*q + s_p*q \
-                + dot(u_k - u_n, v)/dt + c(u_k, u_k, v) + a(mu, u_k, v) + b(v, p_k) + dot(f_B(theta_k), v) + dot(s_u, v) \
+                + dot(u_k - u_n, v)/dt + c(u_k, u_k, v) + a(mu, u_k, v) + b(v, p_k) + dot(m_B(theta_k)*g, v) + dot(s_u, v) \
                 + (theta_k - theta_n)*phi/dt - dot(u_k, grad(phi))*theta_k + dot(K/Pr*grad(theta_k), grad(phi)) + s_theta*phi \
                 )*dx  
                 
             return A, L
+            
+        if adaptive_space:
+        
+            M = theta_w*dx
 
 
     # Create progress bar
@@ -289,15 +328,13 @@ def run(
     
     w_w = Function(W) # w_w was previously a TrialFunction, but must be a Function when calling solve()
 
-    time_residual = Function(W)
+    time_residual = Function(W)        
     
     def solve_time_step(dt):
     
         if linearize:
         
             print '\nIterating Newton method'
-            
-            converged = False
             
             iteration_count = 0
             
@@ -309,8 +346,24 @@ def run(
             
                 A, L = linear_variational_form(dt)
 
-                solve(A == L, w_w, bcs=bc)
+                if not adaptive_space:
                 
+                    solve(A == L, w_w, bcs=bc)
+                    
+                else:
+                        
+                    problem = LinearVariationalProblem(A, L, w_w, bcs=bc)
+
+                    solver = AdaptiveLinearVariationalSolver(problem, M)
+
+                    solver.parameters["error_control"]["dual_variational_solver"]["linear_solver"] = "cg"
+
+                    solver.parameters["error_control"]["dual_variational_solver"]["symmetric"] = True
+
+                    solver.solve(tol)
+
+                    solver.summary()
+
                 w_k.assign(w_k - w_w)
                 
                 norm_residual = norm(w_w, 'L2')/norm(w_k, 'L2')
@@ -321,25 +374,17 @@ def run(
                 
                     diverging = True
                     
-                    if not adaptive_time:
-                    
-                        assert(not diverging)
-                    
                     return diverging
                 
                 old_residual = norm_residual
                 
                 if norm_residual < newton_relative_tolerance:
-                
-                    converged = True
                     
                     iteration_count = k + 1
                     
                     print 'Converged after ' + str(k) + ' iterations'
                     
                     break
-                    
-            assert(converged)
             
             w.assign(w_k)
             
@@ -349,7 +394,8 @@ def run(
 
         else:
         
-            assert(not adaptive_time) # @todo How to get residual from solver.solve() to check if diverging?
+            '''  @todo Implement adaptive time for nonlinear version.
+            How to get residual from solver.solve() to check if diverging? '''
         
             F = nonlinear_variational_form(dt)
         
@@ -362,42 +408,36 @@ def run(
             assert(converged)
 
     EPSILON = 1.e-12
+    
+    time_step_size = TimeStepSize(time_step_size)
 
     while time < final_time - EPSILON:
 
-        if adaptive_time:
+        remaining_time = final_time - time
     
-            remaining_time = final_time - time
-        
-            if time_step_size > remaining_time:
-                
-                time_step_size = remaining_time        
-        
-            diverging = True
+        if time_step_size.value > remaining_time:
             
-            while diverging:
+            time_step_size.set(remaining_time)
+    
+        diverging = True
+        
+        while diverging:
+        
+            diverging = solve_time_step(time_step_size.value)
             
-                diverging = solve_time_step(time_step_size)
-                
-                if diverging:
-                
-                    # @todo Expose parameters for maximum and minimum size.
-                
-                    time_step_size /= 2.
+            if time_step_size.value <= time_step_size.min + DOLFIN_EPS:
                     
-                    print 'Set time step size to dt = ' + str(time_step_size)
+                assert(not diverging)
+            
+            if diverging:
+            
+                time_step_size.set(time_step_size.value/2.)
+    
+        assert(not diverging)
         
-            time += time_step_size
-            
-            time_step_size *= 2.
-            
-            print 'Set time step size to dt = ' + str(time_step_size)
-
-        else:
-            
-            solve_time_step(time_step_size)
-            
-            time += time_step_size
+        time += time_step_size.value
+        
+        time_step_size.set(2*time_step_size.value)
             
         print 'Reached time t = ' + str(time)
             
