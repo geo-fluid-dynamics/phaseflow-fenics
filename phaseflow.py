@@ -35,8 +35,6 @@ from fenics import \
 
 from dolfin import DOLFIN_EPS
     
-import test_phaseflow
-
     
 def arguments():
     """Returns tuple containing dictionary of calling function's
@@ -76,7 +74,7 @@ class TimeStepSize(BoundedValue):
 
     def set(self, value):
     
-        old_value = value
+        old_value = self.value
         
         super(TimeStepSize, self).set(value)
         
