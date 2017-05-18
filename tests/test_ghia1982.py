@@ -21,7 +21,8 @@ def test_ghia1982_steady_lid_driven_cavity():
         mesh = UnitSquareMesh(m, m, "crossed"), \
         final_time = 1.e12, \
         time_step_size = phaseflow.BoundedValue(1.e12, 1.e12, 1.e12), \
-        mu = 0.01, \
+        mu_l = 0.01, \
+        theta_s = -1.,
         output_dir="output/test_ghia1982_steady_lid_driven_cavity", \
         s_theta ='0.', \
         initial_values_expression = ('0.', '0.', '0.', '0.'), \

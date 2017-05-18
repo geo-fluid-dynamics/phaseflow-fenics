@@ -23,7 +23,7 @@ from fenics import \
     Function, TrialFunction, TestFunctions, split, \
     DirichletBC, Constant, Expression, \
     dx, \
-    dot, inner, grad, nabla_grad, sym, div, \
+    dot, inner, grad, nabla_grad, sym, div, tanh, \
     errornorm, norm, \
     File, \
     Progress, set_log_level, PROGRESS, \
@@ -54,6 +54,8 @@ default_Ra = 1.e6
     
 default_Pr = 0.71
 
+default_Ste = 0.045
+
 class BoundedValue(object):
 
     def __init__(self, min=0., value=0., max=0.):
@@ -66,6 +68,7 @@ class BoundedValue(object):
             value = self.max
         elif value < self.min:
             value = self.min
+        self.value = value
     
 class TimeStepSize(BoundedValue):
 
@@ -81,43 +84,57 @@ class TimeStepSize(BoundedValue):
         if abs(self.value - old_value) > DOLFIN_EPS:
             print 'Set time step size to dt = ' + str(value)
 
+            
+'''@todo First add variable viscosity, later latent heat source term.
+Conceptually this will be like having a PCM with zero latent heat.
+The melting front should move quickly.'''
+
+
+
 def run(
-    output_dir = "output/natural_convection", \
-    Ra = default_Ra, \
-    Pr = default_Pr, \
-    K = 1., \
-    mu = 1., \
-    g = (0., -1.), \
-    m_B = lambda theta : theta*default_Ra/(default_Pr*Re*Re), \
-    dm_B_dtheta = lambda theta : default_Ra/(default_Pr*Re*Re), \
-    mesh = UnitSquareMesh(20, 20, "crossed"), \
-    s_u = ("0.", "0."), \
-    s_p = "0.", \
-    s_theta = "0.", \
-    initial_values_expression = ( \
-        "0.", \
-        "0.", \
-        "0.", \
-        "0.5*near(x[0],  0.) -0.5*near(x[0],  1.)"), \
-    bc_expressions = [ \
-        [0, ("0.", "0."), 3, "near(x[0],  0.) | near(x[0],  1.) | near(x[1], 0.) | near(x[1],  1.)","topological"], \
-        [2, "0.", 2, "near(x[0],  0.)", "topological"], \
-        [2, "0.", 2, "near(x[0],  1.)", "topological"]], \
-    final_time = 1., \
-    time_step_size = BoundedValue(1.e-3, 1.e-3, 1.), \
-    adaptive_space = False, \
-    gamma = 1.e-7, \
-    pressure_degree = 1, \
-    temperature_degree = 1, \
-    linearize = True, \
-    newton_relative_tolerance = 1.e-9, \
-    max_newton_iterations = 10, \
-    stop_when_steady = True, \
-    steady_relative_tolerance = 1.e-8, \
-    debug_b_factor = 1., \
-    debug_c_factor = 1., \
-    exact_solution_expression = [] \
-    ):
+    output_dir = "output/natural_convection",
+    Ra = default_Ra,
+    Pr = default_Pr,
+    Ste = default_Ste,
+    C = 1,
+    K = 1.,
+    mu_l = 1.,
+    mu_s = 1.e8,
+    epsilon_1 = 0.01,
+    epsilon_2 = 0.01,
+    a_s = 2.,
+    theta_s = 0.01,
+    R_s = 0.005,
+    g = (0., -1.),
+    m_B = lambda theta : theta*default_Ra/(default_Pr*Re*Re),
+    dm_B_dtheta = lambda theta : default_Ra/(default_Pr*Re*Re),
+    mesh = UnitSquareMesh(20, 20, "crossed"),
+    s_u = ("0.", "0."),
+    s_p = "0.",
+    s_theta = "0.",
+    initial_values_expression = (
+        "0.",
+        "0.",
+        "0.",
+        "0.5*near(x[0],  0.) -0.5*near(x[0],  1.)"),
+    bc_expressions = [
+        [0, ("0.", "0."), 3, "near(x[0],  0.) | near(x[0],  1.) | near(x[1], 0.) | near(x[1],  1.)","topological"],
+        [2, "0.", 2, "near(x[0],  0.)", "topological"],
+        [2, "0.", 2, "near(x[0],  1.)", "topological"]],
+    final_time = 1.,
+    time_step_size = BoundedValue(1.e-3, 1.e-3, 1.),
+    adaptive_space = False,
+    gamma = 1.e-7,
+    pressure_degree = 1,
+    temperature_degree = 1,
+    linearize = True,
+    newton_relative_tolerance = 1.e-9,
+    max_newton_iterations = 10,
+    stop_when_steady = True,
+    steady_relative_tolerance = 1.e-8,
+    debug_b_factor = 1.,
+    debug_c_factor = 1.,
+    exact_solution_expression = []):
 
     #
     print("Running nsb_pcm with the following arguments:")
@@ -137,6 +154,10 @@ def run(
     
     # Compute derived parameters
     velocity_degree = pressure_degree + 1
+    
+    regularized_F = lambda theta, f_s, f_l: f_l + (f_s - f_l)/2.*(1. + tanh(a_s*(theta_s - theta)/R_s))
+    
+    ddtheta_regularized_F = lambda theta, f_s, f_l: -a_s*(tanh((a_s*(theta_s - theta))/R_s)**2 - 1.)*(f_l - f_s)/2./R_s
 
     
     # Define function spaces for the system
@@ -180,9 +201,9 @@ def run(
     
     
     # Set source term expressions
-    s_u = Expression(s_u, element=VxV_ele, mu=mu, gamma=gamma)
+    s_u = Expression(s_u, element=VxV_ele)
     
-    s_p = Expression(s_p, element=Q_ele, mu=mu, gamma=gamma)
+    s_p = Expression(s_p, element=Q_ele)
     
     s_theta = Expression(s_theta, element=V_ele)
         
@@ -202,12 +223,21 @@ def run(
 
     K = Constant(K)
 
-    mu = Constant(mu)
-    
     g = Constant(g)
 
     gamma = Constant(gamma)
-
+    
+    mu_l = Constant(mu_l)
+    
+    mu_s = Constant(mu_s)
+    
+    Ste = Constant(Ste)
+    
+    C = Constant(C)
+    
+    mu_sl = lambda theta: regularized_F(theta, f_s=mu_s, f_l=mu_l)
+    
+    ddtheta_mu_sl = lambda theta: ddtheta_regularized_F(theta, f_s=mu_s, f_l=mu_l)
 
     # Define variational form   
     def a(_mu, _u, _v):
@@ -245,7 +275,7 @@ def run(
             
             F = (\
                     b(u, q) - gamma*p*q - s_p*q \
-                    + dot(u, v)/dt + c(u, u, v) + a(mu, u, v) + b(v, p) - dot(u_n, v)/dt + dot(m_B(theta)*g, v) - dot(s_u, v) \
+                    + dot(u, v)/dt + c(u, u, v) + a(mu_sl(theta), u, v) + b(v, p) - dot(u_n, v)/dt + dot(m_B(theta)*g, v) - dot(s_u, v) \
                     + theta*phi/dt - dot(u, grad(phi))*theta + dot(K/Pr*grad(theta), grad(phi)) - theta_n*phi/dt - s_theta*phi \
                     )*dx
             
@@ -269,13 +299,13 @@ def run(
         
             A = (\
                 b(u_w,q) - gamma*p_w*q \
-                + dot(u_w, v)/dt + c(u_w, u_k, v) + c(u_k, u_w, v) + a(mu, u_w, v) + b(v, p_w) + dot(theta_w*dm_B_dtheta(theta)*g, v) \
+                + dot(u_w, v)/dt + c(u_w, u_k, v) + c(u_k, u_w, v) + a(mu_sl(theta_k), u_w, v) + a(ddtheta_mu_sl(theta_k)*theta_w, u_k, v) + b(v, p_w) + dot(theta_w*dm_B_dtheta(theta)*g, v) \
                 + theta_w*phi/dt - dot(u_k, grad(phi))*theta_w - dot(u_w, grad(phi))*theta_k + dot(K/Pr*grad(theta_w), grad(phi)) \
                 )*dx
                 
             L = (\
                 b(u_k,q) - gamma*p_k*q + s_p*q \
-                + dot(u_k - u_n, v)/dt + c(u_k, u_k, v) + a(mu, u_k, v) + b(v, p_k) + dot(m_B(theta_k)*g, v) + dot(s_u, v) \
+                + dot(u_k - u_n, v)/dt + c(u_k, u_k, v) + a(mu_sl(theta_k), u_k, v) + b(v, p_k) + dot(m_B(theta_k)*g, v) + dot(s_u, v) \
                 + (theta_k - theta_n)*phi/dt - dot(u_k, grad(phi))*theta_k + dot(K/Pr*grad(theta_k), grad(phi)) + s_theta*phi \
                 )*dx  
                 

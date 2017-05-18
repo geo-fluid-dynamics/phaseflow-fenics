@@ -13,6 +13,7 @@ def test_quick_regression_natural_convection_air():
     
     w = phaseflow.run( \
         output_dir = "output/test_wang2010_natural_convection", \
+        theta_s = -1.,
         mesh = UnitSquareMesh(m, m, "crossed"), \
         time_step_size = phaseflow.BoundedValue(1.e-3, 1.e-3, 10.), \
         final_time = 3.e-3, \
@@ -92,6 +93,7 @@ def test_quick_regression_natural_convection_water():
         output_dir = "output/test_quick_regression_natural_convection_water", \
         Ra = Ra, \
         Pr = Pr, \
+        theta_s = -1.,
         m_B = lambda theta : Ra/(Pr*Re*Re)/(beta*(T_h - T_c))*(rho(theta_f) - rho(theta))/rho(theta_f), \
         dm_B_dtheta = lambda theta : -Ra/(Pr*Re*Re)/(beta*(T_h - T_c))*(ddtheta_rho(theta))/rho(theta_f), \
         mesh = UnitSquareMesh(m, m, "crossed"), \
