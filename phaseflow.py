@@ -305,7 +305,7 @@ def run(
         
             A = (\
                 b(u_w,q) - gamma*p_w*q \
-                + dot(u_w, v)/dt + c(u_w, u_k, v) + c(u_k, u_w, v) + a(mu_sl(theta_k), u_w, v) + a(ddtheta_mu_sl(theta_k)*theta_w, u_k, v) + b(v, p_w) + dot(theta_w*dm_B_dtheta(theta)*g, v) \
+                + dot(u_w, v)/dt + c(u_w, u_k, v) + c(u_k, u_w, v) + a(mu_sl(theta_k), u_w, v) + a(ddtheta_mu_sl(theta_k)*theta_w, u_k, v) + b(v, p_w) + dot(dm_B_dtheta(theta_k)*theta_w*g, v) \
                 + theta_w*phi/dt - dot(u_k, grad(phi))*theta_w - dot(u_w, grad(phi))*theta_k + dot(K/Pr*grad(theta_w), grad(phi)) \
                 )*dx
                 
