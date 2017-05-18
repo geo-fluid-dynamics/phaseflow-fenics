@@ -38,4 +38,4 @@ def test_wang2010_natural_convection_air():
         
 if __name__=='__main__':
 
-    test_wang2010_natural_convection()
+    test_wang2010_natural_convection_air()

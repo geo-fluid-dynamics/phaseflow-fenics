@@ -4,33 +4,8 @@ from fenics import UnitSquareMesh, Point
 
 from ufl import sign
 
-''' @todo For now these are being used as a very quick regression test,
-making sure that these simply run and converge.'''
 
-def test_quick_regression_natural_convection_air():
-
-    m = 10
-    
-    w = phaseflow.run( \
-        output_dir = "output/test_wang2010_natural_convection", \
-        mesh = UnitSquareMesh(m, m, "crossed"), \
-        time_step_size = phaseflow.BoundedValue(1.e-3, 1.e-3, 10.), \
-        final_time = 3.e-3, \
-        stop_when_steady = True, \
-        steady_relative_tolerance = 1.e-4, \
-        linearize = True,
-        initial_values_expression = ( \
-            "0.", \
-            "0.", \
-            "0.", \
-            "0.5*near(x[0],  0.) -0.5*near(x[0],  1.)"), \
-        bc_expressions = [ \
-        [0, ("0.", "0."), 3, "near(x[0],  0.) | near(x[0],  1.) | near(x[1], 0.) | near(x[1],  1.)","topological"], \
-        [2, "0.", 2, "near(x[0],  0.)", "topological"], \
-        [2, "0.", 2, "near(x[0],  1.)", "topological"]])
-        
-        
-def test_quick_regression_natural_convection_water():
+def test_regression_natural_convection_water():
 
     ''' Comparing directly to the steady state benchmark data 
     from Michalek2003 in this case would take longer 
@@ -89,14 +64,14 @@ def test_quick_regression_natural_convection_water():
         bc_theta_hot = bc_theta_cold = 0.  
 
     w = phaseflow.run( \
-        output_dir = "output/test_quick_regression_natural_convection_water", \
+        output_dir = "output/test_regression_natural_convection_water", \
         Ra = Ra, \
         Pr = Pr, \
         m_B = lambda theta : Ra/(Pr*Re*Re)/(beta*(T_h - T_c))*(rho(theta_f) - rho(theta))/rho(theta_f), \
         dm_B_dtheta = lambda theta : -Ra/(Pr*Re*Re)/(beta*(T_h - T_c))*(ddtheta_rho(theta))/rho(theta_f), \
         mesh = UnitSquareMesh(m, m, "crossed"), \
         time_step_size = phaseflow.BoundedValue(0.005, 0.005, 0.01), \
-        final_time = 0.015, \
+        final_time = 0.18, \
         linearize = linearize, \
         newton_relative_tolerance = 1.e-4, \
         max_newton_iterations = 10, \
@@ -110,9 +85,15 @@ def test_quick_regression_natural_convection_water():
         [2, str(bc_theta_hot), 2, "near(x[0],  0.)", "topological"], \
         [2, str(bc_theta_cold), 2, "near(x[0],  1.)", "topological"]])
         
+    for i, true_theta in enumerate(verified_solution['theta']):
+        
+        wval = w(Point(verified_solution['x'][i], verified_solution['y']))
+        
+        theta = wval[3]
+        
+        assert(abs(theta - true_theta) < 1.e-2)
+        
         
 if __name__=='__main__':
 
-    test_quick_regression_natural_convection_air()
-    
-    test_quick_regression_natural_convection_water()
+    test_regression_natural_convection_water()
