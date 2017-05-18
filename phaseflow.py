@@ -68,6 +68,7 @@ class BoundedValue(object):
             value = self.max
         elif value < self.min:
             value = self.min
+        self.value = value
     
 class TimeStepSize(BoundedValue):
 
@@ -76,7 +77,7 @@ class TimeStepSize(BoundedValue):
 
     def set(self, value):
     
-        old_value = value
+        old_value = self.value
         
         super(TimeStepSize, self).set(value)
         
