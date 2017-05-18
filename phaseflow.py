@@ -30,7 +30,7 @@ from fenics import \
     project, interpolate, \
     solve, parameters, info, derivative, \
     LinearVariationalProblem, LinearVariationalSolver, NonlinearVariationalProblem, NonlinearVariationalSolver, \
-    AdaptiveLinearVariationalSolver, \
+    AdaptiveLinearVariationalSolver, AdaptiveNonlinearVariationalSolver, \
     SubDomain, EdgeFunction, near, adapt
 
 from dolfin import DOLFIN_EPS
@@ -124,6 +124,7 @@ def run(
     final_time = 1.,
     time_step_size = BoundedValue(1.e-3, 1.e-3, 1.),
     adaptive_space = False,
+    adaptive_space_error_tolerance = 1.e-4,
     gamma = 1.e-7,
     pressure_degree = 1,
     temperature_degree = 1,
@@ -281,6 +282,10 @@ def run(
                     )*dx
             
             return F
+            
+        if adaptive_space:
+        
+            M = (u[0] + u[1])*dx
     # Implement the Newton linearized form published in danaila2014newton
     elif linearize: 
 
@@ -314,7 +319,7 @@ def run(
             
         if adaptive_space:
         
-            M = theta_w*dx
+            M = (u_w[0] + u_w[1])*dx
 
 
     # Create progress bar
@@ -332,19 +337,21 @@ def run(
 
     def write_solution(_w, time):
 
-        _velocity, _pressure, _temperature = _w.split()
+        w = _w.leaf_node()
         
-        _velocity.rename("u", "velocity")
+        velocity, pressure, temperature = w.split()
         
-        _pressure.rename("p", "pressure")
+        velocity.rename("u", "velocity")
         
-        _temperature.rename("theta", "temperature")
+        pressure.rename("p", "pressure")
         
-        velocity_file << (_velocity, time) 
+        temperature.rename("theta", "temperature")
         
-        pressure_file << (_pressure, time) 
+        velocity_file << (velocity, time) 
         
-        temperature_file << (_temperature, time) 
+        pressure_file << (pressure, time) 
+        
+        temperature_file << (temperature, time) 
 
 
     time = 0.
@@ -385,11 +392,7 @@ def run(
 
                     solver = AdaptiveLinearVariationalSolver(problem, M)
 
-                    solver.parameters["error_control"]["dual_variational_solver"]["linear_solver"] = "cg"
-
-                    solver.parameters["error_control"]["dual_variational_solver"]["symmetric"] = True
-
-                    solver.solve(tol)
+                    solver.solve(adaptive_space_error_tolerance)
 
                     solver.summary()
 
@@ -417,12 +420,25 @@ def run(
             How to get residual from solver.solve() to check if diverging? '''
         
             F = nonlinear_variational_form(dt)
-        
+            
             problem = NonlinearVariationalProblem(F, w, bc, derivative(F, w))
             
-            solver = NonlinearVariationalSolver(problem)
+            if not adaptive_space:     
             
-            iteration_count, converged = solver.solve()
+                solver = NonlinearVariationalSolver(problem)
+                
+                iteration_count, converged = solver.solve()
+                
+            else:
+            
+                solver = AdaptiveNonlinearVariationalSolver(problem, M)
+
+                solver.solve(adaptive_space_error_tolerance)
+
+                solver.summary()
+                
+                converged = True 
+                ''' @todo set solver.parameters.nonlinear_variational_solver.newton_solver["error_on_nonconvergence"] = False and figure out how to read convergence data, so this can use adaptive time stepping.'''
             
             assert(converged)
             
@@ -465,8 +481,6 @@ def run(
         time_step_size.set(2*time_step_size.value)
             
         print 'Reached time t = ' + str(time)
-            
-        
         
         if stop_when_steady:
         
