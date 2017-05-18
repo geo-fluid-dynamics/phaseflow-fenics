@@ -447,22 +447,25 @@ def run(
             
             if time_step_size.value <= time_step_size.min + DOLFIN_EPS:
                     
-                assert(converged)
+                break;
             
             if not converged:
             
                 time_step_size.set(time_step_size.value/2.)
     
-        assert(converged)
-        
         time += time_step_size.value
+        
+        ''' Save solution to files. Saving here allows us to inspect the latest solution 
+        even if the Newton iterations failed to converge.'''
+        write_solution(w, time)
+        
+        assert(converged)
         
         time_step_size.set(2*time_step_size.value)
             
         print 'Reached time t = ' + str(time)
             
-        # Save solution to files
-        write_solution(w, time)
+        
         
         if stop_when_steady:
         
