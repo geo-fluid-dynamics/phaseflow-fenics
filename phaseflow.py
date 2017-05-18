@@ -364,9 +364,9 @@ def run(
         
             print '\nIterating Newton method'
             
-            iteration_count = 0
+            converged = False
             
-            old_residual = 1e32
+            iteration_count = 0
         
             w_k.assign(w_n)
             
@@ -398,27 +398,19 @@ def run(
 
                 print '\nL2 norm of relative residual, || w_w || / || w_k || = ' + str(norm_residual) + '\n'
                 
-                if norm_residual > old_residual:
-                
-                    diverging = True
-                    
-                    return diverging
-                
-                old_residual = norm_residual
-                
                 if norm_residual < newton_relative_tolerance:
                     
                     iteration_count = k + 1
                     
                     print 'Converged after ' + str(k) + ' iterations'
                     
+                    converged = True
+                    
                     break
             
             w.assign(w_k)
             
-            diverging = False
-            
-            return diverging
+            return converged
 
         else:
         
@@ -447,21 +439,21 @@ def run(
             
             time_step_size.set(remaining_time)
     
-        diverging = True
+        converged = False
         
-        while diverging:
+        while not converged:
         
-            diverging = solve_time_step(time_step_size.value)
+            converged = solve_time_step(time_step_size.value)
             
             if time_step_size.value <= time_step_size.min + DOLFIN_EPS:
                     
-                assert(not diverging)
+                assert(converged)
             
-            if diverging:
+            if not converged:
             
                 time_step_size.set(time_step_size.value/2.)
     
-        assert(not diverging)
+        assert(converged)
         
         time += time_step_size.value
         
