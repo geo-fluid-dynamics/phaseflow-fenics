@@ -154,10 +154,6 @@ def run(
     
     # Compute derived parameters
     velocity_degree = pressure_degree + 1
-    
-    regularized_F = lambda theta, f_s, f_l: f_l + (f_s - f_l)/2.*(1. + tanh(a_s*(theta_s - theta)/R_s))
-    
-    ddtheta_regularized_F = lambda theta, f_s, f_l: -a_s*(tanh((a_s*(theta_s - theta))/R_s)**2 - 1.)*(f_l - f_s)/2./R_s
 
     
     # Define function spaces for the system
@@ -235,9 +231,14 @@ def run(
     
     C = Constant(C)
     
+    regularized_F = lambda theta, f_s, f_l: f_l + (f_s - f_l)/2.*(1. + tanh(a_s*(theta_s - theta)/R_s))
+    
+    ddtheta_regularized_F = lambda theta, f_s, f_l: -a_s*(tanh((a_s*(theta_s - theta))/R_s)**2 - 1.)*(f_l - f_s)/2./R_s
+    
     mu_sl = lambda theta: regularized_F(theta, f_s=mu_s, f_l=mu_l)
     
     ddtheta_mu_sl = lambda theta: ddtheta_regularized_F(theta, f_s=mu_s, f_l=mu_l)
+    
 
     # Define variational form   
     def a(_mu, _u, _v):
@@ -409,8 +410,6 @@ def run(
                     break
             
             w.assign(w_k)
-            
-            return converged
 
         else:
         
@@ -426,6 +425,8 @@ def run(
             iteration_count, converged = solver.solve()
             
             assert(converged)
+            
+        return converged
 
     EPSILON = 1.e-12
     
