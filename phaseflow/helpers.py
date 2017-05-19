@@ -27,11 +27,8 @@ class BoundedValue(object):
 
 def arguments():
     """Returns tuple containing dictionary of calling function's
-       named arguments and a list of calling function's unnamed
-       positional arguments.
-    """
-    
-    
+    named arguments and a list of calling function's unnamed
+    positional arguments."""
     posname, kwname, args = inspect.getargvalues(inspect.stack()[1][0])[-3:]
     
     posargs = args.pop(posname, [])
