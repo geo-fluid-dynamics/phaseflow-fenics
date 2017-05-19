@@ -229,15 +229,7 @@ def run(
     Ste = Constant(Ste)
     
     C = Constant(C)
-    
-    regularized_F = lambda _theta, f_s, f_l: f_l + (f_s - f_l)/2.*(1. + tanh(a_s*(theta_s - _theta)/R_s))
-    
-    ddtheta_regularized_F = lambda _theta, f_s, f_l: -a_s*(tanh((a_s*(theta_s - _theta))/R_s)**2 - 1.)*(f_l - f_s)/2./R_s
-    
-    mu_sl = lambda _theta: regularized_F(_theta, f_s=mu_s, f_l=mu_l)
-    
-    ddtheta_mu_sl = lambda _theta: ddtheta_regularized_F(_theta, f_s=mu_s, f_l=mu_l)
-    
+
 
     # Define variational form   
     def a(_mu, _u, _v):
@@ -275,7 +267,7 @@ def run(
             
             F = (\
                     b(u, q) - gamma*p*q - s_p*q \
-                    + dot(u, v)/dt + c(u, u, v) + a(mu_sl(theta), u, v) + b(v, p) - dot(u_n, v)/dt + dot(m_B(theta)*g, v) - dot(s_u, v) \
+                    + dot(u, v)/dt + c(u, u, v) + a(mu_l, u, v) + b(v, p) - dot(u_n, v)/dt + dot(m_B(theta)*g, v) - dot(s_u, v) \
                     + theta*phi/dt - dot(u, grad(phi))*theta + dot(K/Pr*grad(theta), grad(phi)) - theta_n*phi/dt - s_theta*phi \
                     )*dx
             
@@ -304,13 +296,13 @@ def run(
         
             A = (\
                 b(u_w, q) - gamma*p_w*q
-                + dot(u_w, v)/dt + c(u_w, u_k, v) + c(u_k, u_w, v) + a(mu_sl(theta_k), u_w, v) + a(ddtheta_mu_sl(theta_k)*theta_w, u_k, v) + b(v, p_w) + dot(dm_B_dtheta(theta_k)*theta_w*g, v)
+                + dot(u_w, v)/dt + c(u_w, u_k, v) + c(u_k, u_w, v) + a(mu_l, u_w, v) + b(v, p_w) + dot(dm_B_dtheta(theta_k)*theta_w*g, v)
                 + theta_w*phi/dt - dot(u_k, grad(phi))*theta_w - dot(u_w, grad(phi))*theta_k + dot(K/Pr*grad(theta_w), grad(phi))
                 )*dx
                 
             L = (\
                 b(u_k, q) - gamma*p_k*q + s_p*q
-                + dot(u_k - u_n, v)/dt + c(u_k, u_k, v) + a(mu_sl(theta_k), u_k, v) + b(v, p_k) + dot(m_B(theta_k)*g, v) + dot(s_u, v)
+                + dot(u_k - u_n, v)/dt + c(u_k, u_k, v) + a(mu_l, u_k, v) + b(v, p_k) + dot(m_B(theta_k)*g, v) + dot(s_u, v)
                 + (theta_k - theta_n)*phi/dt - dot(u_k, grad(phi))*theta_k + dot(K/Pr*grad(theta_k), grad(phi)) + s_theta*phi
                 )*dx  
                 
