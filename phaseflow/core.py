@@ -32,8 +32,9 @@ from fenics import \
     LinearVariationalProblem, LinearVariationalSolver, NonlinearVariationalProblem, NonlinearVariationalSolver, \
     AdaptiveLinearVariationalSolver, AdaptiveNonlinearVariationalSolver, \
     SubDomain, EdgeFunction, near, adapt
-
 from dolfin import DOLFIN_EPS
+import helpers
+import time
     
     
 def arguments():
@@ -55,35 +56,6 @@ default_Ra = 1.e6
 default_Pr = 0.71
 
 default_Ste = 0.045
-
-class BoundedValue(object):
-
-    def __init__(self, min=0., value=0., max=0.):
-        self.min = min
-        self.value = value
-        self.max = max
-    
-    def set(self, value):
-        if value > self.max:
-            value = self.max
-        elif value < self.min:
-            value = self.min
-        self.value = value
-    
-class TimeStepSize(BoundedValue):
-
-    def __init__(self, bounded_value):
-        super(TimeStepSize, self).__init__(bounded_value.min, bounded_value.value, bounded_value.max)
-
-    def set(self, value):
-    
-        old_value = self.value
-        
-        super(TimeStepSize, self).set(value)
-        
-        if abs(self.value - old_value) > DOLFIN_EPS:
-            print 'Set time step size to dt = ' + str(value)
-
             
 '''@todo First add variable viscosity, later latent heat source term.
 Conceptually this will be like having a PCM with zero latent heat.
@@ -111,7 +83,7 @@ def run(
         [2, "0.", 2, "near(x[0],  0.)", "topological"],
         [2, "0.", 2, "near(x[0],  1.)", "topological"]],
     final_time = 1.,
-    time_step_size = BoundedValue(1.e-3, 1.e-3, 1.),
+    time_step_bounds = (1.e-3, 1.e-3, 1.),
     adaptive_space = False,
     adaptive_space_error_tolerance = 1.e-4,
     gamma = 1.e-7,
@@ -124,12 +96,17 @@ def run(
     steady_relative_tolerance = 1.e-8):
 
     #
-    print("Running nsb_pcm with the following arguments:")
+    print("Running Phaseflow with the following arguments:")
     
     print(arguments())
     
-    # Validate inputs
-    assert type(time_step_size) == type(BoundedValue())
+    # Validate inputs    
+    if type(time_step_bounds) == type(1.):
+    
+        time_step_bounds = (time_step_bounds, time_step_bounds, time_step_bounds)
+    
+    time_step_size = time.TimeStepSize(helpers.BoundedValue(time_step_bounds[0], time_step_bounds[1], time_step_bounds[2]))
+    
     
     # @todo Try 3D
     dim = 2
@@ -293,7 +270,7 @@ def run(
     # Define method for writing values, and write initial values# Create VTK file for visualization output
     solution_files = [File(output_dir + '/velocity.pvd'), File(output_dir + '/pressure.pvd'), File(output_dir + '/temperature.pvd')]
 
-    def write_solution(solution_files, _w, time):
+    def write_solution(solution_files, _w, current_time):
 
         w = _w.leaf_node()
         
@@ -307,12 +284,12 @@ def run(
         
         for i, var in enumerate([velocity, pressure, temperature]):
         
-            solution_files[i] << (var, time) 
+            solution_files[i] << (var, current_time) 
 
 
-    time = 0.
+    current_time = 0.
     
-    write_solution(solution_files, w_n, time) 
+    write_solution(solution_files, w_n, current_time) 
 
     
     # Solve each time step
@@ -409,12 +386,10 @@ def run(
         return w_out, converged
 
     EPSILON = 1.e-12
-    
-    time_step_size = TimeStepSize(time_step_size)
 
-    while time < final_time - EPSILON:
+    while current_time < final_time - EPSILON:
 
-        remaining_time = final_time - time
+        remaining_time = final_time - current_time
     
         if time_step_size.value > remaining_time:
             
@@ -434,17 +409,17 @@ def run(
             
                 time_step_size.set(time_step_size.value/2.)
     
-        time += time_step_size.value
+        current_time += time_step_size.value
         
         ''' Save solution to files. Saving here allows us to inspect the latest solution 
         even if the Newton iterations failed to converge.'''
-        write_solution(solution_files, w, time)
+        write_solution(solution_files, w, current_time)
         
         assert(converged)
         
         time_step_size.set(2*time_step_size.value)
             
-        print 'Reached time t = ' + str(time)
+        print 'Reached time t = ' + str(current_time)
         
         if stop_when_steady:
         
@@ -455,7 +430,7 @@ def run(
         w_n.assign(w) # We cannot simply use w_n.assign(w), because w may have been refined
         
         # Show the time progress
-        progress.update(time / final_time)
+        progress.update(current_time / final_time)
         
         if stop_when_steady:
         
@@ -464,7 +439,7 @@ def run(
             print 'Unsteadiness (L2 norm of relative time residual), || w_{n+1} || / || w_n || = ' + str(unsteadiness)
         
             if (unsteadiness < steady_relative_tolerance):
-                print 'Reached steady state at time t = ' + str(time)
+                print 'Reached steady state at time t = ' + str(current_time)
                 break
     
     if time >= final_time:
