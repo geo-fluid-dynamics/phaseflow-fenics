@@ -38,7 +38,43 @@ DEFAULT_STEFAN_NUMBER = 0.045
 Conceptually this will be like having a PCM with zero latent heat.
 The melting front should move quickly.'''
 
+def function_spaces(mesh=fenics.UnitSquareMesh(20, 20, "crossed"), pressure_degree=1, temperature_degree=1):
+    """ Define function spaces for the variational form """
+    
+    velocity_degree = pressure_degree + 1
+    
+    VxV = fenics.VectorFunctionSpace(mesh, 'P', velocity_degree)
 
+    Q = fenics.FunctionSpace(mesh, 'P', pressure_degree) # @todo mixing up test function space
+
+    V = fenics.FunctionSpace(mesh, 'P', temperature_degree)
+
+    '''
+    MixedFunctionSpace used to be available but is now deprecated. 
+    The way that fenics separates function spaces and elements is confusing.
+    To create the mixed space, I'm using the approach from https://fenicsproject.org/qa/11983/mixedfunctionspace-in-2016-2-0
+    '''
+    VxV_ele = fenics.VectorElement('P', mesh.ufl_cell(), velocity_degree)
+
+    '''
+    @todo How can we use the space $Q = \left{q \in L^2(\Omega) | \int{q = 0}\right}$ ?
+
+    All Navier-Stokes FEniCS examples I've found simply use P2P1. danaila2014newton says that
+    they are using the "classical Hilbert spaces" for velocity and pressure, but then they write
+    down the space Q with less restrictions than H^1_0.
+
+    '''
+    Q_ele = fenics.FiniteElement('P', mesh.ufl_cell(), pressure_degree)
+
+    V_ele = fenics.FiniteElement('P', mesh.ufl_cell(), temperature_degree)
+
+    W_ele = fenics.MixedElement([VxV_ele, Q_ele, V_ele])
+
+    W = fenics.FunctionSpace(mesh, W_ele)  
+    
+    return W, W_ele
+    
+    
 def run(
     output_dir = "output/natural_convection",
     Ra = DEFAULT_RAYLEIGH_NUMBER,
@@ -48,7 +84,7 @@ def run(
     g = (0., -1.),
     m_B = lambda theta : theta*DEFAULT_RAYLEIGH_NUMBER/(DEFAULT_PRANDTL_NUMBER*REYNOLDS_NUMBER**2),
     dm_B_dtheta = lambda theta : DEFAULT_RAYLEIGH_NUMBER/(DEFAULT_PRANDTL_NUMBER*REYNOLDS_NUMBER**2),
-    mesh = fenics.UnitSquareMesh(20, 20, "crossed"),
+    mesh=fenics.UnitSquareMesh(20, 20, "crossed"),
     initial_values_expression = (
         "0.",
         "0.",
@@ -85,38 +121,8 @@ def run(
         
     
     # Compute derived parameters
-    velocity_degree = pressure_degree + 1
-
-    
-    # Define function spaces for the system
-    VxV = fenics.VectorFunctionSpace(mesh, 'P', velocity_degree)
-
-    Q = fenics.FunctionSpace(mesh, 'P', pressure_degree) # @todo mixing up test function space
-
-    V = fenics.FunctionSpace(mesh, 'P', temperature_degree)
-
-    '''
-    MixedFunctionSpace used to be available but is now deprecated. 
-    The way that fenics separates function spaces and elements is confusing.
-    To create the mixed space, I'm using the approach from https://fenicsproject.org/qa/11983/mixedfunctionspace-in-2016-2-0
-    '''
-    VxV_ele = fenics.VectorElement('P', mesh.ufl_cell(), velocity_degree)
-
-    '''
-    @todo How can we use the space $Q = \left{q \in L^2(\Omega) | \int{q = 0}\right}$ ?
-
-    All Navier-Stokes FEniCS examples I've found simply use P2P1. danaila2014newton says that
-    they are using the "classical Hilbert spaces" for velocity and pressure, but then they write
-    down the space Q with less restrictions than H^1_0.
-
-    '''
-    Q_ele = fenics.FiniteElement('P', mesh.ufl_cell(), pressure_degree)
-
-    V_ele = fenics.FiniteElement('P', mesh.ufl_cell(), temperature_degree)
-
-    W_ele = fenics.MixedElement([VxV_ele, Q_ele, V_ele])
-
-    W = fenics.FunctionSpace(mesh, W_ele)   
+    W, W_ele = function_spaces(mesh, pressure_degree, temperature_degree)
+        
         
     # Define function and test functions
     w = fenics.Function(W)   
