@@ -49,3 +49,7 @@ To enter a bash terminal inside of the running container
     docker start phaseflow-fenics
     
     docker exec -ti -u fenics phaseflow-fenics /bin/bash -l
+    
+# For developers:
+## Project structure
+This project mostly follows the structure suggested by [The Hitchhiker's Guide to Python](https://python-guide-pt-br.readthedocs.io/en/latest/writing/structure/)

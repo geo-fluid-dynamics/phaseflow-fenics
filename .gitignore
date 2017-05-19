@@ -2,4 +2,7 @@ output*
 old*
 *.pyc
 *.pvsm
-
+.cache
+build
+dist
+phaseflow.egg-info
