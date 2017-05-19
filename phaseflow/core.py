@@ -255,8 +255,6 @@ def run(
 
         w_w = TrialFunction(W)
         
-        #u_w, p_w, theta_w = split(w_w)
-        
         u_w, p_w, theta_w = split(w_w)
         
         w_k = Function(W)

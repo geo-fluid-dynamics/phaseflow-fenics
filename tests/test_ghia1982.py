@@ -1,4 +1,4 @@
-import phaseflow
+from .context import phaseflow
 
 from fenics import UnitSquareMesh, Point
 
@@ -81,10 +81,11 @@ def test_ghia1982_steady_lid_driven_cavity_linearized_amr():
         adaptive_space_error_tolerance = 1.e-4,
         final_time = 1.e12,
         time_step_size = phaseflow.BoundedValue(1.e12, 1.e12, 1.e12),
+        stop_when_steady = True,
         mu_l = 0.01,
-        output_dir="output/test_ghia1982_steady_lid_driven_cavity_linearized_amr",
         initial_values_expression = (lid, '0.', '0.', '0.'),
-        bc_expressions = [[0, ('0.', '0.'), 3, 'near(x[1],  1.)', "topological"], [0, ('0.', '0.'), 3, 'near(x[0],  0.) | near(x[0],  1.) | near(x[1],  0.)', "topological"], [1, '0.', 2, 'near(x[0], 0.) && near(x[1], 0.)', "pointwise"]])
+        bc_expressions = [[0, ('0.', '0.'), 3, 'near(x[1],  1.)', "topological"], [0, ('0.', '0.'), 3, 'near(x[0],  0.) | near(x[0],  1.) | near(x[1],  0.)', "topological"], [1, '0.', 2, 'near(x[0], 0.) && near(x[1], 0.)', "pointwise"]],
+        output_dir="output/test_ghia1982_steady_lid_driven_cavity_linearized_amr")
 
     verify_against_ghia1982(w)
     
@@ -97,4 +98,4 @@ if __name__=='__main__':
     
     test_ghia1982_steady_lid_driven_cavity_amr()
     
-    #test_ghia1982_steady_lid_driven_cavity_linearized_amr()
+    test_ghia1982_steady_lid_driven_cavity_linearized_amr()

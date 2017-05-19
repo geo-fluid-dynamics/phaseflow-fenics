@@ -1,22 +1,12 @@
 import phaseflow
 
-from fenics import UnitSquareMesh, Point
+from fenics import UnitSquareMesh
 
 from ufl import sign
 
-
-def test_regression_natural_convection_water():
-
-    ''' Comparing directly to the steady state benchmark data 
-    from Michalek2003 in this case would take longer 
-    than we should spend on a this part of the test suite. 
-    So instead we subsitute this cheaper regression test.'''
-    verified_solution = {'y': 0.5, 'x': [0.00, 0.10, 0.20, 0.30, 0.40, 0.70, 0.90, 1.00], 'theta': [1.000, 0.551, 0.202, 0.166, 0.211, 0.209, 0.238, 0.000]}
     
-    m = 10
+def run(m=4):
 
-    linearize = True
-    
     Ra = 2.518084e6
     
     Pr = 6.99
@@ -29,16 +19,17 @@ def test_regression_natural_convection_water():
     
     theta_cold = 0.
     
-    bc_theta_hot = theta_hot
-    
-    bc_theta_cold = theta_cold
-    
     T_f = T_fusion = 0. # [deg C]
     
     T_ref = T_fusion
     
     theta_f = theta_fusion = T_fusion - T_ref
     
+    ''' @todo Verify usage of equation (24) and (25) from danaila2014newton
+    
+    The way that Danaila wrote down the density and bouyancy force equations (24) and (25) confuses me. (24) writes density as a function of temperature T, while (25) uses the density as a function of the normalized temperature, i.e. rho(theta). Furthermore, (25) has the bouyancy force as a function of the normalized temperature, i.e. f_b(theta), and it is expressed both with the temperatures T_h and T_c as well as the normalized temperatures theta and theta_f.
+
+    ''' 
     T_m = 4.0293 # [deg C]
         
     rho_m = 999.972 # [kg/m^3]
@@ -58,23 +49,18 @@ def test_regression_natural_convection_water():
     Re = phaseflow.Re
     
     beta = 6.91e-5 # [K^-1]
-    
-    if linearize:
-    
-        bc_theta_hot = bc_theta_cold = 0.  
 
-    w = phaseflow.run( \
-        output_dir = "output/test_regression_natural_convection_water", \
+    phaseflow.run( \
+        output_dir = "output/natural_convection_water_adaptivespace_m"+str(m), \
+        adaptive_space = True, \
         Ra = Ra, \
         Pr = Pr, \
         m_B = lambda theta : Ra/(Pr*Re*Re)/(beta*(T_h - T_c))*(rho(theta_f) - rho(theta))/rho(theta_f), \
         dm_B_dtheta = lambda theta : -Ra/(Pr*Re*Re)/(beta*(T_h - T_c))*(ddtheta_rho(theta))/rho(theta_f), \
         mesh = UnitSquareMesh(m, m, "crossed"), \
-        time_step_size = phaseflow.BoundedValue(0.005, 0.005, 0.01), \
-        final_time = 0.18, \
-        linearize = linearize, \
-        newton_relative_tolerance = 1.e-4, \
-        max_newton_iterations = 10, \
+        time_step_size = phaseflow.BoundedValue(0.002, 0.002, 0.002), \
+        final_time = 1., \
+        steady_relative_tolerance = 1.e-5, \
         initial_values_expression = ( \
             "0.", \
             "0.", \
@@ -82,18 +68,10 @@ def test_regression_natural_convection_water():
             str(theta_hot)+"*near(x[0],  0.) + "+str(theta_cold)+"*near(x[0],  1.)"), \
         bc_expressions = [ \
         [0, ("0.", "0."), 3, "near(x[0],  0.) | near(x[0],  1.) | near(x[1], 0.) | near(x[1],  1.)","topological"], \
-        [2, str(bc_theta_hot), 2, "near(x[0],  0.)", "topological"], \
-        [2, str(bc_theta_cold), 2, "near(x[0],  1.)", "topological"]])
-        
-    for i, true_theta in enumerate(verified_solution['theta']):
-        
-        wval = w(Point(verified_solution['x'][i], verified_solution['y']))
-        
-        theta = wval[3]
-        
-        assert(abs(theta - true_theta) < 1.e-2)
-        
+        [2, str(theta_hot), 2, "near(x[0],  0.)", "topological"], \
+        [2, str(theta_cold), 2, "near(x[0],  1.)", "topological"]])
+
         
 if __name__=='__main__':
 
-    test_regression_natural_convection_water()
+    run()
