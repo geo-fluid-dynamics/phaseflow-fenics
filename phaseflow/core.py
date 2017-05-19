@@ -21,10 +21,6 @@ import dolfin
 import helpers
 import time
     
-''' We want to keep most imports within their proper namespaces;
-but for the sake of readability, we import some math notation '''
-from fenics import dx, dot, inner, grad, sym, div, tanh, sqrt
-    
     
 def arguments():
     """Returns tuple containing dictionary of calling function's
@@ -171,7 +167,9 @@ def run(
     mu_l = fenics.Constant(mu_l)
 
 
-    # Define variational form   
+    # Define variational form
+    inner, dot, grad, div, sym = fenics.inner, fenics.dot, fenics.grad, fenics.div, fenics.sym
+    
     def a(_mu, _u, _v):
 
         def D(_u):
@@ -211,7 +209,7 @@ def run(
                     b(u, q) - gamma*p*q
                     + dot(u, v)/dt + c(u, u, v) + a(mu_l, u, v) + b(v, p) - dot(u_n, v)/dt + dot(m_B(theta)*g, v)
                     + theta*phi/dt - dot(u, grad(phi))*theta + dot(K/Pr*grad(theta), grad(phi)) - theta_n*phi/dt
-                    )*dx
+                    )*fenics.dx
             
             return F
             
@@ -239,13 +237,13 @@ def run(
                 b(u_w, q) - gamma*p_w*q
                 + dot(u_w, v)/dt + c(u_w, u_k, v) + c(u_k, u_w, v) + a(mu_l, u_w, v) + b(v, p_w) + dot(dm_B_dtheta(theta_k)*theta_w*g, v)
                 + theta_w*phi/dt - dot(u_k, grad(phi))*theta_w - dot(u_w, grad(phi))*theta_k + dot(K/Pr*grad(theta_w), grad(phi))
-                )*dx
+                )*fenics.dx
                 
             L = (\
                 b(u_k, q) - gamma*p_k*q
                 + dot(u_k - u_n, v)/dt + c(u_k, u_k, v) + a(mu_l, u_k, v) + b(v, p_k) + dot(m_B(theta_k)*g, v)
                 + (theta_k - theta_n)*phi/dt - dot(u_k, grad(phi))*theta_k + dot(K/Pr*grad(theta_k), grad(phi))
-                )*dx  
+                )*fenics.dx  
                 
             return A, L
 
@@ -312,7 +310,7 @@ def run(
                         
                     '''w_w was previously a TrialFunction, but must be a Function when defining M and when calling solve().
                     This details here are opaque to me. Here is a related issue: https://fenicsproject.org/qa/12271/adaptive-stokes-perform-compilation-unable-extract-indices'''
-                    M = sqrt((u_k[0] - u_w[0])**2 + (u_k[1] - u_w[1])**2 + (theta_k - theta_w)**2)*dx
+                    M = fenics.sqrt((u_k[0] - u_w[0])**2 + (u_k[1] - u_w[1])**2 + (theta_k - theta_w)**2)*fenics.dx
                         
                     problem = fenics.LinearVariationalProblem(A, L, w_w, bcs=bc)
 
@@ -358,7 +356,7 @@ def run(
                 
             else:
         
-                M = sqrt(u[0]**2 + u[1]**2 + theta**2)*dx
+                M = fenics.sqrt(u[0]**2 + u[1]**2 + theta**2)*fenics.dx
             
                 solver = fenics.AdaptiveNonlinearVariationalSolver(problem, M)
 
