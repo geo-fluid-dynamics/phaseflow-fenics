@@ -27,13 +27,16 @@ def test_ghia1982_steady_lid_driven_cavity():
     m = 20
 
     w = phaseflow.run(linearize = False,
-        mesh = UnitSquareMesh(m, m, "crossed"),
+        mesh = UnitSquareMesh(m, m, 'crossed'),
         final_time = 1.e12,
         time_step_bounds = 1.e12,
         mu_l = 0.01,
-        output_dir="output/test_ghia1982_steady_lid_driven_cavity",
-        initial_values_expression = (lid, '0.', '0.', '0.'),
-        bc_expressions = [[0, ('1.', '0.'), 3, lid, "topological"], [0, ('0.', '0.'), 3, fixed_walls, "topological"], [1, '0.', 2, bottom_left_corner, "pointwise"]])
+        output_dir='output/test_ghia1982_steady_lid_driven_cavity',
+        initial_values_expression = (lid, "0.", "0.", "0."),
+        boundary_conditions = [
+            {'subspace': 0, 'value_expression': ("1.", "0."), 'degree': 3, 'location_expression': lid, 'method': 'topological'},
+            {'subspace': 0, 'value_expression': ("0.", "0."), 'degree': 3, 'location_expression': fixed_walls, 'method': 'topological'},
+            {'subspace': 1, 'value_expression': "0.", 'degree': 2, 'location_expression': bottom_left_corner, 'method': 'pointwise'}])
 
     verify_against_ghia1982(w)
     
@@ -47,9 +50,12 @@ def test_unsteady_lid_driven_cavity():
         final_time = 1.e12,
         time_step_bounds = (1., 1., 1.e12),
         mu_l = 0.01,
-        output_dir="output/test_unsteady_lid_driven_cavity",
         initial_values_expression = (lid, '0.', '0.', '0.'),
-        bc_expressions = [[0, ('1.', '0.'), 3, lid, "topological"], [0, ('0.', '0.'), 3, fixed_walls, "topological"], [1, '0.', 2, bottom_left_corner, "pointwise"]])
+        boundary_conditions = [
+            {'subspace': 0, 'value_expression': ("1.", "0."), 'degree': 3, 'location_expression': lid, 'method': 'topological'},
+            {'subspace': 0, 'value_expression': ("0.", "0."), 'degree': 3, 'location_expression': fixed_walls, 'method': 'topological'},
+            {'subspace': 1, 'value_expression': "0.", 'degree': 2, 'location_expression': bottom_left_corner, 'method': 'pointwise'}],
+        output_dir="output/test_unsteady_lid_driven_cavity")
 
     verify_against_ghia1982(w)
         
@@ -63,9 +69,12 @@ def test_ghia1982_steady_lid_driven_cavity_linearized():
         final_time = 1.e12,
         time_step_bounds = 1.e12,
         mu_l = 0.01,
-        output_dir="output/test_ghia1982_steady_lid_driven_cavity_linearized",
         initial_values_expression = (lid, '0.', '0.', '0.'),
-        bc_expressions = [[0, ('0.', '0.'), 3, lid, "topological"], [0, ('0.', '0.'), 3, fixed_walls, "topological"], [1, '0.', 2, bottom_left_corner, "pointwise"]])
+        boundary_conditions = [
+            {'subspace': 0, 'value_expression': ("0.", "0."), 'degree': 3, 'location_expression': lid, 'method': 'topological'},
+            {'subspace': 0, 'value_expression': ("0.", "0."), 'degree': 3, 'location_expression': fixed_walls, 'method': 'topological'},
+            {'subspace': 1, 'value_expression': "0.", 'degree': 2, 'location_expression': bottom_left_corner, 'method': 'pointwise'}],
+        output_dir="output/test_ghia1982_steady_lid_driven_cavity_linearized")
 
     verify_against_ghia1982(w)
 
@@ -80,9 +89,12 @@ def test_ghia1982_steady_lid_driven_cavity_amr():
         final_time = 1.e12,
         time_step_bounds = 1.e12,
         mu_l = 0.01,
-        output_dir="output/test_ghia1982_steady_lid_driven_cavity_amr",
         initial_values_expression = (lid, '0.', '0.', '0.'),
-        bc_expressions = [[0, ('1.', '0.'), 3, 'near(x[1],  1.)', "topological"], [0, ('0.', '0.'), 3, 'near(x[0],  0.) | near(x[0],  1.) | near(x[1],  0.)', "topological"], [1, '0.', 2, 'near(x[0], 0.) && near(x[1], 0.)', "pointwise"]])
+        boundary_conditions = [
+            {'subspace': 0, 'value_expression': ("1.", "0."), 'degree': 3, 'location_expression': lid, 'method': 'topological'},
+            {'subspace': 0, 'value_expression': ("0.", "0."), 'degree': 3, 'location_expression': fixed_walls, 'method': 'topological'},
+            {'subspace': 1, 'value_expression': "0.", 'degree': 2, 'location_expression': bottom_left_corner, 'method': 'pointwise'}],
+        output_dir="output/test_ghia1982_steady_lid_driven_cavity_amr")
 
     verify_against_ghia1982(w)
     
@@ -100,7 +112,10 @@ def test_ghia1982_steady_lid_driven_cavity_linearized_amr():
         stop_when_steady = True,
         mu_l = 0.01,
         initial_values_expression = (lid, '0.', '0.', '0.'),
-        bc_expressions = [[0, ('0.', '0.'), 3, 'near(x[1],  1.)', "topological"], [0, ('0.', '0.'), 3, 'near(x[0],  0.) | near(x[0],  1.) | near(x[1],  0.)', "topological"], [1, '0.', 2, 'near(x[0], 0.) && near(x[1], 0.)', "pointwise"]],
+        boundary_conditions = [
+            {'subspace': 0, 'value_expression': ("0.", "0."), 'degree': 3, 'location_expression': lid, 'method': 'topological'},
+            {'subspace': 0, 'value_expression': ("0.", "0."), 'degree': 3, 'location_expression': fixed_walls, 'method': 'topological'},
+            {'subspace': 1, 'value_expression': "0.", 'degree': 2, 'location_expression': bottom_left_corner, 'method': 'pointwise'}],
         output_dir="output/test_ghia1982_steady_lid_driven_cavity_linearized_amr")
 
     verify_against_ghia1982(w)

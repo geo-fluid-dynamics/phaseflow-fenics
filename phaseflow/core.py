@@ -38,7 +38,7 @@ DEFAULT_STEFAN_NUMBER = 0.045
 Conceptually this will be like having a PCM with zero latent heat.
 The melting front should move quickly.'''
 
-def function_spaces(mesh=fenics.UnitSquareMesh(20, 20, "crossed"), pressure_degree=1, temperature_degree=1):
+def function_spaces(mesh=fenics.UnitSquareMesh(20, 20, 'crossed'), pressure_degree=1, temperature_degree=1):
     """ Define function spaces for the variational form """
     
     velocity_degree = pressure_degree + 1
@@ -76,7 +76,7 @@ def function_spaces(mesh=fenics.UnitSquareMesh(20, 20, "crossed"), pressure_degr
     
     
 def run(
-    output_dir = "output/natural_convection",
+    output_dir = 'output/natural_convection',
     Ra = DEFAULT_RAYLEIGH_NUMBER,
     Pr = DEFAULT_PRANDTL_NUMBER,
     K = 1.,
@@ -84,16 +84,9 @@ def run(
     g = (0., -1.),
     m_B = lambda theta : theta*DEFAULT_RAYLEIGH_NUMBER/(DEFAULT_PRANDTL_NUMBER*REYNOLDS_NUMBER**2),
     dm_B_dtheta = lambda theta : DEFAULT_RAYLEIGH_NUMBER/(DEFAULT_PRANDTL_NUMBER*REYNOLDS_NUMBER**2),
-    mesh=fenics.UnitSquareMesh(20, 20, "crossed"),
-    initial_values_expression = (
-        "0.",
-        "0.",
-        "0.",
-        "0.5*near(x[0],  0.) -0.5*near(x[0],  1.)"),
-    bc_expressions = [
-        [0, ("0.", "0."), 3, "near(x[0],  0.) | near(x[0],  1.) | near(x[1], 0.) | near(x[1],  1.)","topological"],
-        [2, "0.", 2, "near(x[0],  0.)", "topological"],
-        [2, "0.", 2, "near(x[0],  1.)", "topological"]],
+    mesh=fenics.UnitSquareMesh(20, 20, 'crossed'),
+    initial_values_expression = ("0.", "0.", "0.", "0.5*near(x[0],  0.) -0.5*near(x[0],  1.)"),
+    boundary_conditions = [{'subspace': 0, 'value_expression': ("0.", "0."), 'degree': 3, 'location_expression': "near(x[0],  0.) | near(x[0],  1.) | near(x[1], 0.) | near(x[1],  1.)", 'method': 'topological'}, {'subspace': 2, 'value_expression': "0.", 'degree': 2, 'location_expression': "near(x[0],  0.)", 'method': 'topological'}, {'subspace': 2, 'value_expression': "0.", 'degree': 2, 'location_expression': "near(x[0],  1.)", 'method': 'topological'}],
     final_time = 1.,
     time_step_bounds = (1.e-3, 1.e-3, 1.),
     adaptive_space = False,
@@ -107,10 +100,11 @@ def run(
     stop_when_steady = True,
     steady_relative_tolerance = 1.e-8):
 
-    #
+    # Display inputs
     print("Running Phaseflow with the following arguments:")
     
     print(helpers.arguments())
+    
     
     # Validate inputs    
     if type(time_step_bounds) == type(1.):
@@ -119,22 +113,18 @@ def run(
     
     time_step_size = time.TimeStepSize(helpers.BoundedValue(time_step_bounds[0], time_step_bounds[1], time_step_bounds[2]))
         
-    
-    # Compute derived parameters
+        
+    # Define solution function and test functions
     W, W_ele = function_spaces(mesh, pressure_degree, temperature_degree)
-        
-        
-    # Define function and test functions
+    
     w = fenics.Function(W)   
 
     v, q, phi = fenics.TestFunctions(W)
 
-        
-    # Split solution function to access variables separately
     u, p, theta = fenics.split(w)
 
        
-    # Specify the initial values
+    # Set the initial values
     w_n = fenics.interpolate(fenics.Expression(initial_values_expression, element=W_ele), W)
     
     u_n, p_n, theta_n = fenics.split(w_n)
@@ -176,13 +166,6 @@ def run(
     def c(_w, _z, _v):
        
         return dot(dot(grad(_z), _w), _v)
-    
-    # Specify boundary conditions
-    bc = []
-    
-    for subspace, expression, degree, coordinates, method in bc_expressions:
-    
-        bc.append(fenics.DirichletBC(W.sub(subspace), fenics.Expression(expression, degree=degree), coordinates, method=method))
         
 
     # Implement the nonlinear variational form
@@ -237,6 +220,14 @@ def run(
             return A, L
 
 
+    # Organize boundary conditions
+    bc = []
+    
+    for item in boundary_conditions:
+    
+        bc.append(fenics.DirichletBC(W.sub(item['subspace']), fenics.Expression(item['value_expression'], degree=item['degree']), item['location_expression'], method=item['method']))
+        
+        
     # Create progress bar
     progress = fenics.Progress('Time-stepping')
 
