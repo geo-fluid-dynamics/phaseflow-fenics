@@ -108,7 +108,9 @@ def run(
     # Define solution function and test functions
     W, W_ele = function_spaces(mesh, pressure_degree, temperature_degree)
     
-    w = fenics.Function(W)   
+    w = fenics.Function(W)
+    
+    u, p, theta = fenics.split(w)
 
 
     # Set the initial values
