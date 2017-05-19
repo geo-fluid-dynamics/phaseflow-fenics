@@ -95,10 +95,10 @@ def test_ghia1982_steady_lid_driven_cavity_linearized_amr():
         
 if __name__=='__main__':
 
-    #test_ghia1982_steady_lid_driven_cavity()
+    test_ghia1982_steady_lid_driven_cavity()
     
-    #test_ghia1982_steady_lid_driven_cavity_linearized()
+    test_ghia1982_steady_lid_driven_cavity_linearized()
     
     test_ghia1982_steady_lid_driven_cavity_amr()
     
-    test_ghia1982_steady_lid_driven_cavity_linearized_amr()
+    #test_ghia1982_steady_lid_driven_cavity_linearized_amr()
