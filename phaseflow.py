@@ -235,7 +235,9 @@ def run(
     # Implement the nonlinear variational form
     if not linearize:
         
-        def nonlinear_variational_form(dt):
+        def nonlinear_variational_form(dt, w_n):
+        
+            u_n, p_n, theta_n = split(w_n)
         
             dt = Constant(dt)
             
@@ -263,10 +265,12 @@ def run(
     
         u_k, p_k, theta_k = split(w_k)
 
-        def linear_variational_form(dt):
+        def linear_variational_form(dt, w_k):
         
             dt = Constant(dt)
         
+            u_k, p_k, theta_k = split(w_k)
+            
             A = (\
                 b(u_w, q) - gamma*p_w*q
                 + dot(u_w, v)/dt + c(u_w, u_k, v) + c(u_k, u_w, v) + a(mu_l, u_w, v) + b(v, p_w) + dot(dm_B_dtheta(theta_k)*theta_w*g, v)
@@ -309,16 +313,14 @@ def run(
 
 
     time = 0.
-
-    w.assign(w_n)
     
-    write_solution(solution_files, w, time) 
+    write_solution(solution_files, w_n, time) 
 
     
     # Solve each time step
-    time_residual = Function(W)        
+    time_residual = Function(W)
     
-    def solve_time_step(dt):
+    def solve_time_step(dt, w_n):
     
         if linearize:
         
@@ -332,7 +334,7 @@ def run(
             
             for k in range(max_newton_iterations):
             
-                A, L = linear_variational_form(dt)
+                A, L = linear_variational_form(dt, w_k)
                 
                 w_w = Function(W)
 
@@ -372,15 +374,15 @@ def run(
                     
                     break
                      
-            w = w_k # Here we can't simply say w.assign(w_k), because w was not refined (because it had no relation to the adaptive problem)
+            w_out = w_k # Here we can't simply say w.assign(w_k), because w was not refined (because it had no relation to the adaptive problem)
 
         else:
         
             '''  @todo Implement adaptive time for nonlinear version.
             How to get residual from solver.solve() to check if diverging? 
             Related: Set solver.parameters.nonlinear_variational_solver.newton_solver["error_on_nonconvergence"] = False and figure out how to read convergence data.'''
-        
-            F = nonlinear_variational_form(dt)
+            
+            F = nonlinear_variational_form(dt, w_n)
             
             problem = NonlinearVariationalProblem(F, w, bc, derivative(F, w))
             
@@ -404,7 +406,9 @@ def run(
                 
             assert(converged)
             
-        return w, converged
+            w_out = w
+            
+        return w_out, converged
 
     EPSILON = 1.e-12
     
@@ -422,7 +426,7 @@ def run(
         
         while not converged:
         
-            w, converged = solve_time_step(time_step_size.value)
+            w, converged = solve_time_step(time_step_size.value, w_n)
             
             if time_step_size.value <= time_step_size.min + DOLFIN_EPS:
                     
@@ -450,7 +454,7 @@ def run(
             time_residual.assign(w - w_n)
         
         # Update previous solution
-        w_n.assign(w)
+        w_n = w # We cannot simply use w_n.assign(w), because w may have been refined
         
         # Show the time progress
         progress.update(time / final_time)
