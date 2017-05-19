@@ -16,11 +16,10 @@
     Match the notation in danaila2014newton as best as possible.
     
 '''
+import fenics
 
 from fenics import \
-    UnitSquareMesh, FiniteElement, VectorElement, MixedElement, \
-    FunctionSpace, VectorFunctionSpace, \
-    Function, TrialFunction, TestFunctions, split, \
+    split, \
     DirichletBC, Constant, Expression, \
     dx, \
     dot, inner, grad, nabla_grad, sym, div, tanh, sqrt, \
@@ -32,7 +31,8 @@ from fenics import \
     LinearVariationalProblem, LinearVariationalSolver, NonlinearVariationalProblem, NonlinearVariationalSolver, \
     AdaptiveLinearVariationalSolver, AdaptiveNonlinearVariationalSolver, \
     SubDomain, EdgeFunction, near, adapt
-from dolfin import DOLFIN_EPS
+    
+import dolfin
 import helpers
 import time
     
@@ -72,7 +72,7 @@ def run(
     g = (0., -1.),
     m_B = lambda theta : theta*default_Ra/(default_Pr*Re*Re),
     dm_B_dtheta = lambda theta : default_Ra/(default_Pr*Re*Re),
-    mesh = UnitSquareMesh(20, 20, "crossed"),
+    mesh = fenics.UnitSquareMesh(20, 20, "crossed"),
     initial_values_expression = (
         "0.",
         "0.",
@@ -121,18 +121,18 @@ def run(
 
     
     # Define function spaces for the system
-    VxV = VectorFunctionSpace(mesh, 'P', velocity_degree)
+    VxV = fenics.VectorFunctionSpace(mesh, 'P', velocity_degree)
 
-    Q = FunctionSpace(mesh, 'P', pressure_degree) # @todo mixing up test function space
+    Q = fenics.FunctionSpace(mesh, 'P', pressure_degree) # @todo mixing up test function space
 
-    V = FunctionSpace(mesh, 'P', temperature_degree)
+    V = fenics.FunctionSpace(mesh, 'P', temperature_degree)
 
     '''
     MixedFunctionSpace used to be available but is now deprecated. 
     The way that fenics separates function spaces and elements is confusing.
     To create the mixed space, I'm using the approach from https://fenicsproject.org/qa/11983/mixedfunctionspace-in-2016-2-0
     '''
-    VxV_ele = VectorElement('P', mesh.ufl_cell(), velocity_degree)
+    VxV_ele = fenics.VectorElement('P', mesh.ufl_cell(), velocity_degree)
 
     '''
     @todo How can we use the space $Q = \left{q \in L^2(\Omega) | \int{q = 0}\right}$ ?
@@ -142,18 +142,18 @@ def run(
     down the space Q with less restrictions than H^1_0.
 
     '''
-    Q_ele = FiniteElement('P', mesh.ufl_cell(), pressure_degree)
+    Q_ele = fenics.FiniteElement('P', mesh.ufl_cell(), pressure_degree)
 
-    V_ele = FiniteElement('P', mesh.ufl_cell(), temperature_degree)
+    V_ele = fenics.FiniteElement('P', mesh.ufl_cell(), temperature_degree)
 
-    W_ele = MixedElement([VxV_ele, Q_ele, V_ele])
+    W_ele = fenics.MixedElement([VxV_ele, Q_ele, V_ele])
 
-    W = FunctionSpace(mesh, W_ele)   
+    W = fenics.FunctionSpace(mesh, W_ele)   
         
     # Define function and test functions
-    w = Function(W)   
+    w = fenics.Function(W)   
 
-    v, q, phi = TestFunctions(W)
+    v, q, phi = fenics.TestFunctions(W)
 
         
     # Split solution function to access variables separately
@@ -230,11 +230,11 @@ def run(
     # Implement the Newton linearized form published in danaila2014newton
     elif linearize: 
 
-        w_w = TrialFunction(W)
+        w_w = fenics.TrialFunction(W)
         
         u_w, p_w, theta_w = split(w_w)
         
-        w_k = Function(W)
+        w_k = fenics.Function(W)
         
         w_k.assign(w_n)
     
@@ -293,7 +293,7 @@ def run(
 
     
     # Solve each time step
-    time_residual = Function(W)
+    time_residual = fenics.Function(W)
     
     def solve_time_step(dt, w_n):
     
@@ -311,7 +311,7 @@ def run(
             
                 A, L = linear_variational_form(dt, w_k)
                 
-                w_w = Function(W)
+                w_w = fenics.Function(W)
 
                 u_w, p_w, theta_w = split(w_w.leaf_node())
 
@@ -401,7 +401,7 @@ def run(
         
             w, converged = solve_time_step(time_step_size.value, w_n)
             
-            if time_step_size.value <= time_step_size.min + DOLFIN_EPS:
+            if time_step_size.value <= time_step_size.min + dolfin.DOLFIN_EPS:
                     
                 break;
             
