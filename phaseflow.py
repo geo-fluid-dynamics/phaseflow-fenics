@@ -95,23 +95,12 @@ def run(
     output_dir = "output/natural_convection",
     Ra = default_Ra,
     Pr = default_Pr,
-    Ste = default_Ste,
-    C = 1,
     K = 1.,
     mu_l = 1.,
-    mu_s = 1.e8,
-    epsilon_1 = 0.01,
-    epsilon_2 = 0.01,
-    a_s = 2.,
-    theta_s = 0.01,
-    R_s = 0.005,
     g = (0., -1.),
     m_B = lambda theta : theta*default_Ra/(default_Pr*Re*Re),
     dm_B_dtheta = lambda theta : default_Ra/(default_Pr*Re*Re),
     mesh = UnitSquareMesh(20, 20, "crossed"),
-    s_u = ("0.", "0."),
-    s_p = "0.",
-    s_theta = "0.",
     initial_values_expression = (
         "0.",
         "0.",
@@ -132,8 +121,7 @@ def run(
     newton_relative_tolerance = 1.e-9,
     max_newton_iterations = 10,
     stop_when_steady = True,
-    steady_relative_tolerance = 1.e-8,
-    exact_solution_expression = []):
+    steady_relative_tolerance = 1.e-8):
 
     #
     print("Running nsb_pcm with the following arguments:")
@@ -193,15 +181,7 @@ def run(
         
     # Split solution function to access variables separately
     u, p, theta = split(w)
-    
-    
-    # Set source term expressions
-    s_u = Expression(s_u, element=VxV_ele)
-    
-    s_p = Expression(s_p, element=Q_ele)
-    
-    s_theta = Expression(s_theta, element=V_ele)
-        
+
        
     # Specify the initial values
     w_n = interpolate(Expression(initial_values_expression, element=W_ele), W)
@@ -223,12 +203,6 @@ def run(
     gamma = Constant(gamma)
     
     mu_l = Constant(mu_l)
-    
-    mu_s = Constant(mu_s)
-    
-    Ste = Constant(Ste)
-    
-    C = Constant(C)
 
 
     # Define variational form   
@@ -266,9 +240,9 @@ def run(
             dt = Constant(dt)
             
             F = (\
-                    b(u, q) - gamma*p*q - s_p*q \
-                    + dot(u, v)/dt + c(u, u, v) + a(mu_l, u, v) + b(v, p) - dot(u_n, v)/dt + dot(m_B(theta)*g, v) - dot(s_u, v) \
-                    + theta*phi/dt - dot(u, grad(phi))*theta + dot(K/Pr*grad(theta), grad(phi)) - theta_n*phi/dt - s_theta*phi \
+                    b(u, q) - gamma*p*q
+                    + dot(u, v)/dt + c(u, u, v) + a(mu_l, u, v) + b(v, p) - dot(u_n, v)/dt + dot(m_B(theta)*g, v)
+                    + theta*phi/dt - dot(u, grad(phi))*theta + dot(K/Pr*grad(theta), grad(phi)) - theta_n*phi/dt
                     )*dx
             
             return F
@@ -301,9 +275,9 @@ def run(
                 )*dx
                 
             L = (\
-                b(u_k, q) - gamma*p_k*q + s_p*q
-                + dot(u_k - u_n, v)/dt + c(u_k, u_k, v) + a(mu_l, u_k, v) + b(v, p_k) + dot(m_B(theta_k)*g, v) + dot(s_u, v)
-                + (theta_k - theta_n)*phi/dt - dot(u_k, grad(phi))*theta_k + dot(K/Pr*grad(theta_k), grad(phi)) + s_theta*phi
+                b(u_k, q) - gamma*p_k*q
+                + dot(u_k - u_n, v)/dt + c(u_k, u_k, v) + a(mu_l, u_k, v) + b(v, p_k) + dot(m_B(theta_k)*g, v)
+                + (theta_k - theta_n)*phi/dt - dot(u_k, grad(phi))*theta_k + dot(K/Pr*grad(theta_k), grad(phi))
                 )*dx  
                 
             return A, L
@@ -498,14 +472,6 @@ def run(
     
         print 'Reached final time, t = ' + str(final_time)
         
-    
-    if exact_solution_expression:
-    
-        w_e = Expression(exact_solution_expression, element=W_ele)
-    
-        error = errornorm(w_e, w_n, 'L2')
-    
-        print("Error = " + str(error))
         
     w_n.rename("w", "state")
         

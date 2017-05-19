@@ -31,7 +31,6 @@ def test_ghia1982_steady_lid_driven_cavity():
         final_time = 1.e12,
         time_step_size = phaseflow.BoundedValue(1.e12, 1.e12, 1.e12),
         mu_l = 0.01,
-        theta_s = -1.,
         output_dir="output/test_ghia1982_steady_lid_driven_cavity",
         initial_values_expression = (lid, '0.', '0.', '0.'),
         bc_expressions = [[0, ('1.', '0.'), 3, lid, "topological"], [0, ('0.', '0.'), 3, fixed_walls, "topological"], [1, '0.', 2, bottom_left_corner, "pointwise"]])
@@ -48,7 +47,6 @@ def test_ghia1982_steady_lid_driven_cavity_linearized():
         final_time = 1.e12,
         time_step_size = phaseflow.BoundedValue(1.e12, 1.e12, 1.e12),
         mu_l = 0.01,
-        theta_s = -1.,
         output_dir="output/test_ghia1982_steady_lid_driven_cavity_linearized",
         initial_values_expression = (lid, '0.', '0.', '0.'),
         bc_expressions = [[0, ('0.', '0.'), 3, lid, "topological"], [0, ('0.', '0.'), 3, fixed_walls, "topological"], [1, '0.', 2, bottom_left_corner, "pointwise"]])
@@ -66,7 +64,6 @@ def test_ghia1982_steady_lid_driven_cavity_amr():
         final_time = 1.e12,
         time_step_size = phaseflow.BoundedValue(1.e12, 1.e12, 1.e12),
         mu_l = 0.01,
-        theta_s = -1.,
         output_dir="output/test_ghia1982_steady_lid_driven_cavity_amr",
         initial_values_expression = (lid, '0.', '0.', '0.'),
         bc_expressions = [[0, ('1.', '0.'), 3, 'near(x[1],  1.)', "topological"], [0, ('0.', '0.'), 3, 'near(x[0],  0.) | near(x[0],  1.) | near(x[1],  0.)', "topological"], [1, '0.', 2, 'near(x[0], 0.) && near(x[1], 0.)', "pointwise"]])
@@ -78,14 +75,13 @@ def test_ghia1982_steady_lid_driven_cavity_linearized_amr():
 
     coarse_m = 4
 
-    w = phaseflow.run( linearize = True,
+    w = phaseflow.run(linearize = True,
         mesh = UnitSquareMesh(coarse_m, coarse_m, "crossed"),
         adaptive_space = True,
         adaptive_space_error_tolerance = 1.e-4,
         final_time = 1.e12,
         time_step_size = phaseflow.BoundedValue(1.e12, 1.e12, 1.e12),
         mu_l = 0.01,
-        theta_s = -1.,
         output_dir="output/test_ghia1982_steady_lid_driven_cavity_linearized_amr",
         initial_values_expression = (lid, '0.', '0.', '0.'),
         bc_expressions = [[0, ('0.', '0.'), 3, 'near(x[1],  1.)', "topological"], [0, ('0.', '0.'), 3, 'near(x[0],  0.) | near(x[0],  1.) | near(x[1],  0.)', "topological"], [1, '0.', 2, 'near(x[0], 0.) && near(x[1], 0.)', "pointwise"]])
