@@ -16,18 +16,14 @@
     Match the notation in danaila2014newton as best as possible.
     
 '''
-import fenics
-
-from fenics import \
-    dx, dot, inner, grad, nabla_grad, sym, div, tanh, sqrt, \
-    solve, parameters, info, derivative, \
-    LinearVariationalProblem, LinearVariationalSolver, NonlinearVariationalProblem, NonlinearVariationalSolver, \
-    AdaptiveLinearVariationalSolver, AdaptiveNonlinearVariationalSolver, \
-    SubDomain, EdgeFunction, near, adapt
-    
+import fenics   
 import dolfin
 import helpers
 import time
+    
+''' We want to keep most imports within their proper namespaces;
+but for the sake of readability, we import some math notation '''
+from fenics import dx, dot, inner, grad, sym, div, tanh, sqrt
     
     
 def arguments():
@@ -310,7 +306,7 @@ def run(
 
                 if not adaptive_space:
                 
-                    solve(A == L, w_w, bcs=bc)
+                    fenics.solve(A == L, w_w, bcs=bc)
                     
                 else:
                         
@@ -318,9 +314,9 @@ def run(
                     This details here are opaque to me. Here is a related issue: https://fenicsproject.org/qa/12271/adaptive-stokes-perform-compilation-unable-extract-indices'''
                     M = sqrt((u_k[0] - u_w[0])**2 + (u_k[1] - u_w[1])**2 + (theta_k - theta_w)**2)*dx
                         
-                    problem = LinearVariationalProblem(A, L, w_w, bcs=bc)
+                    problem = fenics.LinearVariationalProblem(A, L, w_w, bcs=bc)
 
-                    solver = AdaptiveLinearVariationalSolver(problem, M)
+                    solver = fenics.AdaptiveLinearVariationalSolver(problem, M)
 
                     solver.solve(adaptive_space_error_tolerance)
 
@@ -352,11 +348,11 @@ def run(
             
             F = nonlinear_variational_form(dt, w_n)
             
-            problem = NonlinearVariationalProblem(F, w, bc, derivative(F, w))
+            problem = fenics.NonlinearVariationalProblem(F, w, bc, fenics.derivative(F, w))
             
             if not adaptive_space:     
             
-                solver = NonlinearVariationalSolver(problem)
+                solver = fenics.NonlinearVariationalSolver(problem)
                 
                 iteration_count, converged = solver.solve()
                 
@@ -364,7 +360,7 @@ def run(
         
                 M = sqrt(u[0]**2 + u[1]**2 + theta**2)*dx
             
-                solver = AdaptiveNonlinearVariationalSolver(problem, M)
+                solver = fenics.AdaptiveNonlinearVariationalSolver(problem, M)
 
                 solver.solve(adaptive_space_error_tolerance)
 
