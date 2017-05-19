@@ -23,7 +23,7 @@ from fenics import \
     Function, TrialFunction, TestFunctions, split, \
     DirichletBC, Constant, Expression, \
     dx, \
-    dot, inner, grad, nabla_grad, sym, div, tanh, \
+    dot, inner, grad, nabla_grad, sym, div, tanh, sqrt, \
     errornorm, norm, \
     File, \
     Progress, set_log_level, PROGRESS, \
@@ -289,13 +289,9 @@ def run(
     
 
     # Define method for writing values, and write initial values# Create VTK file for visualization output
-    velocity_file = File(output_dir + '/velocity.pvd')
+    solution_files = [File(output_dir + '/velocity.pvd'), File(output_dir + '/pressure.pvd'), File(output_dir + '/temperature.pvd')]
 
-    pressure_file = File(output_dir + '/pressure.pvd')
-
-    temperature_file = File(output_dir + '/temperature.pvd')
-
-    def write_solution(_w, time):
+    def write_solution(solution_files, _w, time):
 
         w = _w.leaf_node()
         
@@ -307,18 +303,16 @@ def run(
         
         temperature.rename("theta", "temperature")
         
-        velocity_file << (velocity, time) 
+        for i, var in enumerate([velocity, pressure, temperature]):
         
-        pressure_file << (pressure, time) 
-        
-        temperature_file << (temperature, time) 
+            solution_files[i] << (var, time) 
 
 
     time = 0.
 
     w.assign(w_n)
     
-    write_solution(w, time) 
+    write_solution(solution_files, w, time) 
 
     
     # Solve each time step
@@ -339,10 +333,12 @@ def run(
             for k in range(max_newton_iterations):
             
                 A, L = linear_variational_form(dt)
+                
+                w_w = Function(W)
+
+                u_w, p_w, theta_w = split(w_w.leaf_node())
 
                 if not adaptive_space:
-                    
-                    w_w = Function(W)
                 
                     solve(A == L, w_w, bcs=bc)
                     
@@ -350,13 +346,7 @@ def run(
                         
                     '''w_w was previously a TrialFunction, but must be a Function when defining M and when calling solve().
                     This details here are opaque to me. Here is a related issue: https://fenicsproject.org/qa/12271/adaptive-stokes-perform-compilation-unable-extract-indices'''
-                    w_w = Function(W)
-
-                    u_w, p_w, theta_w = split(w_w)
-
-                    if adaptive_space:
-
-                        M = (u_w[0] + u_w[1] + theta_w)*dx
+                    M = sqrt((u_k[0] - u_w[0])**2 + (u_k[1] - u_w[1])**2 + (theta_k - theta_w)**2)*dx
                         
                     problem = LinearVariationalProblem(A, L, w_w, bcs=bc)
 
@@ -365,7 +355,7 @@ def run(
                     solver.solve(adaptive_space_error_tolerance)
 
                     solver.summary()
-
+    
                 w_k.assign(w_k - w_w)
                 
                 norm_residual = norm(w_w, 'L2')/norm(w_k, 'L2')
@@ -381,8 +371,12 @@ def run(
                     converged = True
                     
                     break
+                    
+            write_solution([File(output_dir + '/newton_velocity.pvd'), File(output_dir + '/newton_pressure.pvd'), File(output_dir + '/newton_temperature.pvd')], w_k, time)
+                    
+            w = w_k
             
-            w.assign(w_k)
+            write_solution([File(output_dir + '/newton2_velocity.pvd'), File(output_dir + '/newton2_pressure.pvd'), File(output_dir + '/newton2_temperature.pvd')], w, time)
 
         else:
         
@@ -402,7 +396,7 @@ def run(
                 
             else:
         
-                M = (u[0] + u[1] + theta)*dx
+                M = sqrt(u[0]**2 + u[1]**2 + theta**2)*dx
             
                 solver = AdaptiveNonlinearVariationalSolver(problem, M)
 
@@ -412,7 +406,6 @@ def run(
                 
                 converged = True 
                 
-            
             assert(converged)
             
         return converged
@@ -447,7 +440,7 @@ def run(
         
         ''' Save solution to files. Saving here allows us to inspect the latest solution 
         even if the Newton iterations failed to converge.'''
-        write_solution(w, time)
+        write_solution(solution_files, w, time)
         
         assert(converged)
         
@@ -483,7 +476,7 @@ def run(
         
     w_n.rename("w", "state")
         
-    fe_field_interpolant = interpolate(w_n, W)
+    fe_field_interpolant = interpolate(w_n.leaf_node(), W)
         
     return fe_field_interpolant
     
