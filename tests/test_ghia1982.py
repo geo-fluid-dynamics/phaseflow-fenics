@@ -1,6 +1,6 @@
 from .context import phaseflow
-
 from fenics import UnitSquareMesh, Point
+
 
 lid = 'near(x[1],  1.)'
 
@@ -22,7 +22,7 @@ def verify_against_ghia1982(w):
         assert(abs(ux - true_ux) < 2.e-2)
         
 
-def test_ghia1982_steady_lid_driven_cavity():
+def test_id0_ghia1982_steady_lid_driven_cavity():
    
     m = 20
 
@@ -41,7 +41,7 @@ def test_ghia1982_steady_lid_driven_cavity():
     verify_against_ghia1982(w)
     
     
-def test_unsteady_lid_driven_cavity():
+def test_id1_unsteady_lid_driven_cavity():
    
     m = 20
 
@@ -60,7 +60,7 @@ def test_unsteady_lid_driven_cavity():
     verify_against_ghia1982(w)
         
         
-def test_ghia1982_steady_lid_driven_cavity_linearized():
+def test_id2_ghia1982_steady_lid_driven_cavity_linearized():
 
     m = 20
 
@@ -78,7 +78,7 @@ def test_ghia1982_steady_lid_driven_cavity_linearized():
 
     verify_against_ghia1982(w)
 
-def test_ghia1982_steady_lid_driven_cavity_amr():
+def test_id3_ghia1982_steady_lid_driven_cavity_amr():
 
     coarse_m = 4
 
@@ -99,7 +99,7 @@ def test_ghia1982_steady_lid_driven_cavity_amr():
     verify_against_ghia1982(w)
     
 
-def test_ghia1982_steady_lid_driven_cavity_linearized_amr():
+def test_id4_ghia1982_steady_lid_driven_cavity_linearized_amr():
 
     coarse_m = 4
 
@@ -108,7 +108,7 @@ def test_ghia1982_steady_lid_driven_cavity_linearized_amr():
         adaptive_space = True,
         adaptive_space_error_tolerance = 1.e-4,
         final_time = 1.e12,
-        time_step_size = phaseflow.BoundedValue(1.e12, 1.e12, 1.e12),
+        time_step_bounds = 1.e12,
         stop_when_steady = True,
         mu_l = 0.01,
         initial_values_expression = (lid, '0.', '0.', '0.'),

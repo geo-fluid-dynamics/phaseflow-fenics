@@ -1,22 +1,22 @@
 # -*- coding: utf-8 -*-
 
-from setuptools import setup, find_packages
+import setuptools
 
 
-with open('README.txt') as f:
+with open('README.md') as f:
     readme = f.read()
 
 with open('LICENSE.txt') as f:
     license = f.read()
 
-setup(
+setuptools.setup(
     name='phaseflow',
-    version='0.1.x',
+    version='0.1.0',
     description='Simulate convective and conducive heat transfer in a phase-change material domain',
     long_description=readme,
     author='Alexander G. Zimmerman',
     author_email='alex.g.zimmerman@gmail.com',
     url='https://github.com/alexanderzimmerman/phaseflow-fenics',
     license=license,
-    packages=find_packages(exclude=('tests', 'docs'))
+    packages=setuptools.find_packages(exclude=('tests', 'docs'))
 )

@@ -16,29 +16,20 @@
     Match the notation in danaila2014newton as best as possible.
     
 '''
-import fenics   
+import fenics
 import dolfin
 import helpers
+import globals
+import default
+import forms
 import time
-
-
-'''
-Per Equation 8 from danaila2014newton, we implement an equation scaled with v_ref = nu_liquid/H => t_ref = nu_liquid/H^2 => Re = 1.
-''' 
-REYNOLDS_NUMBER = 1.
-
-DEFAULT_RAYLEIGH_NUMBER = 1.e6
-    
-DEFAULT_PRANDTL_NUMBER = 0.71
-
-DEFAULT_STEFAN_NUMBER = 0.045
 
             
 '''@todo First add variable viscosity, later latent heat source term.
 Conceptually this will be like having a PCM with zero latent heat.
 The melting front should move quickly.'''
 
-def function_spaces(mesh=fenics.UnitSquareMesh(20, 20, 'crossed'), pressure_degree=1, temperature_degree=1):
+def function_spaces(mesh=default.mesh, pressure_degree=default.pressure_degree, temperature_degree=default.temperature_degree):
     """ Define function spaces for the variational form """
     
     velocity_degree = pressure_degree + 1
@@ -77,14 +68,14 @@ def function_spaces(mesh=fenics.UnitSquareMesh(20, 20, 'crossed'), pressure_degr
     
 def run(
     output_dir = 'output/natural_convection',
-    Ra = DEFAULT_RAYLEIGH_NUMBER,
-    Pr = DEFAULT_PRANDTL_NUMBER,
-    K = 1.,
-    mu_l = 1.,
-    g = (0., -1.),
-    m_B = lambda theta : theta*DEFAULT_RAYLEIGH_NUMBER/(DEFAULT_PRANDTL_NUMBER*REYNOLDS_NUMBER**2),
-    dm_B_dtheta = lambda theta : DEFAULT_RAYLEIGH_NUMBER/(DEFAULT_PRANDTL_NUMBER*REYNOLDS_NUMBER**2),
-    mesh=fenics.UnitSquareMesh(20, 20, 'crossed'),
+    Ra = default.parameters['Ra'],
+    Pr = default.parameters['Pr'],
+    K = default.parameters['K'],
+    mu_l = default.parameters['mu_l'],
+    g = default.parameters['g'],
+    m_B = default.m_B,
+    ddtheta_m_B = default.ddtheta_m_B,
+    mesh=default.mesh,
     initial_values_expression = ("0.", "0.", "0.", "0.5*near(x[0],  0.) -0.5*near(x[0],  1.)"),
     boundary_conditions = [{'subspace': 0, 'value_expression': ("0.", "0."), 'degree': 3, 'location_expression': "near(x[0],  0.) | near(x[0],  1.) | near(x[1], 0.) | near(x[1],  1.)", 'method': 'topological'}, {'subspace': 2, 'value_expression': "0.", 'degree': 2, 'location_expression': "near(x[0],  0.)", 'method': 'topological'}, {'subspace': 2, 'value_expression': "0.", 'degree': 2, 'location_expression': "near(x[0],  1.)", 'method': 'topological'}],
     final_time = 1.,
@@ -92,8 +83,8 @@ def run(
     adaptive_space = False,
     adaptive_space_error_tolerance = 1.e-4,
     gamma = 1.e-7,
-    pressure_degree = 1,
-    temperature_degree = 1,
+    pressure_degree = default.pressure_degree,
+    temperature_degree = default.temperature_degree,
     linearize = True,
     newton_relative_tolerance = 1.e-9,
     max_newton_iterations = 10,
@@ -119,105 +110,12 @@ def run(
     
     w = fenics.Function(W)   
 
-    v, q, phi = fenics.TestFunctions(W)
 
-    u, p, theta = fenics.split(w)
-
-       
     # Set the initial values
     w_n = fenics.interpolate(fenics.Expression(initial_values_expression, element=W_ele), W)
-    
-    u_n, p_n, theta_n = fenics.split(w_n)
 
     
-    # Define expressions needed for variational form
-    Ra = fenics.Constant(Ra)
-
-    Pr = fenics.Constant(Pr)
-
-    Re = fenics.Constant(REYNOLDS_NUMBER)
-
-    K = fenics.Constant(K)
-
-    g = fenics.Constant(g)
-
-    gamma = fenics.Constant(gamma)
-    
-    mu_l = fenics.Constant(mu_l)
-
-
-    # Define variational form
-    inner, dot, grad, div, sym = fenics.inner, fenics.dot, fenics.grad, fenics.div, fenics.sym
-    
-    def a(_mu, _u, _v):
-
-        def D(_u):
-        
-            return sym(grad(_u))
-        
-        return 2.*_mu*inner(D(_u), D(_v))
-        
-
-    def b(_u, _q):
-        
-        return -div(_u)*_q
-        
-
-    def c(_w, _z, _v):
-       
-        return dot(dot(grad(_z), _w), _v)
-        
-
-    # Implement the nonlinear variational form
-    if not linearize:
-        
-        def nonlinear_variational_form(dt, w_n):
-        
-            u_n, p_n, theta_n = fenics.split(w_n)
-        
-            dt = fenics.Constant(dt)
-            
-            F = (\
-                    b(u, q) - gamma*p*q
-                    + dot(u, v)/dt + c(u, u, v) + a(mu_l, u, v) + b(v, p) - dot(u_n, v)/dt + dot(m_B(theta)*g, v)
-                    + theta*phi/dt - dot(u, grad(phi))*theta + dot(K/Pr*grad(theta), grad(phi)) - theta_n*phi/dt
-                    )*fenics.dx
-            
-            return F
-            
-            
-    # Implement the Newton linearized form published in danaila2014newton
-    elif linearize: 
-
-        w_w = fenics.TrialFunction(W)
-        
-        u_w, p_w, theta_w = fenics.split(w_w)
-        
-        w_k = fenics.Function(W)
-        
-        w_k.assign(w_n)
-    
-        u_k, p_k, theta_k = fenics.split(w_k)
-
-        def linear_variational_form(dt, w_k):
-        
-            dt = fenics.Constant(dt)
-        
-            u_k, p_k, theta_k = fenics.split(w_k)
-            
-            A = (\
-                b(u_w, q) - gamma*p_w*q
-                + dot(u_w, v)/dt + c(u_w, u_k, v) + c(u_k, u_w, v) + a(mu_l, u_w, v) + b(v, p_w) + dot(dm_B_dtheta(theta_k)*theta_w*g, v)
-                + theta_w*phi/dt - dot(u_k, grad(phi))*theta_w - dot(u_w, grad(phi))*theta_k + dot(K/Pr*grad(theta_w), grad(phi))
-                )*fenics.dx
-                
-            L = (\
-                b(u_k, q) - gamma*p_k*q
-                + dot(u_k - u_n, v)/dt + c(u_k, u_k, v) + a(mu_l, u_k, v) + b(v, p_k) + dot(m_B(theta_k)*g, v)
-                + (theta_k - theta_n)*phi/dt - dot(u_k, grad(phi))*theta_k + dot(K/Pr*grad(theta_k), grad(phi))
-                )*fenics.dx  
-                
-            return A, L
+    make_nonlinear_form, make_newton_linearized_form = forms.initialize(W, {'Ra': Ra, 'Pr': Pr, 'K': K, 'g': g, 'gamma': gamma, 'mu_l': mu_l}, m_B, ddtheta_m_B)
 
 
     # Organize boundary conditions
@@ -272,11 +170,15 @@ def run(
             
             iteration_count = 0
         
+            w_k = fenics.Function(W)
+            
             w_k.assign(w_n)
+            
+            u_k, p_k, theta_k = fenics.split(w_k)
             
             for k in range(max_newton_iterations):
             
-                A, L = linear_variational_form(dt, w_k)
+                A, L = make_newton_linearized_form(dt=dt, w_k=w_k, w_n=w_n)
                 
                 w_w = fenics.Function(W)
 
@@ -324,7 +226,7 @@ def run(
             How to get residual from solver.solve() to check if diverging? 
             Related: Set solver.parameters.nonlinear_variational_solver.newton_solver["error_on_nonconvergence"] = False and figure out how to read convergence data.'''
             
-            F = nonlinear_variational_form(dt, w_n)
+            F = make_nonlinear_form(dt=dt, w_n=w_n)
             
             problem = fenics.NonlinearVariationalProblem(F, w, bc, fenics.derivative(F, w))
             
@@ -352,9 +254,7 @@ def run(
             
         return w_out, converged
 
-    EPSILON = 1.e-12
-
-    while current_time < final_time - EPSILON:
+    while current_time < final_time - dolfin.DOLFIN_EPS:
 
         remaining_time = final_time - current_time
     

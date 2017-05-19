@@ -1,6 +1,7 @@
 import helpers
 import dolfin
 
+
 class TimeStepSize(helpers.BoundedValue):
 
     def __init__(self, bounded_value):
@@ -17,3 +18,8 @@ class TimeStepSize(helpers.BoundedValue):
         if abs(self.value - old_value) > dolfin.DOLFIN_EPS:
         
             print 'Set time step size to dt = ' + str(value)
+
+            
+if __name__=='__main__':
+
+    TimeStepSize()
