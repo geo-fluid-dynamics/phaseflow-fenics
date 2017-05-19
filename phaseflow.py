@@ -371,12 +371,8 @@ def run(
                     converged = True
                     
                     break
-                    
-            write_solution([File(output_dir + '/newton_velocity.pvd'), File(output_dir + '/newton_pressure.pvd'), File(output_dir + '/newton_temperature.pvd')], w_k, time)
-                    
-            w = w_k
-            
-            write_solution([File(output_dir + '/newton2_velocity.pvd'), File(output_dir + '/newton2_pressure.pvd'), File(output_dir + '/newton2_temperature.pvd')], w, time)
+                     
+            w = w_k # Here we can't simply say w.assign(w_k), because w was not refined (because it had no relation to the adaptive problem)
 
         else:
         
@@ -408,7 +404,7 @@ def run(
                 
             assert(converged)
             
-        return converged
+        return w, converged
 
     EPSILON = 1.e-12
     
@@ -426,7 +422,7 @@ def run(
         
         while not converged:
         
-            converged = solve_time_step(time_step_size.value)
+            w, converged = solve_time_step(time_step_size.value)
             
             if time_step_size.value <= time_step_size.min + DOLFIN_EPS:
                     
