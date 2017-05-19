@@ -20,31 +20,33 @@ import fenics
 import dolfin
 import helpers
 import time
-    
- 
-Re = 1.
 
-default_Ra = 1.e6
-    
-default_Pr = 0.71
 
-default_Ste = 0.045
+'''
+Per Equation 8 from danaila2014newton, we implement an equation scaled with v_ref = nu_liquid/H => t_ref = nu_liquid/H^2 => Re = 1.
+''' 
+REYNOLDS_NUMBER = 1.
+
+DEFAULT_RAYLEIGH_NUMBER = 1.e6
+    
+DEFAULT_PRANDTL_NUMBER = 0.71
+
+DEFAULT_STEFAN_NUMBER = 0.045
             
 '''@todo First add variable viscosity, later latent heat source term.
 Conceptually this will be like having a PCM with zero latent heat.
 The melting front should move quickly.'''
 
 
-
 def run(
     output_dir = "output/natural_convection",
-    Ra = default_Ra,
-    Pr = default_Pr,
+    Ra = DEFAULT_RAYLEIGH_NUMBER,
+    Pr = DEFAULT_PRANDTL_NUMBER,
     K = 1.,
     mu_l = 1.,
     g = (0., -1.),
-    m_B = lambda theta : theta*default_Ra/(default_Pr*Re*Re),
-    dm_B_dtheta = lambda theta : default_Ra/(default_Pr*Re*Re),
+    m_B = lambda theta : theta*DEFAULT_RAYLEIGH_NUMBER/(DEFAULT_PRANDTL_NUMBER*REYNOLDS_NUMBER**2),
+    dm_B_dtheta = lambda theta : DEFAULT_RAYLEIGH_NUMBER/(DEFAULT_PRANDTL_NUMBER*REYNOLDS_NUMBER**2),
     mesh = fenics.UnitSquareMesh(20, 20, "crossed"),
     initial_values_expression = (
         "0.",
@@ -84,10 +86,6 @@ def run(
     # @todo Try 3D
     dim = 2
     
-    '''
-    Per Equation 8 from danaila2014newton, we implement an equation scaled with v_ref = nu_liquid/H => t_ref = nu_liquid/H^2 => Re = 1.
-    ''' 
-    Re = 1.
     
     # Compute derived parameters
     velocity_degree = pressure_degree + 1
@@ -144,7 +142,7 @@ def run(
 
     Pr = fenics.Constant(Pr)
 
-    Re = fenics.Constant(Re)
+    Re = fenics.Constant(REYNOLDS_NUMBER)
 
     K = fenics.Constant(K)
 
