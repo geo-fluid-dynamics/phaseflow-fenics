@@ -133,8 +133,6 @@ def run(
     max_newton_iterations = 10,
     stop_when_steady = True,
     steady_relative_tolerance = 1.e-8,
-    debug_b_factor = 1.,
-    debug_c_factor = 1.,
     exact_solution_expression = []):
 
     #
@@ -232,13 +230,13 @@ def run(
     
     C = Constant(C)
     
-    regularized_F = lambda theta, f_s, f_l: f_l + (f_s - f_l)/2.*(1. + tanh(a_s*(theta_s - theta)/R_s))
+    regularized_F = lambda _theta, f_s, f_l: f_l + (f_s - f_l)/2.*(1. + tanh(a_s*(theta_s - _theta)/R_s))
     
-    ddtheta_regularized_F = lambda theta, f_s, f_l: -a_s*(tanh((a_s*(theta_s - theta))/R_s)**2 - 1.)*(f_l - f_s)/2./R_s
+    ddtheta_regularized_F = lambda _theta, f_s, f_l: -a_s*(tanh((a_s*(theta_s - _theta))/R_s)**2 - 1.)*(f_l - f_s)/2./R_s
     
-    mu_sl = lambda theta: regularized_F(theta, f_s=mu_s, f_l=mu_l)
+    mu_sl = lambda _theta: regularized_F(_theta, f_s=mu_s, f_l=mu_l)
     
-    ddtheta_mu_sl = lambda theta: ddtheta_regularized_F(theta, f_s=mu_s, f_l=mu_l)
+    ddtheta_mu_sl = lambda _theta: ddtheta_regularized_F(_theta, f_s=mu_s, f_l=mu_l)
     
 
     # Define variational form   
@@ -253,12 +251,12 @@ def run(
 
     def b(_u, _q):
         
-        return -div(_u)*_q*debug_b_factor
+        return -div(_u)*_q
         
 
     def c(_w, _z, _v):
        
-        return dot(dot(grad(_z), _w), _v)*debug_c_factor # @todo Is this use of nabla_grad correct?
+        return dot(dot(grad(_z), _w), _v)
     
     # Specify boundary conditions
     bc = []
