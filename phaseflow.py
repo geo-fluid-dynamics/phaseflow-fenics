@@ -20,7 +20,7 @@
 from fenics import \
     UnitSquareMesh, FiniteElement, VectorElement, MixedElement, \
     FunctionSpace, VectorFunctionSpace, \
-    Function, TrialFunction, TestFunctions, split, as_vector, \
+    Function, TrialFunction, TestFunctions, split, \
     DirichletBC, Constant, Expression, \
     dx, \
     dot, inner, grad, nabla_grad, sym, div, tanh, \
@@ -255,13 +255,13 @@ def run(
         
         #u_w, p_w, theta_w = split(w_w)
         
-        (u_w, p_w, theta_w) = (as_vector((w_w[0], w_w[1])), w_w[2], w_w[3])
+        u_w, p_w, theta_w = split(w_w)
         
         w_k = Function(W)
         
         w_k.assign(w_n)
     
-        (u_k, p_k, theta_k) = (as_vector((w_k[0], w_k[1])), w_k[2], w_k[3])
+        u_k, p_k, theta_k = split(w_k)
 
         def linear_variational_form(dt):
         
@@ -387,7 +387,8 @@ def run(
         else:
         
             '''  @todo Implement adaptive time for nonlinear version.
-            How to get residual from solver.solve() to check if diverging? '''
+            How to get residual from solver.solve() to check if diverging? 
+            Related: Set solver.parameters.nonlinear_variational_solver.newton_solver["error_on_nonconvergence"] = False and figure out how to read convergence data.'''
         
             F = nonlinear_variational_form(dt)
             
@@ -410,7 +411,7 @@ def run(
                 solver.summary()
                 
                 converged = True 
-                ''' @todo set solver.parameters.nonlinear_variational_solver.newton_solver["error_on_nonconvergence"] = False and figure out how to read convergence data, so this can use adaptive time stepping.'''
+                
             
             assert(converged)
             
