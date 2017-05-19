@@ -20,7 +20,7 @@
 from fenics import \
     UnitSquareMesh, FiniteElement, VectorElement, MixedElement, \
     FunctionSpace, VectorFunctionSpace, \
-    Function, TrialFunction, TestFunctions, split, \
+    Function, TrialFunction, TestFunctions, split, as_vector, \
     DirichletBC, Constant, Expression, \
     dx, \
     dot, inner, grad, nabla_grad, sym, div, tanh, \
@@ -247,22 +247,21 @@ def run(
             
             return F
             
-        if adaptive_space:
-        
-            M = (u[0] + u[1] + theta)*dx
             
     # Implement the Newton linearized form published in danaila2014newton
     elif linearize: 
 
         w_w = TrialFunction(W)
         
-        u_w, p_w, theta_w = split(w_w)
+        #u_w, p_w, theta_w = split(w_w)
+        
+        (u_w, p_w, theta_w) = (as_vector((w_w[0], w_w[1])), w_w[2], w_w[3])
         
         w_k = Function(W)
         
         w_k.assign(w_n)
     
-        u_k, p_k, theta_k = split(w_k)
+        (u_k, p_k, theta_k) = (as_vector((w_k[0], w_k[1])), w_k[2], w_k[3])
 
         def linear_variational_form(dt):
         
@@ -281,10 +280,6 @@ def run(
                 )*dx  
                 
             return A, L
-            
-        if adaptive_space:
-        
-            M = (u_w[0] + u_w[1] + theta_w)*dx
 
 
     # Create progress bar
@@ -325,10 +320,8 @@ def run(
     
     write_solution(w, time) 
 
-    # Solve each time step
     
-    w_w = Function(W) # w_w was previously a TrialFunction, but must be a Function when calling solve()
-
+    # Solve each time step
     time_residual = Function(W)        
     
     def solve_time_step(dt):
@@ -348,10 +341,22 @@ def run(
                 A, L = linear_variational_form(dt)
 
                 if not adaptive_space:
+                    
+                    w_w = Function(W)
                 
                     solve(A == L, w_w, bcs=bc)
                     
                 else:
+                        
+                    '''w_w was previously a TrialFunction, but must be a Function when defining M and when calling solve().
+                    This details here are opaque to me. Here is a related issue: https://fenicsproject.org/qa/12271/adaptive-stokes-perform-compilation-unable-extract-indices'''
+                    w_w = Function(W)
+
+                    u_w, p_w, theta_w = split(w_w)
+
+                    if adaptive_space:
+
+                        M = (u_w[0] + u_w[1] + theta_w)*dx
                         
                     problem = LinearVariationalProblem(A, L, w_w, bcs=bc)
 
@@ -395,6 +400,8 @@ def run(
                 iteration_count, converged = solver.solve()
                 
             else:
+        
+                M = (u[0] + u[1] + theta)*dx
             
                 solver = AdaptiveNonlinearVariationalSolver(problem, M)
 
