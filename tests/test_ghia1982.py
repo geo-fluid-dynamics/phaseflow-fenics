@@ -1,5 +1,5 @@
 from .context import phaseflow
-from fenics import UnitSquareMesh, Point
+import fenics
 
 
 lid = 'near(x[1],  1.)'
@@ -15,7 +15,7 @@ def verify_against_ghia1982(w):
     
     for i, true_ux in enumerate(data['ux']):
         
-        wval = w(Point(data['x'], data['y'][i]))
+        wval = w(fenics.Point(data['x'], data['y'][i]))
         
         ux = wval[0]
         
@@ -27,7 +27,7 @@ def test_ghia1982_steady_lid_driven_cavity():
     m = 20
 
     w = phaseflow.run(linearize = False,
-        mesh = UnitSquareMesh(m, m, 'crossed'),
+        mesh = fenics.UnitSquareMesh(m, m, 'crossed'),
         final_time = 1.e12,
         time_step_bounds = 1.e12,
         mu_l = 0.01,
@@ -46,7 +46,7 @@ def test_unsteady_lid_driven_cavity():
     m = 20
 
     w = phaseflow.run(linearize = False,
-        mesh = UnitSquareMesh(m, m, 'crossed'),
+        mesh = fenics.UnitSquareMesh(m, m, 'crossed'),
         final_time = 1.e12,
         time_step_bounds = (1., 1., 1.e12),
         mu_l = 0.01,
@@ -65,7 +65,7 @@ def test_ghia1982_steady_lid_driven_cavity_linearized():
     m = 20
 
     w = phaseflow.run(linearize = True,
-        mesh = UnitSquareMesh(m, m, 'crossed'),
+        mesh = fenics.UnitSquareMesh(m, m, 'crossed'),
         final_time = 1.e12,
         time_step_bounds = 1.e12,
         mu_l = 0.01,
@@ -84,7 +84,7 @@ def test_unsteady_lid_driven_cavity_linearized():
     m = 20
 
     w = phaseflow.run(linearize = True,
-        mesh = UnitSquareMesh(m, m, 'crossed'),
+        mesh = fenics.UnitSquareMesh(m, m, 'crossed'),
         final_time = 1.e12,
         time_step_bounds = (1., 1., 1.e12),
         mu_l = 0.01,
@@ -103,7 +103,7 @@ def test_ghia1982_steady_lid_driven_cavity_adaptive():
     m = 4
 
     w = phaseflow.run(linearize = False,
-        mesh = UnitSquareMesh(m, m, 'crossed'),
+        mesh = fenics.UnitSquareMesh(m, m, 'crossed'),
         adaptive_space = True,
         adaptive_space_error_tolerance = 1.e-4,
         final_time = 1.e12,
@@ -124,7 +124,7 @@ def test_ghia1982_steady_lid_driven_cavity_linearized_adaptive():
     m = 4
 
     w = phaseflow.run(linearize = True,
-        mesh = UnitSquareMesh(m, m, 'crossed'),
+        mesh = fenics.UnitSquareMesh(m, m, 'crossed'),
         adaptive_space = True,
         adaptive_space_error_tolerance = 1.e-4,
         final_time = 1.e12,
