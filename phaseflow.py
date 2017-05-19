@@ -258,7 +258,7 @@ def run(
 
     def c(_w, _z, _v):
        
-        return dot(dot(_w, nabla_grad(_z)), _v)*debug_c_factor # @todo Is this use of nabla_grad correct?
+        return dot(dot(grad(_z), _w), _v)*debug_c_factor # @todo Is this use of nabla_grad correct?
     
     # Specify boundary conditions
     bc = []
@@ -285,7 +285,8 @@ def run(
             
         if adaptive_space:
         
-            M = (u[0] + u[1])*dx
+            M = (u[0] + u[1] + theta)*dx
+            
     # Implement the Newton linearized form published in danaila2014newton
     elif linearize: 
 
@@ -304,22 +305,22 @@ def run(
             dt = Constant(dt)
         
             A = (\
-                b(u_w,q) - gamma*p_w*q \
-                + dot(u_w, v)/dt + c(u_w, u_k, v) + c(u_k, u_w, v) + a(mu_sl(theta_k), u_w, v) + a(ddtheta_mu_sl(theta_k)*theta_w, u_k, v) + b(v, p_w) + dot(dm_B_dtheta(theta_k)*theta_w*g, v) \
-                + theta_w*phi/dt - dot(u_k, grad(phi))*theta_w - dot(u_w, grad(phi))*theta_k + dot(K/Pr*grad(theta_w), grad(phi)) \
+                b(u_w, q) - gamma*p_w*q
+                + dot(u_w, v)/dt + c(u_w, u_k, v) + c(u_k, u_w, v) + a(mu_sl(theta_k), u_w, v) + a(ddtheta_mu_sl(theta_k)*theta_w, u_k, v) + b(v, p_w) + dot(dm_B_dtheta(theta_k)*theta_w*g, v)
+                + theta_w*phi/dt - dot(u_k, grad(phi))*theta_w - dot(u_w, grad(phi))*theta_k + dot(K/Pr*grad(theta_w), grad(phi))
                 )*dx
                 
             L = (\
-                b(u_k,q) - gamma*p_k*q + s_p*q \
-                + dot(u_k - u_n, v)/dt + c(u_k, u_k, v) + a(mu_sl(theta_k), u_k, v) + b(v, p_k) + dot(m_B(theta_k)*g, v) + dot(s_u, v) \
-                + (theta_k - theta_n)*phi/dt - dot(u_k, grad(phi))*theta_k + dot(K/Pr*grad(theta_k), grad(phi)) + s_theta*phi \
+                b(u_k, q) - gamma*p_k*q + s_p*q
+                + dot(u_k - u_n, v)/dt + c(u_k, u_k, v) + a(mu_sl(theta_k), u_k, v) + b(v, p_k) + dot(m_B(theta_k)*g, v) + dot(s_u, v)
+                + (theta_k - theta_n)*phi/dt - dot(u_k, grad(phi))*theta_k + dot(K/Pr*grad(theta_k), grad(phi)) + s_theta*phi
                 )*dx  
                 
             return A, L
             
         if adaptive_space:
         
-            M = (u_w[0] + u_w[1])*dx
+            M = (u_w[0] + u_w[1] + theta_w)*dx
 
 
     # Create progress bar
