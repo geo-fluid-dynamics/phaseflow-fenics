@@ -33,9 +33,7 @@ def initialize(W, parameters = default.parameters, m_B = default.m_B, ddtheta_m_
         return dot(dot(grad(_z), _w), _v)
         
         
-    def make_nonlinear_form(dt = 1.e-3, w_n = fenics.Function(W)):
-    
-        w = fenics.Function(W)
+    def make_nonlinear_form(dt = 1.e-3, w = fenics.Function(W), w_n = fenics.Function(W)):
         
         u, p, theta = fenics.split(w)
         

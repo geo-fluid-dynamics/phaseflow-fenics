@@ -226,7 +226,7 @@ def run(
             How to get residual from solver.solve() to check if diverging? 
             Related: Set solver.parameters.nonlinear_variational_solver.newton_solver["error_on_nonconvergence"] = False and figure out how to read convergence data.'''
             
-            F = make_nonlinear_form(dt=dt, w_n=w_n)
+            F = make_nonlinear_form(dt=dt, w=w, w_n=w_n)
             
             problem = fenics.NonlinearVariationalProblem(F, w, bc, fenics.derivative(F, w))
             
