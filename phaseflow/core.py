@@ -32,6 +32,7 @@ DEFAULT_RAYLEIGH_NUMBER = 1.e6
 DEFAULT_PRANDTL_NUMBER = 0.71
 
 DEFAULT_STEFAN_NUMBER = 0.045
+
             
 '''@todo First add variable viscosity, later latent heat source term.
 Conceptually this will be like having a PCM with zero latent heat.
@@ -81,11 +82,7 @@ def run(
         time_step_bounds = (time_step_bounds, time_step_bounds, time_step_bounds)
     
     time_step_size = time.TimeStepSize(helpers.BoundedValue(time_step_bounds[0], time_step_bounds[1], time_step_bounds[2]))
-    
-    
-    # @todo Try 3D
-    dim = 2
-    
+        
     
     # Compute derived parameters
     velocity_degree = pressure_degree + 1
