@@ -19,14 +19,7 @@
 import fenics
 
 from fenics import \
-    split, \
-    DirichletBC, Constant, Expression, \
-    dx, \
-    dot, inner, grad, nabla_grad, sym, div, tanh, sqrt, \
-    errornorm, norm, \
-    File, \
-    Progress, set_log_level, PROGRESS, \
-    project, interpolate, \
+    dx, dot, inner, grad, nabla_grad, sym, div, tanh, sqrt, \
     solve, parameters, info, derivative, \
     LinearVariationalProblem, LinearVariationalSolver, NonlinearVariationalProblem, NonlinearVariationalSolver, \
     AdaptiveLinearVariationalSolver, AdaptiveNonlinearVariationalSolver, \
@@ -157,29 +150,29 @@ def run(
 
         
     # Split solution function to access variables separately
-    u, p, theta = split(w)
+    u, p, theta = fenics.split(w)
 
        
     # Specify the initial values
-    w_n = interpolate(Expression(initial_values_expression, element=W_ele), W)
+    w_n = fenics.interpolate(fenics.Expression(initial_values_expression, element=W_ele), W)
     
-    u_n, p_n, theta_n = split(w_n)
+    u_n, p_n, theta_n = fenics.split(w_n)
 
     
     # Define expressions needed for variational form
-    Ra = Constant(Ra)
+    Ra = fenics.Constant(Ra)
 
-    Pr = Constant(Pr)
+    Pr = fenics.Constant(Pr)
 
-    Re = Constant(Re)
+    Re = fenics.Constant(Re)
 
-    K = Constant(K)
+    K = fenics.Constant(K)
 
-    g = Constant(g)
+    g = fenics.Constant(g)
 
-    gamma = Constant(gamma)
+    gamma = fenics.Constant(gamma)
     
-    mu_l = Constant(mu_l)
+    mu_l = fenics.Constant(mu_l)
 
 
     # Define variational form   
@@ -206,7 +199,7 @@ def run(
     
     for subspace, expression, degree, coordinates, method in bc_expressions:
     
-        bc.append(DirichletBC(W.sub(subspace), Expression(expression, degree=degree), coordinates, method=method))
+        bc.append(fenics.DirichletBC(W.sub(subspace), fenics.Expression(expression, degree=degree), coordinates, method=method))
         
 
     # Implement the nonlinear variational form
@@ -214,9 +207,9 @@ def run(
         
         def nonlinear_variational_form(dt, w_n):
         
-            u_n, p_n, theta_n = split(w_n)
+            u_n, p_n, theta_n = fenics.split(w_n)
         
-            dt = Constant(dt)
+            dt = fenics.Constant(dt)
             
             F = (\
                     b(u, q) - gamma*p*q
@@ -232,19 +225,19 @@ def run(
 
         w_w = fenics.TrialFunction(W)
         
-        u_w, p_w, theta_w = split(w_w)
+        u_w, p_w, theta_w = fenics.split(w_w)
         
         w_k = fenics.Function(W)
         
         w_k.assign(w_n)
     
-        u_k, p_k, theta_k = split(w_k)
+        u_k, p_k, theta_k = fenics.split(w_k)
 
         def linear_variational_form(dt, w_k):
         
-            dt = Constant(dt)
+            dt = fenics.Constant(dt)
         
-            u_k, p_k, theta_k = split(w_k)
+            u_k, p_k, theta_k = fenics.split(w_k)
             
             A = (\
                 b(u_w, q) - gamma*p_w*q
@@ -262,13 +255,13 @@ def run(
 
 
     # Create progress bar
-    progress = Progress('Time-stepping')
+    progress = fenics.Progress('Time-stepping')
 
-    set_log_level(PROGRESS)
+    fenics.set_log_level(fenics.PROGRESS)
     
 
     # Define method for writing values, and write initial values# Create VTK file for visualization output
-    solution_files = [File(output_dir + '/velocity.pvd'), File(output_dir + '/pressure.pvd'), File(output_dir + '/temperature.pvd')]
+    solution_files = [fenics.File(output_dir + '/velocity.pvd'), fenics.File(output_dir + '/pressure.pvd'), fenics.File(output_dir + '/temperature.pvd')]
 
     def write_solution(solution_files, _w, current_time):
 
@@ -313,7 +306,7 @@ def run(
                 
                 w_w = fenics.Function(W)
 
-                u_w, p_w, theta_w = split(w_w.leaf_node())
+                u_w, p_w, theta_w = fenics.split(w_w.leaf_node())
 
                 if not adaptive_space:
                 
@@ -335,7 +328,7 @@ def run(
     
                 w_k.assign(w_k - w_w)
                 
-                norm_residual = norm(w_w, 'L2')/norm(w_k, 'L2')
+                norm_residual = fenics.norm(w_w, 'L2')/fenics.norm(w_k, 'L2')
 
                 print '\nL2 norm of relative residual, || w_w || / || w_k || = ' + str(norm_residual) + '\n'
                 
@@ -434,7 +427,7 @@ def run(
         
         if stop_when_steady:
         
-            unsteadiness = norm(time_residual, 'L2')/norm(w_n, 'L2')
+            unsteadiness = fenics.norm(time_residual, 'L2')/fenics.norm(w_n, 'L2')
             
             print 'Unsteadiness (L2 norm of relative time residual), || w_{n+1} || / || w_n || = ' + str(unsteadiness)
         
@@ -449,7 +442,7 @@ def run(
         
     w_n.rename("w", "state")
         
-    fe_field_interpolant = interpolate(w_n.leaf_node(), W)
+    fe_field_interpolant = fenics.interpolate(w_n.leaf_node(), W)
         
     return fe_field_interpolant
     
