@@ -36,6 +36,22 @@ def test_ghia1982_steady_lid_driven_cavity():
         bc_expressions = [[0, ('1.', '0.'), 3, lid, "topological"], [0, ('0.', '0.'), 3, fixed_walls, "topological"], [1, '0.', 2, bottom_left_corner, "pointwise"]])
 
     verify_against_ghia1982(w)
+    
+    
+def test_unsteady_lid_driven_cavity():
+   
+    m = 20
+
+    w = phaseflow.run(linearize = False,
+        mesh = UnitSquareMesh(m, m, "crossed"),
+        final_time = 1.e12,
+        time_step_size = phaseflow.BoundedValue(1., 1., 1.e12),
+        mu_l = 0.01,
+        output_dir="output/test_unsteady_lid_driven_cavity",
+        initial_values_expression = (lid, '0.', '0.', '0.'),
+        bc_expressions = [[0, ('1.', '0.'), 3, lid, "topological"], [0, ('0.', '0.'), 3, fixed_walls, "topological"], [1, '0.', 2, bottom_left_corner, "pointwise"]])
+
+    verify_against_ghia1982(w)
         
         
 def test_ghia1982_steady_lid_driven_cavity_linearized():
@@ -94,8 +110,10 @@ if __name__=='__main__':
 
     test_ghia1982_steady_lid_driven_cavity()
     
+    test_unsteady_lid_driven_cavity()
+    
     test_ghia1982_steady_lid_driven_cavity_linearized()
     
     test_ghia1982_steady_lid_driven_cavity_amr()
     
-    test_ghia1982_steady_lid_driven_cavity_linearized_amr()
+    #test_ghia1982_steady_lid_driven_cavity_linearized_amr()

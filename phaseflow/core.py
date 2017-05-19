@@ -452,7 +452,7 @@ def run(
             time_residual.assign(w - w_n)
         
         # Update previous solution
-        w_n = w # We cannot simply use w_n.assign(w), because w may have been refined
+        w_n.assign(w) # We cannot simply use w_n.assign(w), because w may have been refined
         
         # Show the time progress
         progress.update(time / final_time)
