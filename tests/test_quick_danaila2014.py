@@ -97,8 +97,8 @@ def test_quick_regression_natural_convection_water():
         m_B = lambda theta : Ra/(Pr*Re*Re)/(beta*(T_h - T_c))*(rho(theta_f) - rho(theta))/rho(theta_f), \
         dm_B_dtheta = lambda theta : -Ra/(Pr*Re*Re)/(beta*(T_h - T_c))*(ddtheta_rho(theta))/rho(theta_f), \
         mesh = UnitSquareMesh(m, m, "crossed"), \
-        time_step_size = phaseflow.BoundedValue(0.005, 0.005, 0.01), \
-        final_time = 0.015, \
+        time_step_size = phaseflow.BoundedValue(0.001, 0.001, 0.005), \
+        final_time = 0.003, \
         linearize = linearize, \
         newton_relative_tolerance = 1.e-4, \
         max_newton_iterations = 10, \
