@@ -27,7 +27,6 @@ def test_wang2010_natural_convection_air():
         time_step_bounds = (1.e-3, 1.e-3, 10.),
         final_time = 10.,
         stop_when_steady = True,
-        steady_relative_tolerance = 1.e-4,
         linearize = True,
         initial_values_expression = (
             "0.",
@@ -119,8 +118,6 @@ def test_regression_natural_convection_water():
         time_step_bounds = (0.005, 0.005, 0.01),
         final_time = 0.18,
         linearize = linearize,
-        newton_relative_tolerance = 1.e-4,
-        max_newton_iterations = 10,
         initial_values_expression = (
             "0.",
             "0.",

@@ -3,43 +3,53 @@ import globals
 import default
 
 
-def initialize(W, parameters = default.parameters, m_B = default.m_B, ddtheta_m_B = default.ddtheta_m_B):
-    # Define expressions needed for variational form
-    Ra, Pr, K, g, gamma, mu_l = fenics.Constant(parameters['Ra']), fenics.Constant(parameters['Pr']), fenics.Constant(parameters['K']), fenics.Constant(parameters['g']), fenics.Constant(parameters['gamma']), fenics.Constant(parameters['mu_l'])
+inner, dot, grad, div, sym = fenics.inner, fenics.dot, fenics.grad, fenics.div, fenics.sym
+
+def a(mu, u, v):
+
+    def D(u):
     
-    Re = fenics.Constant(globals.Re)
-
-    v, q, phi = fenics.TestFunctions(W)
-
-    # Define variational form
-    inner, dot, grad, div, sym = fenics.inner, fenics.dot, fenics.grad, fenics.div, fenics.sym
+        return sym(grad(u))
     
-    def a(_mu, _u, _v):
+    return 2.*mu*inner(D(u), D(v))
 
-        def D(_u):
-        
-            return sym(grad(_u))
-        
-        return 2.*_mu*inner(D(_u), D(_v))
-        
 
-    def b(_u, _q):
-        
-        return -div(_u)*_q
-        
+def b(u, q):
+    
+    return -div(u)*q
+    
 
-    def c(_w, _z, _v):
-       
-        return dot(dot(grad(_z), _w), _v)
+def c(w, z, v):
+   
+    return dot(dot(grad(z), w), v)
+
+
+class FormFactory():
+    
+    def __init__(self, W, parameters = default.parameters, m_B = default.m_B, ddtheta_m_B = default.ddtheta_m_B):
+        # Define expressions needed for variational form
+        self.Ra, self.Pr, self.K, self.g, self.gamma, self.mu_l = fenics.Constant(parameters['Ra']), fenics.Constant(parameters['Pr']), fenics.Constant(parameters['K']), fenics.Constant(parameters['g']), fenics.Constant(parameters['gamma']), fenics.Constant(parameters['mu_l'])
         
+        self.m_B = m_B
         
-    def make_nonlinear_form(dt = 1.e-3, w = fenics.Function(W), w_n = fenics.Function(W)):
+        self.ddtheta_m_B = ddtheta_m_B
+        
+        self.W = W
+        
+        self.Re = fenics.Constant(globals.Re)
+    
+    
+    def make_nonlinear_form(self, dt, w, w_n):
+    
+        dt = fenics.Constant(dt)
         
         u, p, theta = fenics.split(w)
         
         u_n, p_n, theta_n = fenics.split(w_n)
+        
+        v, q, phi = fenics.TestFunctions(self.W)
     
-        dt = fenics.Constant(dt)
+        Ra, Pr, K, g, gamma, mu_l, m_B = self.Ra, self.Pr, self.K, self.g, self.gamma, self.mu_l, self.m_B
         
         F = (
             b(u, q) - gamma*p*q
@@ -49,37 +59,38 @@ def initialize(W, parameters = default.parameters, m_B = default.m_B, ddtheta_m_
         
         return F
 
-        
-    w_w = fenics.TrialFunction(W)
-    
-    u_w, p_w, theta_w = fenics.split(w_w)
 
-    def make_newton_linearized_form(dt = 1.e-3, w_k = fenics.Function(W), w_n = fenics.Function(W)):
+    def make_newton_linearized_form(self, dt, w_n, w_k):
     
         dt = fenics.Constant(dt)
         
         u_n, p_n, theta_n = fenics.split(w_n)
         
         u_k, p_k, theta_k = fenics.split(w_k)
+    
+        w_w = fenics.TrialFunction(self.W)
+    
+        u_w, p_w, theta_w = fenics.split(w_w)
+        
+        v, q, phi = fenics.TestFunctions(self.W)
+        
+        Ra, Pr, K, g, gamma, mu_l, m_B, ddtheta_m_B = self.Ra, self.Pr, self.K, self.g, self.gamma, self.mu_l, self.m_B, self.ddtheta_m_B
         
         A = (
             b(u_w, q) - gamma*p_w*q
             + dot(u_w, v)/dt + c(u_w, u_k, v) + c(u_k, u_w, v) + a(mu_l, u_w, v) + b(v, p_w) + dot(ddtheta_m_B(theta_k)*theta_w*g, v)
             + theta_w*phi/dt - dot(u_k, grad(phi))*theta_w - dot(u_w, grad(phi))*theta_k + dot(K/Pr*grad(theta_w), grad(phi))
             )*fenics.dx
-            
+        
         L = (
             b(u_k, q) - gamma*p_k*q
             + dot(u_k - u_n, v)/dt + c(u_k, u_k, v) + a(mu_l, u_k, v) + b(v, p_k) + dot(m_B(theta_k)*g, v)
             + (theta_k - theta_n)*phi/dt - dot(u_k, grad(phi))*theta_k + dot(K/Pr*grad(theta_k), grad(phi))
             )*fenics.dx  
-            
+        
         return A, L
-        
-        
-    return make_nonlinear_form, make_newton_linearized_form
-    
-    
+
+
 if __name__=='__main__':
 
     initialize()
