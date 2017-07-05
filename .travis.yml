@@ -17,5 +17,7 @@ notifications:
 before_install:
 - docker pull zimmerman/fenics-pytest:latest
 
+group: deprecated-2017Q2
+
 script:
 - docker run --rm -P -v `pwd`:/home/fenics/shared -w /home/fenics/shared zimmerman/fenics-pytest:latest "pytest"
