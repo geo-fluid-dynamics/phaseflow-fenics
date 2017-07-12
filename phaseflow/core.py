@@ -72,6 +72,8 @@ def run(
     output_dir = 'output/natural_convection',
     Ra = default.parameters['Ra'],
     Pr = default.parameters['Pr'],
+    Ste = default.parameters['Ste'],
+    C = default.parameters['C'],
     K = default.parameters['K'],
     mu_l = default.parameters['mu_l'],
     g = default.parameters['g'],
@@ -116,7 +118,7 @@ def run(
 
     
     # Initialize the functions that we will use to generate our variational form
-    form_factory = forms.FormFactory(W, {'Ra': Ra, 'Pr': Pr, 'K': K, 'g': g, 'gamma': gamma, 'mu_l': mu_l}, m_B, ddtheta_m_B)
+    form_factory = forms.FormFactory(W, {'Ra': Ra, 'Pr': Pr, 'Ste': Ste, 'C': C, 'K': K, 'g': g, 'gamma': gamma, 'mu_l': mu_l}, m_B, ddtheta_m_B)
 
     
     # Organize boundary conditions

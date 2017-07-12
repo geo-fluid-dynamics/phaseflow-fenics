@@ -26,13 +26,15 @@ def c(w, z, v):
 
 class FormFactory():
     
-    def __init__(self, W, parameters = default.parameters, m_B = default.m_B, ddtheta_m_B = default.ddtheta_m_B):
-        # Define expressions needed for variational form
-        self.Ra, self.Pr, self.K, self.g, self.gamma, self.mu_l = fenics.Constant(parameters['Ra']), fenics.Constant(parameters['Pr']), fenics.Constant(parameters['K']), fenics.Constant(parameters['g']), fenics.Constant(parameters['gamma']), fenics.Constant(parameters['mu_l'])
+    def __init__(self, W, parameters = default.parameters, m_B = default.m_B, ddtheta_m_B = default.ddtheta_m_B, regularization = default.regularization):
+        
+        self.parameters = parameters
         
         self.m_B = m_B
         
         self.ddtheta_m_B = ddtheta_m_B
+        
+        self.regularization = regularization
         
         self.W = W
         
@@ -49,14 +51,23 @@ class FormFactory():
         
         v, q, phi = fenics.TestFunctions(self.W)
     
-        Ra, Pr, K, g, gamma, mu_l, m_B = self.Ra, self.Pr, self.K, self.g, self.gamma, self.mu_l, self.m_B
+        Ra, Pr, Ste, C, K, g, gamma, mu_l = fenics.Constant(self.parameters['Ra']), fenics.Constant(self.parameters['Pr']), fenics.Constant(self.parameters['Ste']), fenics.Constant(self.parameters['C']), fenics.Constant(self.parameters['K']), fenics.Constant(self.parameters['g']), fenics.Constant(self.parameters['gamma']), fenics.Constant(self.parameters['mu_l'])
+        
+        m_B = self.m_B
+        
+        a_s, theta_s, R_s = fenics.Constant(self.regularization['a_s']), fenics.Constant(self.regularization['theta_s']), fenics.Constant(self.regularization['R_s'])
+        
+        heaviside_tanh = lambda theta, f_s, f_l: f_l + (f_s - f_l)/2.*(1. + fenics.tanh(a_s*(theta_s - theta)/R_s))
+        
+        S = lambda theta : heaviside_tanh(theta, f_s=fenics.Constant(0.), f_l=fenics.Constant(1./Ste))
         
         F = (
             b(u, q) - gamma*p*q
-            + dot(u, v)/dt + c(u, u, v) + a(mu_l, u, v) + b(v, p) - dot(u_n, v)/dt + dot(m_B(theta)*g, v)
-            + theta*phi/dt - dot(u, grad(phi))*theta + dot(K/Pr*grad(theta), grad(phi)) - theta_n*phi/dt
+            + dot(u, v)/dt + c(u, u, v) + a(mu_l, u, v) + b(v, p) + dot(m_B(theta)*g, v) - dot(u_n, v)/dt
+            + C*theta*phi/dt - dot(u, grad(phi))*C*theta + dot(K/Pr*grad(theta), grad(phi)) - C*theta_n*phi/dt 
+            + C*S(theta)*phi/dt - S(theta_n)*phi/dt
             )*fenics.dx
-        
+            
         return F
 
 
@@ -74,7 +85,9 @@ class FormFactory():
         
         v, q, phi = fenics.TestFunctions(self.W)
         
-        Ra, Pr, K, g, gamma, mu_l, m_B, ddtheta_m_B = self.Ra, self.Pr, self.K, self.g, self.gamma, self.mu_l, self.m_B, self.ddtheta_m_B
+        Ra, Pr, K, g, gamma, mu_l = fenics.Constant(self.parameters['Ra']), fenics.Constant(self.parameters['Pr']), fenics.Constant(self.parameters['K']), fenics.Constant(self.parameters['g']), fenics.Constant(self.parameters['gamma']), fenics.Constant(self.parameters['mu_l'])
+        
+        m_B, ddtheta_m_B = self.m_B, self.ddtheta_m_B
         
         A = (
             b(u_w, q) - gamma*p_w*q

@@ -23,6 +23,7 @@ def test_wang2010_natural_convection_air():
     m = 20
     
     w = phaseflow.run(
+        Ste = 1.e16,
         mesh = fenics.UnitSquareMesh(m, m, 'crossed'),
         time_step_bounds = (1.e-3, 1.e-3, 10.),
         final_time = 10.,
@@ -112,6 +113,7 @@ def test_regression_natural_convection_water():
     w = phaseflow.run(
         Ra = Ra,
         Pr = Pr,
+        Ste = 1.e16,
         m_B = lambda theta : Ra/(Pr*Re*Re)/(beta*(T_h - T_c))*(rho(theta_f) - rho(theta))/rho(theta_f),
         ddtheta_m_B = lambda theta : -Ra/(Pr*Re*Re)/(beta*(T_h - T_c))*(ddtheta_rho(theta))/rho(theta_f),
         mesh = fenics.UnitSquareMesh(m, m, 'crossed'),

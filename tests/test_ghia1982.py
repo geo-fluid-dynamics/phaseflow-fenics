@@ -26,11 +26,13 @@ def test_ghia1982_steady_lid_driven_cavity():
    
     m = 20
 
-    w = phaseflow.run(linearize = False,
+    w = phaseflow.run(
+        linearize = False,
         mesh = fenics.UnitSquareMesh(m, m, 'crossed'),
         final_time = 1.e12,
         time_step_bounds = 1.e12,
         mu_l = 0.01,
+        Ste = 1.e16,
         output_dir='output/test_ghia1982_steady_lid_driven_cavity',
         initial_values_expression = (lid, "0.", "0.", "0."),
         boundary_conditions = [
@@ -50,6 +52,7 @@ def test_unsteady_lid_driven_cavity():
         final_time = 1.e12,
         time_step_bounds = (1., 1., 1.e12),
         mu_l = 0.01,
+        Ste = 1.e16,
         initial_values_expression = (lid, '0.', '0.', '0.'),
         boundary_conditions = [
             {'subspace': 0, 'value_expression': ("1.", "0."), 'degree': 3, 'location_expression': lid, 'method': 'topological'},
@@ -69,6 +72,7 @@ def test_ghia1982_steady_lid_driven_cavity_linearized():
         final_time = 1.e12,
         time_step_bounds = 1.e12,
         mu_l = 0.01,
+        Ste = 1.e16,
         initial_values_expression = (lid, '0.', '0.', '0.'),
         boundary_conditions = [
             {'subspace': 0, 'value_expression': ("0.", "0."), 'degree': 3, 'location_expression': lid, 'method': 'topological'},
@@ -88,6 +92,7 @@ def test_unsteady_lid_driven_cavity_linearized():
         final_time = 1.e12,
         time_step_bounds = (1., 1., 1.e12),
         mu_l = 0.01,
+        Ste = 1.e16,
         initial_values_expression = (lid, '0.', '0.', '0.'),
         boundary_conditions = [
             {'subspace': 0, 'value_expression': ("0.", "0."), 'degree': 3, 'location_expression': lid, 'method': 'topological'},
@@ -109,6 +114,7 @@ def test_ghia1982_steady_lid_driven_cavity_adaptive():
         final_time = 1.e12,
         time_step_bounds = 1.e12,
         mu_l = 0.01,
+        Ste = 1.e16,
         initial_values_expression = (lid, '0.', '0.', '0.'),
         boundary_conditions = [
             {'subspace': 0, 'value_expression': ("1.", "0."), 'degree': 3, 'location_expression': lid, 'method': 'topological'},
