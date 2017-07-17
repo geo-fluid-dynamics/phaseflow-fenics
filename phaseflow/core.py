@@ -140,7 +140,7 @@ def run(
     
         solution_files = [open(output_dir + 'temperature.txt', 'w')]
         
-        solution_files[0].write("x, theta \n")
+        solution_files[0].write("t, x, theta \n")
         
     current_time = 0.
     

@@ -24,4 +24,4 @@ def write_solution(output_format, solution_files, W, _w, current_time):
         
         for i, x in enumerate(coordinates):
         
-            solution_files[0].write(str(x)+", "+str(temperature(x))+"\n")
+            solution_files[0].write(str(current_time)+", "+str(x)+", "+str(temperature(x))+"\n")
