@@ -15,7 +15,7 @@ def test_stefan_problem():
         Pr = 1.,
         Ste = 1.,
         g = [0.],
-        mesh = fenics.UnitIntervalMesh(100),
+        mesh = fenics.UnitIntervalMesh(1000),
         initial_values_expression = (
             "0.",
             "0.",
@@ -26,7 +26,7 @@ def test_stefan_problem():
             {'subspace': 2, 'value_expression': theta_c, 'degree': 2, 'location_expression': "near(x[0],  1.)", 'method': "topological"}],
         regularization = {'a_s': 2., 'theta_s': 0.01, 'R_s': 0.005},
         final_time = 1.,
-        time_step_bounds = 0.01,
+        time_step_bounds = 0.001,
         linearize = False)
 
 
