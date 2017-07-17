@@ -20,7 +20,7 @@ def write_solution(output_format, solution_files, W, _w, current_time):
     
         ''' The following table output is just hacked on for the 1D Stefan Problem, not general at all.'''
     
-        coordinates = W.tabulate_dof_coordinates())
+        coordinates = W.tabulate_dof_coordinates()
         
         for i, x in enumerate(coordinates):
         
