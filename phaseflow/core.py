@@ -145,6 +145,8 @@ def run(
 
         elif output_format is 'table':
         
+            helpers.mkdir_p(output_dir)
+        
             solution_files = [open(output_dir + 'temperature.txt', 'w')]
             
             solution_files[0].write("t, x, theta \n")
