@@ -69,6 +69,7 @@ def function_spaces(mesh=default.mesh, pressure_degree=default.pressure_degree, 
 
     
 def run(
+    write_output = True,
     output_dir = 'output/natural_convection',
     output_format = 'vtk',
     Ra = default.parameters['Ra'],
@@ -131,20 +132,24 @@ def run(
         bcs.append(fenics.DirichletBC(W.sub(item['subspace']), item['value_expression'], item['location_expression'], method=item['method']))
     
     
+    # Initialize time
+    current_time = 0.    
+    
+    
     # Open the output VTK files, and write initial values
-    if output_format is 'vtk':
+    if write_output:
     
-        solution_files = [fenics.File(output_dir + '/velocity.pvd'), fenics.File(output_dir + '/pressure.pvd'), fenics.File(output_dir + '/temperature.pvd')]
+        if output_format is 'vtk':
+        
+            solution_files = [fenics.File(output_dir + '/velocity.pvd'), fenics.File(output_dir + '/pressure.pvd'), fenics.File(output_dir + '/temperature.pvd')]
 
-    elif output_format is 'table':
-    
-        solution_files = [open(output_dir + 'temperature.txt', 'w')]
+        elif output_format is 'table':
         
-        solution_files[0].write("t, x, theta \n")
+            solution_files = [open(output_dir + 'temperature.txt', 'w')]
+            
+            solution_files[0].write("t, x, theta \n")
         
-    current_time = 0.
-    
-    output.write_solution(output_format, solution_files, W, w_n, current_time) 
+            output.write_solution(output_format, solution_files, W, w_n, current_time) 
 
     
     # Solve each time step
@@ -167,7 +172,9 @@ def run(
         ''' Save solution to files.
         Saving here allows us to inspect the latest solution 
         even if the Newton iterations failed to converge.'''
-        output.write_solution(output_format, solution_files, W, w, current_time)
+        if write_output:
+        
+            output.write_solution(output_format, solution_files, W, w, current_time)
         
         assert(converged)
         
@@ -184,20 +191,25 @@ def run(
         w_n.assign(w)
         
         progress.update(current_time / final_time)
-        
-    
+            
     if time >= (final_time - dolfin.DOLFIN_EPS):
     
         print 'Reached final time, t = ' + str(final_time)
+    
+    
+    # Clean up
+    if write_output:
+    
+        if output_format is 'table':
         
+            solution_files[0].close()
+    
+    
+    # Return the interpolant to sample inside of Python
     w_n.rename("w", "state")
         
     fe_field_interpolant = fenics.interpolate(w_n.leaf_node(), W)
-        
-    if output_format is 'table':
     
-        solution_files[0].close()
-        
     return fe_field_interpolant
     
     
