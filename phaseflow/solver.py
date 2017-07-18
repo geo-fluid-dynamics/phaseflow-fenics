@@ -23,7 +23,7 @@ def make(form_factory, linearize=False, adaptive_space=False, adaptive_space_err
             
         else:
                 
-            M = fenics.sqrt((u_k[0] - u_w[0])**2 + (u_k[1] - u_w[1])**2 + (theta_k - theta_w)**2)*fenics.dx
+            M = fenics.sqrt((u_k[0] - u_w[0])**2 + (theta_k - theta_w)**2)*fenics.dx # @todo Handle n-D
                 
             def solve(A, L, w_w, bcs, M):
             
@@ -52,9 +52,12 @@ def make(form_factory, linearize=False, adaptive_space=False, adaptive_space_err
             
                 A, L = form_factory.make_newton_linearized_form(dt=dt, w_n=w_n, w_k=w_k)
                 
+                
                 # Adaptive mesh refinement metric
-                M = fenics.sqrt((u_k[0] - u_w[0])**2 + (u_k[1] - u_w[1])**2 + (theta_k - theta_w)**2)*fenics.dx
-
+                M = fenics.sqrt((u_k[0] - u_w[0])**2 + (theta_k - theta_w)**2)*fenics.dx # @todo Handle n-D
+                
+                
+                #
                 solve(A=A, L=L, w_w=w_w, bcs=bcs, M=M)
 
                 w_k.assign(w_k - w_w)
