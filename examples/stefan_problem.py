@@ -1,16 +1,20 @@
-from .context import phaseflow
-
 import fenics
 
+import sys
+import os.path
 
-def test_stefan_problem():
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+
+import phaseflow
+
+def stefan_problem():
 
     theta_h = 1.
     
     theta_c = -1.
     
     w = phaseflow.run(
-        output_dir = 'output/test_stefan_problem/',
+        output_dir = 'output/stefan_problem/',
         output_format = 'table',
         Pr = 1.,
         Ste = 1.,
@@ -32,4 +36,4 @@ def test_stefan_problem():
 
 if __name__=='__main__':
     
-    test_stefan_problem()
+    stefan_problem()
