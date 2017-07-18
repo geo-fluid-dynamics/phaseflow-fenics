@@ -36,18 +36,18 @@ def function_spaces(mesh=default.mesh, pressure_degree=default.pressure_degree, 
     
     velocity_degree = pressure_degree + 1
     
-    VxV = fenics.VectorFunctionSpace(mesh, 'P', velocity_degree)
+    velocity_space = fenics.VectorFunctionSpace(mesh, 'P', velocity_degree)
 
-    Q = fenics.FunctionSpace(mesh, 'P', pressure_degree) # @todo mixing up test function space
+    pressure_space = fenics.FunctionSpace(mesh, 'P', pressure_degree) # @todo mixing up test function space
 
-    V = fenics.FunctionSpace(mesh, 'P', temperature_degree)
+    temperature_space = fenics.FunctionSpace(mesh, 'P', temperature_degree)
 
     '''
     MixedFunctionSpace used to be available but is now deprecated. 
     The way that fenics separates function spaces and elements is confusing.
     To create the mixed space, I'm using the approach from https://fenicsproject.org/qa/11983/mixedfunctionspace-in-2016-2-0
     '''
-    VxV_ele = fenics.VectorElement('P', mesh.ufl_cell(), velocity_degree)
+    velocity_element = fenics.VectorElement('P', mesh.ufl_cell(), velocity_degree)
 
     '''
     @todo How can we use the space $Q = \left{q \in L^2(\Omega) | \int{q = 0}\right}$ ?
@@ -57,26 +57,31 @@ def function_spaces(mesh=default.mesh, pressure_degree=default.pressure_degree, 
     down the space Q with less restrictions than H^1_0.
 
     '''
-    Q_ele = fenics.FiniteElement('P', mesh.ufl_cell(), pressure_degree)
+    pressure_element = fenics.FiniteElement('P', mesh.ufl_cell(), pressure_degree)
 
-    V_ele = fenics.FiniteElement('P', mesh.ufl_cell(), temperature_degree)
+    temperature_element = fenics.FiniteElement('P', mesh.ufl_cell(), temperature_degree)
 
-    W_ele = fenics.MixedElement([VxV_ele, Q_ele, V_ele])
+    solution_element = fenics.MixedElement([velocity_element, pressure_element, temperature_element])
 
-    W = fenics.FunctionSpace(mesh, W_ele)  
+    solution_function_space = fenics.FunctionSpace(mesh, solution_element)  
     
-    return W, W_ele
+    return solution_function_space, solution_element
 
     
 def run(
+    write_output = True,
     output_dir = 'output/natural_convection',
+    output_format = 'vtk',
     Ra = default.parameters['Ra'],
     Pr = default.parameters['Pr'],
+    Ste = default.parameters['Ste'],
+    C = default.parameters['C'],
     K = default.parameters['K'],
     mu_l = default.parameters['mu_l'],
     g = default.parameters['g'],
     m_B = default.m_B,
     ddtheta_m_B = default.ddtheta_m_B,
+    regularization = default.regularization,
     mesh=default.mesh,
     initial_values_expression = ("0.", "0.", "0.", "0.5*near(x[0],  0.) -0.5*near(x[0],  1.)"),
     boundary_conditions = [{'subspace': 0, 'value_expression': ("0.", "0."), 'degree': 3, 'location_expression': "near(x[0],  0.) | near(x[0],  1.) | near(x[1], 0.) | near(x[1],  1.)", 'method': 'topological'}, {'subspace': 2, 'value_expression': "0.", 'degree': 2, 'location_expression': "near(x[0],  0.)", 'method': 'topological'}, {'subspace': 2, 'value_expression': "0.", 'degree': 2, 'location_expression': "near(x[0],  1.)", 'method': 'topological'}],
@@ -116,7 +121,7 @@ def run(
 
     
     # Initialize the functions that we will use to generate our variational form
-    form_factory = forms.FormFactory(W, {'Ra': Ra, 'Pr': Pr, 'K': K, 'g': g, 'gamma': gamma, 'mu_l': mu_l}, m_B, ddtheta_m_B)
+    form_factory = forms.FormFactory(W, {'Ra': Ra, 'Pr': Pr, 'Ste': Ste, 'C': C, 'K': K, 'g': g, 'gamma': gamma, 'mu_l': mu_l}, m_B, ddtheta_m_B, regularization)
 
     
     # Organize boundary conditions
@@ -124,15 +129,27 @@ def run(
     
     for item in boundary_conditions:
     
-        bcs.append(fenics.DirichletBC(W.sub(item['subspace']), fenics.Expression(item['value_expression'], degree=item['degree']), item['location_expression'], method=item['method']))
+        bcs.append(fenics.DirichletBC(W.sub(item['subspace']), item['value_expression'], item['location_expression'], method=item['method']))
+    
+    
+    # Initialize time
+    current_time = 0.    
     
     
     # Open the output VTK files, and write initial values
-    solution_files = [fenics.File(output_dir + '/velocity.pvd'), fenics.File(output_dir + '/pressure.pvd'), fenics.File(output_dir + '/temperature.pvd')]
-
-    current_time = 0.
+    if write_output:
     
-    output.write_solution(solution_files, w_n, current_time) 
+        if output_format is 'vtk':
+        
+            solution_files = [fenics.File(output_dir + '/velocity.pvd'), fenics.File(output_dir + '/pressure.pvd'), fenics.File(output_dir + '/temperature.pvd')]
+
+        elif output_format is 'table':
+        
+            solution_files = [open(output_dir + 'temperature.txt', 'w')]
+            
+            solution_files[0].write("t, x, theta \n")
+        
+            output.write_solution(output_format, solution_files, W, w_n, current_time) 
 
     
     # Solve each time step
@@ -155,7 +172,9 @@ def run(
         ''' Save solution to files.
         Saving here allows us to inspect the latest solution 
         even if the Newton iterations failed to converge.'''
-        output.write_solution(solution_files, w, current_time)
+        if write_output:
+        
+            output.write_solution(output_format, solution_files, W, w, current_time)
         
         assert(converged)
         
@@ -172,16 +191,25 @@ def run(
         w_n.assign(w)
         
         progress.update(current_time / final_time)
-        
-    
+            
     if time >= (final_time - dolfin.DOLFIN_EPS):
     
         print 'Reached final time, t = ' + str(final_time)
+    
+    
+    # Clean up
+    if write_output:
+    
+        if output_format is 'table':
         
+            solution_files[0].close()
+    
+    
+    # Return the interpolant to sample inside of Python
     w_n.rename("w", "state")
         
     fe_field_interpolant = fenics.interpolate(w_n.leaf_node(), W)
-        
+    
     return fe_field_interpolant
     
     
