@@ -68,7 +68,7 @@ def refine_pci():
             {'subspace': 2, 'value_expression': theta_c, 'degree': 2, 'location_expression': "near(x[0],  1.)", 'method': "topological"}],
         regularization = {'a_s': 2., 'theta_s': 0.01, 'R_s': R_s},
         newton_relative_tolerance = 1.e-4,
-        final_time = 0.005,
+        final_time = 0.01,
         time_step_bounds = 0.0005,
         linearize = False)
 

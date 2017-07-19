@@ -211,6 +211,21 @@ def run(
         
             current_time, converged = time.adaptive_time_step(time_step_size=time_step_size, w=w, w_n=w_n, bcs=bcs, current_time=current_time, solve_time_step=solve_time_step)
             
+            
+            # Write current solution for debugging if Newton method fails
+            if output_format is 'vtk':
+            
+                newton_files = [fenics.File(output_dir + '/newton_velocity.pvd'), fenics.File(output_dir + '/newton_pressure.pvd'), fenics.File(output_dir + '/newton_temperature.pvd')]
+
+            elif output_format is 'table':        
+            
+                newton_files = [open(output_dir + 'newton_temperature.txt', 'w')]
+                
+                newton_files[0].write("t, x, theta \n")
+            
+            output.write_solution(output_format, newton_files, W, w, -1.)
+            
+            
             if converged:
             
                 break
@@ -227,9 +242,9 @@ def run(
 
             for cell in fenics.cells(mesh):
                 
-                has_hot_vertex = False
+                hot_vertex_count = 0
                 
-                has_cold_vertex = False
+                cold_vertex_count = 0
                 
                 for vertex in fenics.vertices(cell):
                 
@@ -249,21 +264,29 @@ def run(
                     
                     if theta > hot:
                     
-                        has_hot_vertex = True
+                        hot_vertex_count += 1
                         
                     if theta < cold:
                     
-                        has_cold_vertex = True
+                        cold_vertex_count += 1
 
-                if has_hot_vertex and has_cold_vertex:
+                if dimensionality is 1:
                 
-                    contains_pci[cell] = True
+                    if (hot_vertex_count is 1) or (cold_vertex_count is 1):
+                
+                        contains_pci[cell] = True
+                        
+                elif dimensionality is 2:
+                
+                    if (0 < hot_vertex_count < 3) or (0 < cold_vertex_count < 3):
+                    
+                        contains_pci[cell] = True
 
             pci_cell_count = sum(contains_pci)
 
             assert(pci_cell_count > 0)
 
-            print("Refining "+str(pci_cell_count)+" cells containing the PCI.")
+            print("PCI Refinement cycle #"+str(pci_refinement_cycle)+"Refining "+str(pci_cell_count)+" cells containing the PCI.")
 
             mesh = fenics.refine(mesh, contains_pci)                    
                 
