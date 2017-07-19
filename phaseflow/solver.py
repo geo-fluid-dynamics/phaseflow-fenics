@@ -1,14 +1,15 @@
 import fenics
 
+'''@todo Encapsulate this Newton method '''
+MAX_NEWTON_ITERATIONS = 12 
+
+NEWTON_RELATIVE_TOLERANCE = 1.e-3
+
+
 def make(form_factory, linearize=False, adaptive_space=False, adaptive_space_error_tolerance=1.e-4):
     ''' This function allows us to create a time solver function with a consistent interface. Among other reasons for this, the interfaces for the FEniCS classes AdaptiveLinearVariationalSolver and LinearVariationalSolver are not consistent. '''
     
     if linearize:
-    
-        '''@todo Encapsulate this Newton method '''
-        MAX_NEWTON_ITERATIONS = 12 
-        
-        NEWTON_RELATIVE_TOLERANCE = 1.e-9
         
         '''w_w was previously a TrialFunction, but must be a Function when defining M and when calling solve(). The details here are opaque to me. Here is a related issue: https://fenicsproject.org/qa/12271/adaptive-stokes-perform-compilation-unable-extract-indices'''
         w_w = fenics.Function(form_factory.W)
@@ -87,6 +88,9 @@ def make(form_factory, linearize=False, adaptive_space=False, adaptive_space_err
             def solve(problem):
                 
                 solver = fenics.NonlinearVariationalSolver(problem)
+                
+                solver.parameters['newton_solver']['maximum_iterations'] = MAX_NEWTON_ITERATIONS
+                solver.parameters['newton_solver']['relative_tolerance'] = NEWTON_RELATIVE_TOLERANCE
             
                 iteration_count, converged = solver.solve()
                 
@@ -122,7 +126,7 @@ def make(form_factory, linearize=False, adaptive_space=False, adaptive_space_err
             
             if adaptive_space:
             
-                M = fenics.sqrt(u[0]**2 + u[1]**2 + theta**2)*fenics.dx
+                M = fenics.sqrt(u[0]**2 + theta**2)*fenics.dx # @todo Handle n-D
                 
                 converged = solve(problem=problem, M=M)
             
