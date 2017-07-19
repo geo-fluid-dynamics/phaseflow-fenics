@@ -85,20 +85,38 @@ class FormFactory():
         
         v, q, phi = fenics.TestFunctions(self.W)
         
-        Ra, Pr, K, g, gamma, mu_l = fenics.Constant(self.parameters['Ra']), fenics.Constant(self.parameters['Pr']), fenics.Constant(self.parameters['K']), fenics.Constant(self.parameters['g']), fenics.Constant(self.parameters['gamma']), fenics.Constant(self.parameters['mu_l'])
+        Ra, Pr, Ste, C, K, g, gamma, mu_l = fenics.Constant(self.parameters['Ra']), fenics.Constant(self.parameters['Pr']), fenics.Constant(self.parameters['Ste']), fenics.Constant(self.parameters['C']), fenics.Constant(self.parameters['K']), fenics.Constant(self.parameters['g']), fenics.Constant(self.parameters['gamma']), fenics.Constant(self.parameters['mu_l'])
         
         m_B, ddtheta_m_B = self.m_B, self.ddtheta_m_B
         
+        a_s, theta_s, R_s = fenics.Constant(self.regularization['a_s']), fenics.Constant(self.regularization['theta_s']), fenics.Constant(self.regularization['R_s'])
+        
+        heaviside_tanh = lambda theta, f_s, f_l: f_l + (f_s - f_l)/2.*(1. + fenics.tanh(a_s*(theta_s - theta)/R_s))
+        
+        ddtheta_heaviside_tanh = lambda theta, f_s, f_l: -(a_s*(fenics.tanh((a_s*(theta_s - theta))/R_s)**2 - 1.)*(f_l/2. - f_s/2.))/R_s
+        
+        S_s = fenics.Constant(0.)
+        
+        S_l = fenics.Constant(1./Ste)
+        
+        S = lambda theta : heaviside_tanh(theta, f_s=S_s, f_l=S_l)
+        
+        ddtheta_S = lambda theta : ddtheta_heaviside_tanh(theta, f_s=S_s, f_l=S_l)   
+        
+        ddtheta_mu_l = 0.
+        
         A = (
             b(u_w, q) - gamma*p_w*q
-            + dot(u_w, v)/dt + c(u_w, u_k, v) + c(u_k, u_w, v) + a(mu_l, u_w, v) + b(v, p_w) + dot(ddtheta_m_B(theta_k)*theta_w*g, v)
+            + dot(u_w, v)/dt + c(u_w, u_k, v) + c(u_k, u_w, v) + a(mu_l, u_w, v) + a(ddtheta_mu_l*theta_w, u_k, v) + b(v, p_w) + dot(ddtheta_m_B(theta_k)*theta_w*g, v)
             + theta_w*phi/dt - dot(u_k, grad(phi))*theta_w - dot(u_w, grad(phi))*theta_k + dot(K/Pr*grad(theta_w), grad(phi))
+            + dot(ddtheta_S(theta_k)*theta_w, phi)/dt
             )*fenics.dx
         
         L = (
             b(u_k, q) - gamma*p_k*q
             + dot(u_k - u_n, v)/dt + c(u_k, u_k, v) + a(mu_l, u_k, v) + b(v, p_k) + dot(m_B(theta_k)*g, v)
             + (theta_k - theta_n)*phi/dt - dot(u_k, grad(phi))*theta_k + dot(K/Pr*grad(theta_k), grad(phi))
+            + (S(theta_k) - S(theta_n))*phi/dt
             )*fenics.dx  
         
         return A, L

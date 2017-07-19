@@ -1,20 +1,16 @@
+from .context import phaseflow
+
 import fenics
-
-import sys
-import os.path
-
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-
-import phaseflow
-
-def stefan_problem():
+        
+        
+def test_1D_output():
 
     theta_h = 1.
     
     theta_c = -1.
     
     w = phaseflow.run(
-        output_dir = 'output/stefan_problem/',
+        output_dir = 'output/test_1D_output/',
         output_format = 'table',
         Pr = 1.,
         Ste = 1.,
@@ -29,11 +25,11 @@ def stefan_problem():
             {'subspace': 2, 'value_expression': theta_h, 'degree': 2, 'location_expression': "near(x[0],  0.)", 'method': "topological"},
             {'subspace': 2, 'value_expression': theta_c, 'degree': 2, 'location_expression': "near(x[0],  1.)", 'method': "topological"}],
         regularization = {'a_s': 2., 'theta_s': 0.01, 'R_s': 0.005},
-        final_time = 1.,
+        final_time = 0.001,
         time_step_bounds = 0.001,
         linearize = False)
 
 
 if __name__=='__main__':
     
-    stefan_problem()
+    test_1D_output()

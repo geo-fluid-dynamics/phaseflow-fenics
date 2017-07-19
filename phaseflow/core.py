@@ -101,6 +101,14 @@ def run(
     
     print(helpers.arguments())
     
+    helpers.mkdir_p(output_dir)
+        
+    arguments_file = open(output_dir + 'arguments.txt', 'w')
+    
+    arguments_file.write(str(helpers.arguments()))
+
+    arguments_file.close()
+    
     
     # Validate inputs    
     if type(time_step_bounds) == type(1.):
@@ -143,7 +151,7 @@ def run(
         
             solution_files = [fenics.File(output_dir + '/velocity.pvd'), fenics.File(output_dir + '/pressure.pvd'), fenics.File(output_dir + '/temperature.pvd')]
 
-        elif output_format is 'table':
+        elif output_format is 'table':        
         
             solution_files = [open(output_dir + 'temperature.txt', 'w')]
             
