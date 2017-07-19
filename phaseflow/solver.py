@@ -1,12 +1,7 @@
 import fenics
 
-'''@todo Encapsulate this Newton method '''
-MAX_NEWTON_ITERATIONS = 12 
 
-NEWTON_RELATIVE_TOLERANCE = 1.e-3
-
-
-def make(form_factory, linearize=False, adaptive_space=False, adaptive_space_error_tolerance=1.e-4):
+def make(form_factory, newton_relative_tolerance=1.e-8, max_newton_iterations=12, linearize=False, adaptive_space=False, adaptive_space_error_tolerance=1.e-4):
     ''' This function allows us to create a time solver function with a consistent interface. Among other reasons for this, the interfaces for the FEniCS classes AdaptiveLinearVariationalSolver and LinearVariationalSolver are not consistent. '''
     
     if linearize:
@@ -49,7 +44,7 @@ def make(form_factory, linearize=False, adaptive_space=False, adaptive_space_err
             
             u_k, p_k, theta_k = fenics.split(w_k)
             
-            for k in range(MAX_NEWTON_ITERATIONS):
+            for k in range(max_newton_iterations):
             
                 A, L = form_factory.make_newton_linearized_form(dt=dt, w_n=w_n, w_k=w_k)
                 
@@ -67,7 +62,7 @@ def make(form_factory, linearize=False, adaptive_space=False, adaptive_space_err
 
                 print '\nL2 norm of relative residual, || w_w || / || w_k || = ' + str(norm_residual) + '\n'
                 
-                if norm_residual < NEWTON_RELATIVE_TOLERANCE:
+                if norm_residual < newton_relative_tolerance:
                     
                     iteration_count = k + 1
                     
@@ -89,8 +84,8 @@ def make(form_factory, linearize=False, adaptive_space=False, adaptive_space_err
                 
                 solver = fenics.NonlinearVariationalSolver(problem)
                 
-                solver.parameters['newton_solver']['maximum_iterations'] = MAX_NEWTON_ITERATIONS
-                solver.parameters['newton_solver']['relative_tolerance'] = NEWTON_RELATIVE_TOLERANCE
+                solver.parameters['newton_solver']['maximum_iterations'] = max_newton_iterations
+                solver.parameters['newton_solver']['relative_tolerance'] = newton_relative_tolerance
             
                 iteration_count, converged = solver.solve()
                 

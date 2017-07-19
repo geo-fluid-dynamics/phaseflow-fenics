@@ -90,6 +90,8 @@ def run(
     adaptive_space = False,
     adaptive_space_error_tolerance = 1.e-4,
     gamma = 1.e-7,
+    newton_relative_tolerance = 1.e-8,
+    max_newton_iterations = 12,
     pressure_degree = default.pressure_degree,
     temperature_degree = default.temperature_degree,
     linearize = True,
@@ -161,7 +163,7 @@ def run(
 
     
     # Solve each time step
-    solve_time_step = solver.make(form_factory, linearize, adaptive_space, adaptive_space_error_tolerance)
+    solve_time_step = solver.make(form_factory, newton_relative_tolerance, max_newton_iterations, linearize, adaptive_space, adaptive_space_error_tolerance)
     
     progress = fenics.Progress('Time-stepping')
 
