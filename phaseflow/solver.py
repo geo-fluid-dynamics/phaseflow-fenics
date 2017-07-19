@@ -1,9 +1,9 @@
 import fenics
 
 '''@todo Encapsulate this Newton method '''
-MAX_NEWTON_ITERATIONS = 12 
+MAX_NEWTON_ITERATIONS = 12 # @todo Expose this parameter as an argument and update tests.
 
-NEWTON_RELATIVE_TOLERANCE = 1.e-3
+NEWTON_RELATIVE_TOLERANCE = 1.e-8 # @todo Expose this parameter as an argument and update tests.
 
 
 def make(form_factory, linearize=False, adaptive_space=False, adaptive_space_error_tolerance=1.e-4):
