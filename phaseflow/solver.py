@@ -85,7 +85,10 @@ def make(form_factory, newton_relative_tolerance=1.e-8, max_newton_iterations=12
                 solver = fenics.NonlinearVariationalSolver(problem)
                 
                 solver.parameters['newton_solver']['maximum_iterations'] = max_newton_iterations
+                
                 solver.parameters['newton_solver']['relative_tolerance'] = newton_relative_tolerance
+            
+                solver.parameters['newton_solver']['error_on_nonconvergence'] = False
             
                 iteration_count, converged = solver.solve()
                 
@@ -106,7 +109,7 @@ def make(form_factory, newton_relative_tolerance=1.e-8, max_newton_iterations=12
                 return converged
                 
     
-        def solve_time_step(dt, w, w_n, bcs):
+        def solve_time_step(dt, w, w_n, bcs, pci_refinement_cycles=0):
     
             '''  @todo Implement adaptive time for nonlinear version.
             How to get residual from solver.solve() to check if diverging? 
