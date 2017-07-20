@@ -17,8 +17,6 @@
     
 '''
 import fenics
-import dolfin
-import numpy
 
 import helpers
 import globals
@@ -26,6 +24,7 @@ import default
 import forms
 import solver
 import time
+import refine
 import output
 
 
@@ -131,10 +130,6 @@ def run(
     current_time = 0.    
     
     
-    # Initialize auxiliary variables
-    solution_at_point = numpy.array([1.e32, 1.e32, 1.e32, 1.e32, 1.e32], dtype=numpy.float_)
-    
-    
     # Open the output file(s)
     if write_output:
     
@@ -152,7 +147,7 @@ def run(
 
     fenics.set_log_level(fenics.PROGRESS)
     
-    while current_time < final_time - dolfin.DOLFIN_EPS:
+    while current_time < final_time - fenics.dolfin.DOLFIN_EPS:
 
         remaining_time = final_time - current_time
     
@@ -225,61 +220,21 @@ def run(
             
             output.write_solution(output_format, newton_files, W, w, -1.)
             
+            
+            #
             if converged:
             
                 break
-                
+            
+            
+            # Refine mesh cells containing the PCI
             if (max_pci_refinement_cycles is 0) or (pci_refinement_cycle is (max_pci_refinement_cycles - 1)):
 
                 break
                 
             pci_refinement_cycle = pci_refinement_cycle + 1
-
-            contains_pci = fenics.CellFunction("bool", mesh)
-
-            contains_pci.set_all(False)
-
-            for cell in fenics.cells(mesh):
-                
-                hot_vertex_count = 0
-                
-                cold_vertex_count = 0
-                
-                for vertex in fenics.vertices(cell):
-                
-                    w.eval_cell(solution_at_point, numpy.array([vertex.x(0), vertex.x(1), vertex.x(2)]), cell)
-                    
-                    if dimensionality is 1:
-                    
-                        theta = solution_at_point[2]
-                        
-                    elif dimensionality is 2:
-                    
-                        theta = solution_at_point[3]
-                        
-                    hot = (regularization['theta_s'] + 2*regularization['R_s'] - fenics.dolfin.DOLFIN_EPS)
-                    
-                    cold = (regularization['theta_s'] - 2*regularization['R_s'] + fenics.dolfin.DOLFIN_EPS)
-                    
-                    if theta > hot:
-                    
-                        hot_vertex_count += 1
-                        
-                    if theta < cold:
-                    
-                        cold_vertex_count += 1
-
-                if dimensionality is 1:
-                
-                    if (hot_vertex_count is 1) or (cold_vertex_count is 1):
-                
-                        contains_pci[cell] = True
-                        
-                elif dimensionality is 2:
-                
-                    if (0 < hot_vertex_count < 3) or (0 < cold_vertex_count < 3):
-                    
-                        contains_pci[cell] = True
+            
+            contains_pci = refine.mark_pci_cells(regularization, mesh, w)
 
             pci_cell_count = sum(contains_pci)
 
@@ -313,7 +268,7 @@ def run(
         
         progress.update(current_time / final_time)
             
-    if time >= (final_time - dolfin.DOLFIN_EPS):
+    if time >= (final_time - fenics.dolfin.DOLFIN_EPS):
     
         print 'Reached final time, t = ' + str(final_time)
     
