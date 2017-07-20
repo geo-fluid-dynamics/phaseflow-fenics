@@ -225,12 +225,11 @@ def run(
             
             output.write_solution(output_format, newton_files, W, w, -1.)
             
-            
             if converged:
             
                 break
                 
-            if max_pci_refinement_cycles is 0:
+            if (max_pci_refinement_cycles is 0) or (pci_refinement_cycle is (max_pci_refinement_cycles - 1)):
 
                 break
                 
@@ -286,20 +285,19 @@ def run(
 
             assert(pci_cell_count > 0)
 
-            print("PCI Refinement cycle #"+str(pci_refinement_cycle)+"Refining "+str(pci_cell_count)+" cells containing the PCI.")
+            print("PCI Refinement cycle #"+str(pci_refinement_cycle)+": Refining "+str(pci_cell_count)+" cells containing the PCI.")
 
             mesh = fenics.refine(mesh, contains_pci)                    
                 
         current_time += time_step_size.value
     
-        ''' Save solution to files.
-        Saving here allows us to inspect the latest solution 
-        even if the Newton iterations failed to converge.'''
+        assert(converged)
+        
+        
+        # Write the solution
         if write_output:
         
             output.write_solution(output_format, solution_files, W, w, current_time)
-        
-        assert(converged)
         
         time_step_size.set(2*time_step_size.value) # @todo: Encapsulate the adaptive time stepping
                     
