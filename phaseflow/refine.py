@@ -2,9 +2,13 @@ import fenics
 import numpy
 
 
-solution_at_point = numpy.array([1.e32, 1.e32, 1.e32, 1.e32, 1.e32], dtype=numpy.float_)
+solution_at_point = numpy.array([1.e32, 1.e32, 1.e32, 1.e32, 1.e32], dtype=numpy.float_) # Oversized for up to 3D
 
 def mark_pci_cells(regularization, mesh, w):
+
+    hot = (regularization['theta_s'] + 2*regularization['R_s'] - fenics.dolfin.DOLFIN_EPS)
+            
+    cold = (regularization['theta_s'] - 2*regularization['R_s'] + fenics.dolfin.DOLFIN_EPS)
 
     contains_pci = fenics.CellFunction("bool", mesh)
 
@@ -18,19 +22,9 @@ def mark_pci_cells(regularization, mesh, w):
         
         for vertex in fenics.vertices(cell):
         
-            w.eval_cell(solution_at_point, numpy.array([vertex.x(0), vertex.x(1), vertex.x(2)]), cell)
+            w.eval_cell(solution_at_point, numpy.array([vertex.x(0), vertex.x(1), vertex.x(2)]), cell) # Works for 1/2/3D
             
-            if mesh.type().dim() is 1:
-            
-                theta = solution_at_point[2]
-                
-            elif mesh.type().dim() is 2:
-            
-                theta = solution_at_point[3]
-                
-            hot = (regularization['theta_s'] + 2*regularization['R_s'] - fenics.dolfin.DOLFIN_EPS)
-            
-            cold = (regularization['theta_s'] - 2*regularization['R_s'] + fenics.dolfin.DOLFIN_EPS)
+            theta = solution_at_point[mesh.type().dim() + 1]
             
             if theta > hot:
             
@@ -40,16 +34,8 @@ def mark_pci_cells(regularization, mesh, w):
             
                 cold_vertex_count += 1
 
-        if mesh.type().dim() is 1:
+        if (0 < hot_vertex_count < 1 + mesh.type().dim()) | (0 < cold_vertex_count < 1 + mesh.type().dim()):
         
-            if (hot_vertex_count is 1) or (cold_vertex_count is 1):
-        
-                contains_pci[cell] = True
+            contains_pci[cell] = True
                 
-        elif mesh.type().dim() is 2:
-        
-            if (0 < hot_vertex_count < 3) or (0 < cold_vertex_count < 3):
-            
-                contains_pci[cell] = True
-                
-        return contains_pci
+    return contains_pci
