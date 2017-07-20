@@ -75,8 +75,8 @@ def stefan_problem(Ste = 1.,
     
 if __name__=='__main__':
     
-    stefan_problem()
+    #stefan_problem()
     
-    stefan_problem(Ste=0.1, R_s=0.05, dt=0.0001, initial_uniform_cell_count=10, newton_relative_tolerance=1.e-4)
+    #stefan_problem(Ste=0.1, R_s=0.05, dt=0.0001, initial_uniform_cell_count=10, newton_relative_tolerance=1.e-4)
     
-    #stefan_problem(Ste=0.045, R_s=0.005, dt=0.001, initial_uniform_cell_count=1000, newton_relative_tolerance=1.e-4)
+    stefan_problem(Ste=0.01, R_s=0.1, dt=0.0001, initial_uniform_cell_count=100, newton_relative_tolerance=1.e-5)
