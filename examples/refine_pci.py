@@ -1,5 +1,4 @@
 import fenics
-
 import sys
 import os.path
 
@@ -14,7 +13,7 @@ def refine_pci():
     
     theta_c = -0.5
     
-    R_s = 0.005
+    R_s = 0.01
     
     mesh = fenics.UnitIntervalMesh(1)
     
