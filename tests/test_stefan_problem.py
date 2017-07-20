@@ -131,7 +131,7 @@ def test_boundary_refinement():
     
     #
     w = phaseflow.run(
-        output_dir = 'output/stefan_problem_refine_boundary/',
+        output_dir = 'output/test_stefan_problem_refine_boundary/',
         output_format = 'table',
         Pr = 1.,
         Ste = 1.,
@@ -154,15 +154,17 @@ def test_boundary_refinement():
         
 def test_pci_refinement():
 
+    Ste = 1.
+    
     theta_h = 0.5
     
     theta_c = -0.5
     
-    R_s = 0.005
+    R_s = 0.01
     
-    mesh = fenics.UnitIntervalMesh(10)
+    mesh = fenics.UnitIntervalMesh(1)
     
-    hot_boundary_refinement_cycles = 6
+    hot_boundary_refinement_cycles = 10
 
     
     ''' Refine mesh near hot boundary
@@ -195,10 +197,10 @@ def test_pci_refinement():
     
     #
     w = phaseflow.run(
-        output_dir = 'output/stefan_problem_refine_pci/',
+        output_dir = 'output/test_stefan_problem_refine_pci/',
         output_format = 'table',
         Pr = 1.,
-        Ste = 1.,
+        Ste = Ste,
         g = [0.],
         mesh = mesh,
         max_pci_refinement_cycles = 3,
@@ -212,9 +214,11 @@ def test_pci_refinement():
             {'subspace': 2, 'value_expression': theta_c, 'degree': 2, 'location_expression': "near(x[0],  1.)", 'method': "topological"}],
         regularization = {'a_s': 2., 'theta_s': 0.01, 'R_s': R_s},
         newton_relative_tolerance = 1.e-4,
-        final_time = 0.005,
+        final_time = 0.01,
         time_step_bounds = 0.0005,
         linearize = False)
+        
+    verify_pci_position(Ste, R_s, w)
         
         
 if __name__=='__main__':
@@ -224,3 +228,5 @@ if __name__=='__main__':
     test_stefan_problem_linearized()
 
     test_boundary_refinement()
+    
+    test_stefan_problem_pci_refinement()
