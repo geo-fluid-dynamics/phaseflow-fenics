@@ -17,6 +17,12 @@ def stefan_problem_limits_refined_pci():
     
         R_s = 0.005/Ste
     
+        dt = 0.001*Ste
+        
+        final_time = 0.01*Ste
+        
+        newton_relative_tolerance = 1.e-3*Ste
+        
         mesh = fenics.UnitIntervalMesh(int(1/Ste))
         
         hot_boundary_refinement_cycles = 10
@@ -66,9 +72,9 @@ def stefan_problem_limits_refined_pci():
                 {'subspace': 2, 'value_expression': theta_h, 'degree': 2, 'location_expression': "near(x[0],  0.)", 'method': "topological"},
                 {'subspace': 2, 'value_expression': theta_c, 'degree': 2, 'location_expression': "near(x[0],  1.)", 'method': "topological"}],
             regularization = {'a_s': 2., 'theta_s': 0.01, 'R_s': R_s},
-            newton_relative_tolerance = 1.e-4/Ste,
-            final_time = 0.01,
-            time_step_bounds = 0.001*Ste,
+            newton_relative_tolerance = newton_relative_tolerance,
+            final_time = final_time,
+            time_step_bounds = dt,
             linearize = False)
 
         
