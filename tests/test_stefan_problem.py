@@ -156,11 +156,11 @@ def test_pci_refinement():
 
     Ste = 1.
     
-    theta_h = 0.5
+    theta_h = 1.
     
-    theta_c = -0.5
+    theta_c = -1.
     
-    R_s = 0.01
+    R_s = 0.005
     
     mesh = fenics.UnitIntervalMesh(1)
     
@@ -213,9 +213,9 @@ def test_pci_refinement():
             {'subspace': 2, 'value_expression': theta_h, 'degree': 2, 'location_expression': "near(x[0],  0.)", 'method': "topological"},
             {'subspace': 2, 'value_expression': theta_c, 'degree': 2, 'location_expression': "near(x[0],  1.)", 'method': "topological"}],
         regularization = {'a_s': 2., 'theta_s': 0.01, 'R_s': R_s},
-        newton_relative_tolerance = 1.e-4,
+        newton_relative_tolerance = 1.e-3,
         final_time = 0.01,
-        time_step_bounds = 0.0005,
+        time_step_bounds = 0.001,
         linearize = False)
         
     verify_pci_position(Ste, R_s, w)
