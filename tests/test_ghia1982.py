@@ -41,26 +41,6 @@ def test_ghia1982_steady_lid_driven_cavity():
             {'subspace': 1, 'value_expression': "0.", 'degree': 2, 'location_expression': bottom_left_corner, 'method': 'pointwise'}])
 
     verify_against_ghia1982(w)
-    
-    
-def test_unsteady_lid_driven_cavity():
-   
-    m = 20
-
-    w = phaseflow.run(linearize = False,
-        mesh = fenics.UnitSquareMesh(m, m, 'crossed'),
-        final_time = 1.e12,
-        time_step_bounds = (1., 1., 1.e12),
-        mu_l = 0.01,
-        Ste = 1.e16,
-        initial_values_expression = (lid, '0.', '0.', '0.'),
-        boundary_conditions = [
-            {'subspace': 0, 'value_expression': ("1.", "0."), 'degree': 3, 'location_expression': lid, 'method': 'topological'},
-            {'subspace': 0, 'value_expression': ("0.", "0."), 'degree': 3, 'location_expression': fixed_walls, 'method': 'topological'},
-            {'subspace': 1, 'value_expression': "0.", 'degree': 2, 'location_expression': bottom_left_corner, 'method': 'pointwise'}],
-        output_dir="output/test_unsteady_lid_driven_cavity")
-
-    verify_against_ghia1982(w)
         
         
 def test_ghia1982_steady_lid_driven_cavity_linearized():
@@ -79,26 +59,6 @@ def test_ghia1982_steady_lid_driven_cavity_linearized():
             {'subspace': 0, 'value_expression': ("0.", "0."), 'degree': 3, 'location_expression': fixed_walls, 'method': 'topological'},
             {'subspace': 1, 'value_expression': "0.", 'degree': 2, 'location_expression': bottom_left_corner, 'method': 'pointwise'}],
         output_dir="output/test_ghia1982_steady_lid_driven_cavity_linearized")
-
-    verify_against_ghia1982(w)
-    
-    
-def test_unsteady_lid_driven_cavity_linearized():
-   
-    m = 20
-
-    w = phaseflow.run(linearize = True,
-        mesh = fenics.UnitSquareMesh(m, m, 'crossed'),
-        final_time = 1.e12,
-        time_step_bounds = (1., 1., 1.e12),
-        mu_l = 0.01,
-        Ste = 1.e16,
-        initial_values_expression = (lid, '0.', '0.', '0.'),
-        boundary_conditions = [
-            {'subspace': 0, 'value_expression': ("0.", "0."), 'degree': 3, 'location_expression': lid, 'method': 'topological'},
-            {'subspace': 0, 'value_expression': ("0.", "0."), 'degree': 3, 'location_expression': fixed_walls, 'method': 'topological'},
-            {'subspace': 1, 'value_expression': "0.", 'degree': 2, 'location_expression': bottom_left_corner, 'method': 'pointwise'}],
-        output_dir="output/test_unsteady_lid_driven_cavity")
 
     verify_against_ghia1982(w)
         
@@ -150,11 +110,7 @@ def test_ghia1982_steady_lid_driven_cavity_linearized_adaptive():
 if __name__=='__main__':
 
     test_ghia1982_steady_lid_driven_cavity()
-    
-    test_unsteady_lid_driven_cavity()
-    
-    test_unsteady_lid_driven_cavity_linearized()
-    
+
     test_ghia1982_steady_lid_driven_cavity_linearized()
     
     test_ghia1982_steady_lid_driven_cavity_adaptive()
