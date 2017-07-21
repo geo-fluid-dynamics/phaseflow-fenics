@@ -79,4 +79,4 @@ if __name__=='__main__':
     
     #stefan_problem(Ste=0.1, R_s=0.05, dt=0.0001, initial_uniform_cell_count=10, newton_relative_tolerance=1.e-4)
     
-    stefan_problem(Ste=0.01, R_s=0.1, dt=0.0001, initial_uniform_cell_count=100, newton_relative_tolerance=1.e-5)
+    stefan_problem(Ste=0.01, R_s=0.1, dt=0.0001, final_time = 0.1, initial_uniform_cell_count=100, newton_relative_tolerance=1.e-5)
