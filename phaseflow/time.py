@@ -36,8 +36,6 @@ def adaptive_time_step(time_step_size, w, w_n, bcs, current_time, solve_time_ste
         if not converged:
         
             time_step_size.set(time_step_size.value/2.)
-
-    current_time += time_step_size.value
     
     return current_time, converged
    

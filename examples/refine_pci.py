@@ -7,20 +7,18 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 import phaseflow
 
 
-def stefan_problem(Ste = 1.,
-    theta_h = 1.,
-    theta_c = -1.,
-    a_s = 2.,
-    R_s = 0.005,
-    dt = 0.001,
-    final_time = 0.01,
-    newton_relative_tolerance = 1.e-3,
-    initial_uniform_cell_count = 1,
-    hot_boundary_refinement_cycles = 10,
-    max_pci_refinement_cycles = 10):
+def refine_pci():
 
+    theta_h = 0.5
     
-    mesh = fenics.UnitIntervalMesh(initial_uniform_cell_count)
+    theta_c = -0.5
+    
+    R_s = 0.01
+    
+    mesh = fenics.UnitIntervalMesh(1)
+    
+    hot_boundary_refinement_cycles = 10
+
     
     ''' Refine mesh near hot boundary
     The usual approach of using SubDomain and EdgeFunction isn't appearing to work
@@ -49,15 +47,16 @@ def stefan_problem(Ste = 1.,
                 break # There should only be one such point.
                 
         mesh = fenics.refine(mesh, cell_markers)
-
+    
+    #
     w = phaseflow.run(
-        output_dir = 'output/stefan_problem_Ste'+str(Ste).replace('.', 'p')+'/',
+        output_dir = 'output/stefan_problem_refine_pci/',
         output_format = 'table',
         Pr = 1.,
-        Ste = Ste,
+        Ste = 1.,
         g = [0.],
         mesh = mesh,
-        max_pci_refinement_cycles = max_pci_refinement_cycles,
+        max_pci_refinement_cycles = 10,
         initial_values_expression = (
             "0.",
             "0.",
@@ -67,16 +66,12 @@ def stefan_problem(Ste = 1.,
             {'subspace': 2, 'value_expression': theta_h, 'degree': 2, 'location_expression': "near(x[0],  0.)", 'method': "topological"},
             {'subspace': 2, 'value_expression': theta_c, 'degree': 2, 'location_expression': "near(x[0],  1.)", 'method': "topological"}],
         regularization = {'a_s': 2., 'theta_s': 0.01, 'R_s': R_s},
-        newton_relative_tolerance = newton_relative_tolerance,
-        final_time = final_time,
-        time_step_bounds = dt,
+        newton_relative_tolerance = 1.e-4,
+        final_time = 0.01,
+        time_step_bounds = 0.0005,
         linearize = False)
 
-    
+        
 if __name__=='__main__':
     
-    #stefan_problem()
-    
-    #stefan_problem(Ste=0.1, R_s=0.05, dt=0.0001, initial_uniform_cell_count=10, newton_relative_tolerance=1.e-4)
-    
-    stefan_problem(Ste=0.01, R_s=0.1, dt=0.0001, final_time = 0.1, initial_uniform_cell_count=100, newton_relative_tolerance=1.e-5)
+    refine_pci()
