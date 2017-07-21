@@ -157,7 +157,7 @@ def run(
 
         pci_refinement_cycle = 0
             
-        for ir in range(max_pci_refinement_cycles):
+        for ir in range(max_pci_refinement_cycles + 1):
         
             # Define function spaces and solution function
             W, W_ele = function_spaces(mesh, pressure_degree, temperature_degree)
@@ -218,7 +218,9 @@ def run(
                 
                 newton_files[0].write("t, x, theta \n")
             
-            output.write_solution(output_format, newton_files, W, w, -1.)
+            if write_output:
+            
+                output.write_solution(output_format, newton_files, W, w, -1.)
             
             
             #
