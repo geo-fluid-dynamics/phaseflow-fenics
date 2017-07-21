@@ -29,7 +29,22 @@ def test_1D_output():
         time_step_bounds = 0.001,
         linearize = False)
 
+        
+def test_1D_velocity():
+
+    mesh = fenics.UnitIntervalMesh(5)
+
+    V = fenics.VectorFunctionSpace(mesh, 'P', 1)
+
+    u = fenics.Function(V)
+
+    bc = fenics.DirichletBC(V, [10.0], 'x[0] < 0.5')
+
+    print(bc.get_boundary_values())
+        
 
 if __name__=='__main__':
     
     test_1D_output()
+    
+    test_1D_velocity()
