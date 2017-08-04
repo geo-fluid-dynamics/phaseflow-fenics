@@ -18,7 +18,7 @@ We have a [Docker image](quay.io/fenicsproject/stable:latest) with a pre-configu
 
 Get the [free community edition of Docker](https://www.docker.com/community-edition).
 
-Pull the [image](docker run -ti quay.io/fenicsproject/stable:current) and run the container with Docker
+Pull the [image](https://hub.docker.com/r/fenicsproject/stable/) and run the container with Docker
 
     docker run -ti quay.io/fenicsproject/stable:current
     
