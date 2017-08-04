@@ -15,9 +15,9 @@ notifications:
   slack: aices-pcm-cfd:ShncJAFCJzx48zt8hrXpRwGw
 
 before_install:
-- docker pull zimmerman/fenics-pytest:latest
+- docker pull quay.io/fenicsproject/stable:current
 
 group: deprecated-2017Q2
 
 script:
-- docker run --rm -P -v `pwd`:/home/fenics/shared -w /home/fenics/shared zimmerman/fenics-pytest:latest "pytest"
+- docker run --rm -P -v `pwd`:/home/fenics/shared -w /home/fenics/shared quay.io/fenicsproject/stable:current "python -m pytest"
