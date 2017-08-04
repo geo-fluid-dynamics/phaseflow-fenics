@@ -14,7 +14,7 @@ Author: Alexander G. Zimmerman <zimmerman@aices.rwth-aachen.de>
 # For users:
 ## [Docker](https://www.docker.com)
 
-We have a [Docker image](https://hub.docker.com/r/fenicsproject/stable/) with a pre-configured Python environment and pre-built FEniCS, courtesy of the FEniCS developers.
+We have a [Docker image](https://hub.docker.com/r/fenicsproject/stable/) with a pre-configured Python environment and pre-built FEniCS, courtesy of the FEniCS developers. See their ["FEniCS in Docker" manual](https://fenics.readthedocs.io/projects/containers/en/latest/).
 
 Get the [free community edition of Docker](https://www.docker.com/community-edition).
 
@@ -25,8 +25,6 @@ Pull the [image](https://hub.docker.com/r/fenicsproject/stable/) and run the con
 Or run the container with access to a shared folder (shared between the host and the container)
 
     docker run -ti -v $(pwd):/home/fenics/shared quay.io/fenicsproject/stable:current
-    
-Note that our [Docker image](https://hub.docker.com/r/zimmerman/phaseflow-fenics/latest) only adds pytest to the [FEniCS Docker image](quay.io/fenicsproject/stable:latest) and clones this repository, as shown in our [Dockerfile](https://github.com/alexanderzimmerman/phaseflow-fenics/blob/master/Dockerfile). So for the most part, everything you need to know is [here in the "FEniCS in Docker" manual](https://fenics.readthedocs.io/projects/containers/en/latest/).
 
 If you plan to use this container repeatedly, then instead use this command to also give it a name
 
