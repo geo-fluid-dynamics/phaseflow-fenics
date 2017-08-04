@@ -14,7 +14,7 @@ Author: Alexander G. Zimmerman <zimmerman@aices.rwth-aachen.de>
 # For users:
 ## [Docker](https://www.docker.com)
 
-We have a [Docker image](quay.io/fenicsproject/stable:latest) with a pre-configured Python environment and pre-built FEniCS, courtesy of the FEniCS developers.
+We have a [Docker image](https://hub.docker.com/r/fenicsproject/stable/) with a pre-configured Python environment and pre-built FEniCS, courtesy of the FEniCS developers.
 
 Get the [free community edition of Docker](https://www.docker.com/community-edition).
 
