@@ -107,7 +107,7 @@ def run(
     
     helpers.mkdir_p(output_dir)
         
-    arguments_file = open(output_dir + 'arguments.txt', 'w')
+    arguments_file = open(output_dir + '/arguments.txt', 'w')
     
     arguments_file.write(str(helpers.arguments()))
 
