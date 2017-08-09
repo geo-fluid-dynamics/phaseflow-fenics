@@ -1,9 +1,14 @@
+import fenics
+import sys
+import os.path
+
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+
 import phaseflow
 
-import fenics
-
+def wang2010_natural_convection_water():
     
-def run(m=20):
+    m = 20
 
     linearize = True
     
@@ -56,14 +61,16 @@ def run(m=20):
     w = phaseflow.run(
         Ra = Ra,
         Pr = Pr,
+        Ste = 1.e16,
         m_B = lambda theta : Ra/(Pr*Re*Re)/(beta*(T_h - T_c))*(rho(theta_f) - rho(theta))/rho(theta_f),
         ddtheta_m_B = lambda theta : -Ra/(Pr*Re*Re)/(beta*(T_h - T_c))*(ddtheta_rho(theta))/rho(theta_f),
         mesh = fenics.UnitSquareMesh(m, m, 'crossed'),
-        time_step_bounds = (0.001, 0.004, 10.),
-        final_time = 10.,
-        linearize = linearize,
+        time_step_bounds = 0.01,
+        final_time = 1.,
+        stop_when_steady = True,
+        steady_relative_tolerance = 1.e-3,
         newton_relative_tolerance = 1.e-4,
-        max_newton_iterations = 10,
+        linearize = linearize,
         initial_values_expression = (
             "0.",
             "0.",
@@ -73,9 +80,9 @@ def run(m=20):
             {'subspace': 0, 'value_expression': ("0.", "0."), 'degree': 3, 'location_expression': "near(x[0],  0.) | near(x[0],  1.) | near(x[1], 0.) | near(x[1],  1.)", 'method': "topological"},
             {'subspace': 2, 'value_expression':str(bc_theta_hot), 'degree': 2, 'location_expression': "near(x[0],  0.)", 'method': "topological"},
             {'subspace': 2, 'value_expression':str(bc_theta_cold), 'degree': 2, 'location_expression': "near(x[0],  1.)", 'method': "topological"}],
-        output_dir = 'output/natural_convection_water')
-
+        output_dir = 'output/wang2010_natural_convection_water')
         
+    
 if __name__=='__main__':
-
-    run()
+    
+    wang2010_natural_convection_water()
