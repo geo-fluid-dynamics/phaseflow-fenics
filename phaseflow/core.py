@@ -255,8 +255,6 @@ def run(
         if write_output:
         
             output.write_solution(output_format, solution_files, W, w, current_time)
-        
-        time_step_size.set(2*time_step_size.value) # @todo: Encapsulate the adaptive time stepping
                     
         print 'Reached time t = ' + str(current_time)
         
@@ -269,6 +267,8 @@ def run(
         w_n.assign(w)
         
         progress.update(current_time / final_time)
+        
+        time_step_size.set(2*time_step_size.value) # @todo: Encapsulate the adaptive time stepping
             
     if time >= (final_time - fenics.dolfin.DOLFIN_EPS):
     
