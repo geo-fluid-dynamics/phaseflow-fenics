@@ -80,7 +80,8 @@ def wang2010_natural_convection_water():
             {'subspace': 0, 'value_expression': ("0.", "0."), 'degree': 3, 'location_expression': "near(x[0],  0.) | near(x[0],  1.) | near(x[1], 0.) | near(x[1],  1.)", 'method': "topological"},
             {'subspace': 2, 'value_expression':str(bc_theta_hot), 'degree': 2, 'location_expression': "near(x[0],  0.)", 'method': "topological"},
             {'subspace': 2, 'value_expression':str(bc_theta_cold), 'degree': 2, 'location_expression': "near(x[0],  1.)", 'method': "topological"}],
-        output_dir = 'output/wang2010_natural_convection_water')
+        output_dir = 'output/quick_water',
+        output_format = 'xdmf')
         
     
 if __name__=='__main__':

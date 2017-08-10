@@ -1,5 +1,9 @@
+import helpers
+
 def write_solution(output_format, solution_files, W, _w, current_time):
 
+    helpers.print_once("Writing solution to "+output_format)
+    
     w = _w.leaf_node()
         
     velocity, pressure, temperature = w.split()
@@ -10,11 +14,11 @@ def write_solution(output_format, solution_files, W, _w, current_time):
     
     temperature.rename("theta", "temperature")
 
-    if output_format is 'vtk':
+    if (output_format is 'vtk') or (output_format is 'xdmf'):
         
         for i, var in enumerate([velocity, pressure, temperature]):
         
-            solution_files[i] << (var, current_time)
+            solution_files[i].write(var, current_time)
             
     elif output_format is 'table':
     
