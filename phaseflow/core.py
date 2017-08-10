@@ -159,7 +159,7 @@ def run(
     
     output_count = 0
     
-    if output_times[0] == 'initial':
+    if (output_times is not ()) and (output_times[0] == 'initial'):
     
         output_initial_time = True
         
