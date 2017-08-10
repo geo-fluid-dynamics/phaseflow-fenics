@@ -21,7 +21,7 @@ class TimeStepSize(helpers.BoundedValue):
             helpers.print_once("Set time step size to dt = "+str(value))
 
 
-def adaptive_time_step(time_step_size, w, w_n, bcs, current_time, solve_time_step):
+def adaptive_time_step(time_step_size, w, w_n, bcs, solve_time_step):
     
     converged = False
     
@@ -37,7 +37,46 @@ def adaptive_time_step(time_step_size, w, w_n, bcs, current_time, solve_time_ste
         
             time_step_size.set(time_step_size.value/2.)
     
-    return current_time, converged
+    return converged
+   
+   
+def check(current_time, time_step_size, final_time, output_times, output_count):
+
+    output_this_time = False
+        
+    next_time = current_time + time_step_size.value
+
+    if next_time > final_time:
+    
+        time_step_size.set(final_time - current_time)
+        
+        next_time = final_time
+    
+    if output_times is not ():
+
+        if output_times[output_count] == 'final':
+
+            if abs(next_time - final_time) < fenics.dolfin.DOLFIN_EPS:
+    
+                output_this_time = True
+                
+                output_count += 1
+            
+        elif output_count < len(output_times):
+        
+            time_to_next_output = output_times[output_count] - current_time
+
+            if time_step_size.value > time_to_next_output:
+                
+                time_step_size.set(time_to_next_output)
+        
+            if abs(time_to_next_output - time_step_size.value) < fenics.dolfin.DOLFIN_EPS:
+                
+                output_this_time = True
+    
+                output_count += 1
+                
+    return time_step_size, next_time, output_this_time, output_count 
    
 
 def steady(W, w, w_n):
