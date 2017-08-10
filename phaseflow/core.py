@@ -68,7 +68,33 @@ def function_spaces(mesh=default.mesh, pressure_degree=default.pressure_degree, 
     
     return solution_function_space, solution_element
 
+    
+def set_initial_values(current_time, initial_values_expression, W, W_ele, w_n, restart=False, ir=0):
 
+    if restart and (ir == 0):
+    
+        w_n = fenics.Function(W)
+    
+        mesh = fenics.Mesh()
+
+        with fenics.HDF5File(mesh.mpi_comm(), restart_filename, 'r') as h5:
+        
+            h5.read(mesh, "mesh", True)
+        
+            h5.read(w_n, "w_n")
+            
+    if fenics.near(current_time, 0.):
+    
+        w_n = fenics.interpolate(fenics.Expression(initial_values_expression,
+            element=W_ele), W)
+            
+    else:
+    
+        w_n = fenics.project(w_n, W)
+        
+    return w_n
+    
+    
 def run(
     output_dir = 'output/natural_convection',
     Ra = default.parameters['Ra'],
@@ -153,7 +179,19 @@ def run(
 
     solution_files = [fenics.XDMFFile(output_dir + '/velocity.xdmf'), fenics.XDMFFile(output_dir + '/pressure.xdmf'), fenics.XDMFFile(output_dir + '/temperature.xdmf')]
 
+            
+    # Set and write initial values
+    W, W_ele = function_spaces(mesh, pressure_degree, temperature_degree)
     
+    w_n = set_initial_values(current_time, initial_values_expression, W, W_ele, w_n, restart)
+    
+    if output_format is 'table':
+                
+        solution_files[0].write("t, x, theta \n")
+                
+    output.write_solution(output_format, solution_files, W, w_n, current_time) 
+        
+        
     # Solve each time step
     progress = fenics.Progress('Time-stepping')
 
@@ -191,29 +229,8 @@ def run(
             
             
             # Set the initial values
-            if fenics.near(current_time, 0.):
+            w_n = set_initial_values(current_time, initial_values_expression, W, W_ele, w_n, restart, ir)
             
-                w_n = fenics.interpolate(fenics.Expression(initial_values_expression,
-                    element=W_ele), W)
-                    
-            else:
-            
-                if restart and (ir == 0):
-                
-                    w_n = fenics.Function(W)
-                
-                    mesh = fenics.Mesh()
-        
-                    with fenics.HDF5File(mesh.mpi_comm(), restart_filename, 'r') as h5:
-                    
-                        h5.read(mesh, "mesh", True)
-                    
-                        h5.read(w_n, "w_n")
-                    
-                else:
-            
-                    w_n = fenics.project(w_n, W)
-
             
             # Initialize the functions that we will use to generate our variational form
             form_factory = forms.FormFactory(W, {'Ra': Ra, 'Pr': Pr, 'Ste': Ste, 'C': C, 'K': K, 'g': g, 'gamma': gamma, 'mu_l': mu_l}, m_B, ddtheta_m_B, regularization)
@@ -231,12 +248,12 @@ def run(
                 bcs.append(fenics.DirichletBC(W.sub(item['subspace']), item['value_expression'], item['location_expression'], method=item['method']))
             
 
-            # Write the initial values                    
-            if output_initial_time and fenics.near(current_time, 0.) and (ir is 0):
+            # Write the initial values
+            if write_output and fenics.near(current_time, 0.) and (ir is 0):
+            
+                output.write_solution(output_format, solution_files, W, w_n, current_time) 
+
                 
-                output.write_solution(solution_files, W, w_n, current_time) 
-             
-             
             #
             converged = time.adaptive_time_step(time_step_size=time_step_size, w=w, w_n=w_n, bcs=bcs,
                 solve_time_step=solve_time_step)
