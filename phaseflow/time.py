@@ -18,7 +18,7 @@ class TimeStepSize(helpers.BoundedValue):
         
         if abs(self.value - old_value) > dolfin.DOLFIN_EPS:
         
-            print 'Set time step size to dt = ' + str(value)
+            helpers.print_once("Set time step size to dt = "+str(value))
 
 
 def adaptive_time_step(time_step_size, w, w_n, bcs, current_time, solve_time_step):
@@ -54,7 +54,8 @@ def steady(W, w, w_n):
     
     unsteadiness = fenics.norm(time_residual, 'L2')/fenics.norm(w_n, 'L2')
     
-    print 'Unsteadiness (L2 norm of relative time residual), || w_{n+1} || / || w_n || = ' + str(unsteadiness)
+    helpers.print_once(
+        "Unsteadiness (L2 norm of relative time residual), || w_{n+1} || / || w_n || = "+str(unsteadiness))
 
     if (unsteadiness < STEADY_RELATIVE_TOLERANCE):
         

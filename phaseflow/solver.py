@@ -1,5 +1,5 @@
 import fenics
-
+import helpers
 
 def make(form_factory, newton_relative_tolerance=1.e-8, max_newton_iterations=12, linearize=False, adaptive_space=False, adaptive_space_error_tolerance=1.e-4):
     ''' This function allows us to create a time solver function with a consistent interface. Among other reasons for this, the interfaces for the FEniCS classes AdaptiveLinearVariationalSolver and LinearVariationalSolver are not consistent. '''
@@ -34,7 +34,7 @@ def make(form_factory, newton_relative_tolerance=1.e-8, max_newton_iterations=12
     
         def solve_time_step(dt, w, w_n, bcs):
             
-            print '\nIterating Newton method'
+            helpers.print_once("\nIterating Newton method")
             
             converged = False
             
@@ -60,13 +60,13 @@ def make(form_factory, newton_relative_tolerance=1.e-8, max_newton_iterations=12
                 
                 norm_residual = fenics.norm(w_w, 'L2')/fenics.norm(w_k, 'L2')
 
-                print '\nL2 norm of relative residual, || w_w || / || w_k || = ' + str(norm_residual) + '\n'
+                helpers.print_once("\nL2 norm of relative residual, || w_w || / || w_k || = "+str(norm_residual)+"\n")
                 
                 if norm_residual < newton_relative_tolerance:
                     
                     iteration_count = k + 1
                     
-                    print 'Converged after ' + str(k) + ' iterations'
+                    helpers.print_once("Converged after "+str(k)+" iterations")
                     
                     converged = True
                     

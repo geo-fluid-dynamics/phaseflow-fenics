@@ -1,7 +1,7 @@
 import inspect
 import errno    
 import os
-
+import fenics
 
 class BoundedValue(object):
 
@@ -40,6 +40,13 @@ def arguments():
     return args, posargs
     
 
+def print_once(string):
+
+    if fenics.dolfin.MPI.rank(fenics.dolfin.mpi_comm_world()) is 0:
+    
+        print(string)
+    
+    
 ''' Make a directory if it doesn't exist.
 Code from https://stackoverflow.com/questions/600268/mkdir-p-functionality-in-python '''
 def mkdir_p(path):

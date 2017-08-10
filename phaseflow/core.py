@@ -98,20 +98,24 @@ def run(
     temperature_degree = default.temperature_degree,
     linearize = True,
     stop_when_steady = False,
-    steady_relative_tolerance = 1.e-8):
-
-    # Display inputs
-    print("Running Phaseflow with the following arguments:")
+    steady_relative_tolerance = 1.e-8,
+    debug = False):
     
-    print(helpers.arguments())
+        
+    # Display inputs
+    helpers.print_once("Running Phaseflow with the following arguments:")
+    
+    helpers.print_once(helpers.arguments())
     
     helpers.mkdir_p(output_dir)
-        
-    arguments_file = open(output_dir + '/arguments.txt', 'w')
     
-    arguments_file.write(str(helpers.arguments()))
+    if fenics.dolfin.MPI.rank(fenics.dolfin.mpi_comm_world()) is 0:
+        
+        arguments_file = open(output_dir + '/arguments.txt', 'w')
+        
+        arguments_file.write(str(helpers.arguments()))
 
-    arguments_file.close()
+        arguments_file.close()
     
     
     # Validate inputs    
@@ -123,23 +127,29 @@ def run(
         
     dimensionality = mesh.type().dim()
     
-    print("Running "+str(dimensionality)+"D problem")
+    helpers.print_once("Running "+str(dimensionality)+"D problem")
     
     
     # Initialize time
     current_time = 0.    
     
     
-    # Open the output file(s)
-    if write_output:
+    # Open the output file(s)   
+    if output_format is 'vtk':
     
-        if output_format is 'vtk':
+        solution_files = [fenics.File(output_dir + '/velocity.pvd'), fenics.File(output_dir + '/pressure.pvd'), fenics.File(output_dir + '/temperature.pvd')]
         
-            solution_files = [fenics.File(output_dir + '/velocity.pvd'), fenics.File(output_dir + '/pressure.pvd'), fenics.File(output_dir + '/temperature.pvd')]
+    elif output_format is 'xdmf': # Parallel format
+    
+        ''' @todo  explore info(f.parameters, verbose=True) 
+        to avoid duplicate mesh storage when appropriate 
+        per https://fenicsproject.org/qa/3051/parallel-output-of-a-time-series-in-hdf5-format '''
+    
+        solution_files = [fenics.XDMFFile(output_dir + '/velocity.xdmf'), fenics.XDMFFile(output_dir + '/pressure.xdmf'), fenics.XDMFFile(output_dir + '/temperature.xdmf')]
 
-        elif output_format is 'table':        
-        
-            solution_files = [open(output_dir + 'temperature.txt', 'w')]
+    elif output_format is 'table':        
+    
+        solution_files = [open(output_dir + 'temperature.txt', 'w')]
 
     
     # Solve each time step
@@ -192,7 +202,7 @@ def run(
                 bcs.append(fenics.DirichletBC(W.sub(item['subspace']), item['value_expression'], item['location_expression'], method=item['method']))
             
 
-            # Write the initial values
+            # Write the initial values                    
             if write_output and fenics.near(current_time, 0.) and (ir is 0):
             
                 if output_format is 'table':
@@ -207,21 +217,33 @@ def run(
             current_time, converged = time.adaptive_time_step(time_step_size=time_step_size, w=w, w_n=w_n, bcs=bcs, current_time=current_time, solve_time_step=solve_time_step)
             
             
-            # Write current solution for debugging if Newton method fails
-            if output_format is 'vtk':
+            # Write current solution for debugging in case Newton method fails
+            if debug:
             
-                newton_files = [fenics.File(output_dir + '/newton_velocity.pvd'), fenics.File(output_dir + '/newton_pressure.pvd'), fenics.File(output_dir + '/newton_temperature.pvd')]
-
-            elif output_format is 'table':        
-            
-                newton_files = [open(output_dir + 'newton_temperature.txt', 'w')]
+                if output_format is 'vtk':
                 
-                newton_files[0].write("t, x, theta \n")
+                    newton_files = [fenics.File(output_dir + '/newton_velocity.pvd'), fenics.File(output_dir + '/newton_pressure.pvd'), fenics.File(output_dir + '/newton_temperature.pvd')]
+
+                elif output_format is 'xdmf': # Parallel format
+
+                    ''' @todo  explore info(f.parameters, verbose=True) 
+                    to avoid duplicate mesh storage when appropriate 
+                    per https://fenicsproject.org/qa/3051/parallel-output-of-a-time-series-in-hdf5-format '''
+
+                    newton_files = [fenics.XDMFFile(output_dir + '/newton_velocity.xdmf'),
+                        fenics.XDMFFile(output_dir + '/newton_pressure.xdmf'),
+                        fenics.XDMFFile(output_dir + '/newton_temperature.xdmf')]
             
-            if write_output:
-            
-                output.write_solution(output_format, newton_files, W, w, -1.)
-            
+                elif output_format is 'table':        
+                
+                    newton_files = [open(output_dir + 'newton_temperature.txt', 'w')]
+                    
+                    newton_files[0].write("t, x, theta \n")
+                
+                if write_output:
+                
+                    output.write_solution(output_format, newton_files, W, w, -1.)
+                
             
             #
             if converged:
@@ -242,7 +264,7 @@ def run(
 
             assert(pci_cell_count > 0)
 
-            print("PCI Refinement cycle #"+str(pci_refinement_cycle)+": Refining "+str(pci_cell_count)+" cells containing the PCI.")
+            helpers.print_once("PCI Refinement cycle #"+str(pci_refinement_cycle)+": Refining "+str(pci_cell_count)+" cells containing the PCI.")
 
             mesh = fenics.refine(mesh, contains_pci)                    
                 
@@ -256,11 +278,11 @@ def run(
         
             output.write_solution(output_format, solution_files, W, w, current_time)
                     
-        print 'Reached time t = ' + str(current_time)
-        
+        helpers.print_once('Reached time t = ' + str(current_time))
+            
         if stop_when_steady and time.steady(W, w, w_n):
         
-            print 'Reached steady state at time t = ' + str(current_time)
+            helpers.print_once('Reached steady state at time t = ' + str(current_time))
             
             break
 
@@ -272,15 +294,13 @@ def run(
             
     if time >= (final_time - fenics.dolfin.DOLFIN_EPS):
     
-        print 'Reached final time, t = ' + str(final_time)
+        helpers.print_once("Reached final time, t = "+str(final_time))
     
     
     # Clean up
-    if write_output:
+    if output_format is 'table':
     
-        if output_format is 'table':
-        
-            solution_files[0].close()
+        solution_files[0].close()
     
     
     # Return the interpolant to sample inside of Python
