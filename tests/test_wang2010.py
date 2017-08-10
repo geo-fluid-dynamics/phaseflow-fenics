@@ -3,17 +3,23 @@ from .context import phaseflow
 import fenics
 
 
-def verify_against_wang2010(w):
+def verify_against_wang2010(w, mesh):
 
     data = {'Ra': 1.e6, 'Pr': 0.71, 'x': 0.5, 'y': [0., 0.15, 0.35, 0.5, 0.65, 0.85, 1.], 'ux': [0.0000, -0.0649, -0.0194, 0.0000, 0.0194, 0.0649, 0.0000]}
     
+    bbt = mesh.bounding_box_tree()
+    
     for i, true_ux in enumerate(data['ux']):
+    
+        p = fenics.Point(data['x'], data['y'][i])
         
-        wval = w(fenics.Point(data['x'], data['y'][i]))
+        if bbt.collides_entity(p):
         
-        ux = wval[0]*data['Pr']/data['Ra']**0.5
+            wval = w(p)
         
-        assert(abs(ux - true_ux) < 2.e-2)
+            ux = wval[0]*data['Pr']/data['Ra']**0.5
+        
+            assert(abs(ux - true_ux) < 2.e-2)
         
 
 def test_wang2010_natural_convection_air():
@@ -22,7 +28,7 @@ def test_wang2010_natural_convection_air():
     
     m = 20
     
-    w = phaseflow.run(
+    w, mesh = phaseflow.run(
         Ste = 1.e16,
         mesh = fenics.UnitSquareMesh(m, m, 'crossed'),
         time_step_bounds = (1.e-3, 1.e-3, 10.),
@@ -41,23 +47,29 @@ def test_wang2010_natural_convection_air():
         {'subspace': 2, 'value_expression': "0.", 'degree': 2, 'location_expression': "near(x[0],  1.)", 'method': "topological"}],
         output_dir = 'output/test_wang2010_natural_convection')
         
-    verify_against_wang2010(w)
+    verify_against_wang2010(w, mesh)
 
 
-def verify_regression_water(w):
+def verify_regression_water(w, mesh):
     ''' Comparing directly to the steady state benchmark data 
     from Michalek2003 in this case would take longer 
     than we should spend on a this part of the test suite. 
     So instead we subsitute this cheaper regression test.'''
     verified_solution = {'y': 0.5, 'x': [0.00, 0.10, 0.20, 0.30, 0.40, 0.70, 0.90, 1.00], 'theta': [1.000, 0.551, 0.202, 0.166, 0.211, 0.209, 0.238, 0.000]}
     
+    bbt = mesh.bounding_box_tree()
+    
     for i, true_theta in enumerate(verified_solution['theta']):
+    
+        p = fenics.Point(fenics.Point(verified_solution['x'][i], verified_solution['y']))
+        
+        if bbt.collides_entity(p):
             
-        wval = w(fenics.Point(verified_solution['x'][i], verified_solution['y']))
-        
-        theta = wval[3]
-        
-        assert(abs(theta - true_theta) < 1.e-2)
+            wval = w(p)
+            
+            theta = wval[3]
+            
+            assert(abs(theta - true_theta) < 1.e-2)
 
             
 def test_regression_natural_convection_water():
@@ -111,7 +123,7 @@ def test_regression_natural_convection_water():
     
         bc_theta_hot = bc_theta_cold = 0.  
 
-    w = phaseflow.run(
+    w, mesh = phaseflow.run(
         Ra = Ra,
         Pr = Pr,
         Ste = 1.e16,
@@ -133,7 +145,7 @@ def test_regression_natural_convection_water():
             {'subspace': 2, 'value_expression':str(bc_theta_cold), 'degree': 2, 'location_expression': "near(x[0],  1.)", 'method': "topological"}],
         output_dir = 'output/test_regression_natural_convection_water')
         
-    verify_regression_water(w)
+    verify_regression_water(w, mesh)
 
 
 if __name__=='__main__':

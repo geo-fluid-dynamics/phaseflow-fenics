@@ -4,12 +4,14 @@ import fenics
 import scipy.optimize as opt
 
 
-def verify_pci_position(Ste, R_s, w):
+def verify_pci_position(Ste, R_s, w, mesh):
 
     data = [
         {'Ste': 1., 'time': 0.01, 'true_pci_pos': 0.075551957640682}, 
         {'Ste': 0.1, 'time': 0.01, 'true_pci_pos': 0.037826726426565},
         {'Ste': 0.01, 'time': 0.1, 'true_pci_pos': 0.042772111844781}] # From Kai's MATLAB script
+    
+    bbt = mesh.bounding_box_tree()
     
     def theta(x):
     
@@ -17,13 +19,15 @@ def verify_pci_position(Ste, R_s, w):
         
         return wval[2]
     
-    pci_pos = opt.newton(theta, 0.075)
-    
     for record in data:
     
         if Ste == record['Ste']:
         
-            assert(abs(pci_pos - record['true_pci_pos']) < R_s)
+            x = record['true_pci_pos']
+            
+            if bbt.collides_entity(x):
+        
+                assert(abs(theta(x)) < R_s)
         
         
 def stefan_problem(Ste = 1.,
@@ -69,7 +73,7 @@ def stefan_problem(Ste = 1.,
                 
         mesh = fenics.refine(mesh, cell_markers)
 
-    w = phaseflow.run(
+    w, mesh = phaseflow.run(
         output_dir = 'output/test_stefan_problem_Ste'+str(Ste).replace('.', 'p')+'/',
         output_format = 'table',
         Pr = 1.,
@@ -92,7 +96,7 @@ def stefan_problem(Ste = 1.,
         output_times = (),
         linearize = False)
         
-    return w
+    return w, mesh
         
         
 def test_stefan_problem_vary_Ste():
@@ -104,10 +108,10 @@ def test_stefan_problem_vary_Ste():
         but took almost thirty minutes on my laptop:
         {'Ste': 0.01, 'R_s': 0.1, 'dt': 0.0001, 'final_time': 0.1, 'initial_uniform_cell_count': 100, 'newton_relative_tolerance': 1.e-4}]'''
         
-        w = stefan_problem(Ste=p['Ste'], R_s=p['R_s'], dt=p['dt'], final_time = p['final_time'],
+        w, mesh = stefan_problem(Ste=p['Ste'], R_s=p['R_s'], dt=p['dt'], final_time = p['final_time'],
             initial_uniform_cell_count=p['initial_uniform_cell_count'], newton_relative_tolerance=p['newton_relative_tolerance'])
     
-        verify_pci_position(p['Ste'], p['R_s'], w)
+        verify_pci_position(p['Ste'], p['R_s'], w, mesh)
        
        
 def test_stefan_problem_linearized():
@@ -120,7 +124,7 @@ def test_stefan_problem_linearized():
 
     for Ste in [1., 0.1]:
     
-        w = phaseflow.run(
+        w, mesh = phaseflow.run(
             Pr = 1.,
             Ste = Ste,
             g = [0.],
@@ -139,7 +143,7 @@ def test_stefan_problem_linearized():
             output_times = (),
             linearize = True)
 
-        verify_pci_position(Ste, R_s, w)
+        verify_pci_position(Ste, R_s, w, mesh)
         
         
 def test_boundary_refinement():
@@ -251,7 +255,7 @@ def test_pci_refinement():
         mesh = fenics.refine(mesh, cell_markers)
     
     #
-    w = phaseflow.run(
+    w, mesh = phaseflow.run(
         output_dir = 'output/test_stefan_problem_refine_pci/',
         output_format = 'table',
         Pr = 1.,
@@ -274,7 +278,7 @@ def test_pci_refinement():
         output_times = (),
         linearize = False)
         
-    verify_pci_position(Ste, R_s, w)
+    verify_pci_position(Ste, R_s, w, mesh)
         
         
 if __name__=='__main__':

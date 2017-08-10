@@ -289,7 +289,7 @@ def run(
         
     fe_field_interpolant = fenics.interpolate(w_n.leaf_node(), W)
     
-    return fe_field_interpolant
+    return fe_field_interpolant, mesh
     
     
 if __name__=='__main__':
