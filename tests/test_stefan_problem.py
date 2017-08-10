@@ -119,8 +119,8 @@ def test_stefan_problem_linearized():
     R_s = 0.005
 
     for Ste in [1., 0.1]:
+    
         w = phaseflow.run(
-            write_output = False,
             Pr = 1.,
             Ste = Ste,
             g = [0.],
