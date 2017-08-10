@@ -69,6 +69,20 @@ def function_spaces(mesh=default.mesh, pressure_degree=default.pressure_degree, 
     return solution_function_space, solution_element
 
     
+def set_initial_values(current_time, initial_values_expression, W, W_ele):
+
+    if fenics.near(current_time, 0.):
+    
+        w_n = fenics.interpolate(fenics.Expression(initial_values_expression,
+            element=W_ele), W)
+            
+    else:
+    
+        w_n = fenics.project(w_n, W)
+        
+    return w_n
+    
+    
 def run(
     write_output = True,
     output_dir = 'output/natural_convection',
@@ -141,12 +155,24 @@ def run(
         
             solution_files = [open(output_dir + 'temperature.txt', 'w')]
 
+            
+    # Set and write initial values
+    W, W_ele = function_spaces(mesh, pressure_degree, temperature_degree)
     
+    w_n = set_initial_values(current_time, initial_values_expression, W, W_ele)
+    
+    if output_format is 'table':
+                
+        solution_files[0].write("t, x, theta \n")
+                
+    output.write_solution(output_format, solution_files, W, w_n, current_time) 
+        
+        
     # Solve each time step
     progress = fenics.Progress('Time-stepping')
 
     fenics.set_log_level(fenics.PROGRESS)
-    
+        
     while current_time < final_time - fenics.dolfin.DOLFIN_EPS:
 
         remaining_time = final_time - current_time
@@ -166,14 +192,7 @@ def run(
             
             
             # Set the initial values
-            if fenics.near(current_time, 0.):
-            
-                w_n = fenics.interpolate(fenics.Expression(initial_values_expression,
-                    element=W_ele), W)
-                    
-            else:
-            
-                w_n = fenics.project(w_n, W)
+            w_n = set_initial_values(current_time, initial_values_expression, W, W_ele)
 
             
             # Initialize the functions that we will use to generate our variational form
@@ -195,10 +214,6 @@ def run(
             # Write the initial values
             if write_output and fenics.near(current_time, 0.) and (ir is 0):
             
-                if output_format is 'table':
-                
-                    solution_files[0].write("t, x, theta \n")
-                
                 output.write_solution(output_format, solution_files, W, w_n, current_time) 
              
              
