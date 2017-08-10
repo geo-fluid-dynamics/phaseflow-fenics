@@ -68,9 +68,8 @@ def function_spaces(mesh=default.mesh, pressure_degree=default.pressure_degree, 
     
     return solution_function_space, solution_element
 
-    
+
 def run(
-    write_output = True,
     output_dir = 'output/natural_convection',
     output_format = 'vtk',
     Ra = default.parameters['Ra'],
@@ -88,6 +87,7 @@ def run(
     boundary_conditions = [{'subspace': 0, 'value_expression': ("0.", "0."), 'degree': 3, 'location_expression': "near(x[0],  0.) | near(x[0],  1.) | near(x[1], 0.) | near(x[1],  1.)", 'method': 'topological'}, {'subspace': 2, 'value_expression': "0.", 'degree': 2, 'location_expression': "near(x[0],  0.)", 'method': 'topological'}, {'subspace': 2, 'value_expression': "0.", 'degree': 2, 'location_expression': "near(x[0],  1.)", 'method': 'topological'}],
     final_time = 1.,
     time_step_bounds = (1.e-3, 1.e-3, 1.),
+    output_times = ('initial', 1.e-3, 1.e-2, 1.e-1, 'final'),
     max_pci_refinement_cycles = 0,
     adaptive_space = False,
     adaptive_space_error_tolerance = 1.e-4,
@@ -98,20 +98,24 @@ def run(
     temperature_degree = default.temperature_degree,
     linearize = True,
     stop_when_steady = False,
-    steady_relative_tolerance = 1.e-8):
-
-    # Display inputs
-    print("Running Phaseflow with the following arguments:")
+    steady_relative_tolerance = 1.e-8,
+    debug = False):
     
-    print(helpers.arguments())
+        
+    # Display inputs
+    helpers.print_once("Running Phaseflow with the following arguments:")
+    
+    helpers.print_once(helpers.arguments())
     
     helpers.mkdir_p(output_dir)
-        
-    arguments_file = open(output_dir + '/arguments.txt', 'w')
     
-    arguments_file.write(str(helpers.arguments()))
+    if fenics.dolfin.MPI.rank(fenics.dolfin.mpi_comm_world()) is 0:
+        
+        arguments_file = open(output_dir + '/arguments.txt', 'w')
+        
+        arguments_file.write(str(helpers.arguments()))
 
-    arguments_file.close()
+        arguments_file.close()
     
     
     # Validate inputs    
@@ -123,23 +127,29 @@ def run(
         
     dimensionality = mesh.type().dim()
     
-    print("Running "+str(dimensionality)+"D problem")
+    helpers.print_once("Running "+str(dimensionality)+"D problem")
     
     
     # Initialize time
     current_time = 0.    
     
     
-    # Open the output file(s)
-    if write_output:
+    # Open the output file(s)   
+    if output_format is 'vtk':
     
-        if output_format is 'vtk':
+        solution_files = [fenics.File(output_dir + '/velocity.pvd'), fenics.File(output_dir + '/pressure.pvd'), fenics.File(output_dir + '/temperature.pvd')]
         
-            solution_files = [fenics.File(output_dir + '/velocity.pvd'), fenics.File(output_dir + '/pressure.pvd'), fenics.File(output_dir + '/temperature.pvd')]
+    elif output_format is 'xdmf': # Parallel format
+    
+        ''' @todo  explore info(f.parameters, verbose=True) 
+        to avoid duplicate mesh storage when appropriate 
+        per https://fenicsproject.org/qa/3051/parallel-output-of-a-time-series-in-hdf5-format '''
+    
+        solution_files = [fenics.XDMFFile(output_dir + '/velocity.xdmf'), fenics.XDMFFile(output_dir + '/pressure.xdmf'), fenics.XDMFFile(output_dir + '/temperature.xdmf')]
 
-        elif output_format is 'table':        
-        
-            solution_files = [open(output_dir + 'temperature.txt', 'w')]
+    elif output_format is 'table':        
+    
+        solution_files = [open(output_dir + 'temperature.txt', 'w')]
 
     
     # Solve each time step
@@ -147,14 +157,23 @@ def run(
 
     fenics.set_log_level(fenics.PROGRESS)
     
-    while current_time < final_time - fenics.dolfin.DOLFIN_EPS:
-
-        remaining_time = final_time - current_time
+    output_count = 0
     
-        if time_step_size.value > remaining_time:
-            
-            time_step_size.set(remaining_time)
-
+    if (output_times is not ()) and (output_times[0] == 'initial'):
+    
+        output_initial_time = True
+        
+        output_count += 1
+        
+    else:
+    
+        output_initial_time = False
+    
+    while current_time < (final_time - fenics.dolfin.DOLFIN_EPS):
+    
+        time_step_size, next_time, output_this_time, output_count = time.check(current_time,
+            time_step_size, final_time, output_times, output_count)
+        
         pci_refinement_cycle = 0
             
         for ir in range(max_pci_refinement_cycles + 1):
@@ -192,8 +211,8 @@ def run(
                 bcs.append(fenics.DirichletBC(W.sub(item['subspace']), item['value_expression'], item['location_expression'], method=item['method']))
             
 
-            # Write the initial values
-            if write_output and fenics.near(current_time, 0.) and (ir is 0):
+            # Write the initial values                    
+            if output_initial_time and fenics.near(current_time, 0.) and (ir is 0):
             
                 if output_format is 'table':
                 
@@ -203,24 +222,8 @@ def run(
              
              
             #
-        
-            current_time, converged = time.adaptive_time_step(time_step_size=time_step_size, w=w, w_n=w_n, bcs=bcs, current_time=current_time, solve_time_step=solve_time_step)
-            
-            
-            # Write current solution for debugging if Newton method fails
-            if output_format is 'vtk':
-            
-                newton_files = [fenics.File(output_dir + '/newton_velocity.pvd'), fenics.File(output_dir + '/newton_pressure.pvd'), fenics.File(output_dir + '/newton_temperature.pvd')]
-
-            elif output_format is 'table':        
-            
-                newton_files = [open(output_dir + 'newton_temperature.txt', 'w')]
-                
-                newton_files[0].write("t, x, theta \n")
-            
-            if write_output:
-            
-                output.write_solution(output_format, newton_files, W, w, -1.)
+            converged = time.adaptive_time_step(time_step_size=time_step_size, w=w, w_n=w_n, bcs=bcs,
+                solve_time_step=solve_time_step)
             
             
             #
@@ -230,7 +233,8 @@ def run(
             
             
             # Refine mesh cells containing the PCI
-            if (max_pci_refinement_cycles is 0) or (pci_refinement_cycle is (max_pci_refinement_cycles - 1)):
+            if (max_pci_refinement_cycles is 0) or (pci_refinement_cycle
+                    is (max_pci_refinement_cycles - 1)):
 
                 break
                 
@@ -242,29 +246,28 @@ def run(
 
             assert(pci_cell_count > 0)
 
-            print("PCI Refinement cycle #"+str(pci_refinement_cycle)+": Refining "+str(pci_cell_count)+" cells containing the PCI.")
+            helpers.print_once("PCI Refinement cycle #"+str(pci_refinement_cycle)+
+                ": Refining "+str(pci_cell_count)+" cells containing the PCI.")
 
             mesh = fenics.refine(mesh, contains_pci)                    
                 
-        current_time += time_step_size.value
-    
         assert(converged)
         
+        current_time += time_step_size.value
         
-        # Write the solution
-        if write_output:
+        if output_this_time:
         
             output.write_solution(output_format, solution_files, W, w, current_time)
                     
-        print 'Reached time t = ' + str(current_time)
-        
+        helpers.print_once('Reached time t = ' + str(current_time))
+            
         if stop_when_steady and time.steady(W, w, w_n):
         
-            print 'Reached steady state at time t = ' + str(current_time)
+            helpers.print_once('Reached steady state at time t = ' + str(current_time))
             
             break
 
-        w_n.assign(w)
+        w_n.assign(w)  # The current solution becomes the new initial values
         
         progress.update(current_time / final_time)
         
@@ -272,15 +275,13 @@ def run(
             
     if time >= (final_time - fenics.dolfin.DOLFIN_EPS):
     
-        print 'Reached final time, t = ' + str(final_time)
+        helpers.print_once("Reached final time, t = "+str(final_time))
     
     
     # Clean up
-    if write_output:
+    if output_format is 'table':
     
-        if output_format is 'table':
-        
-            solution_files[0].close()
+        solution_files[0].close()
     
     
     # Return the interpolant to sample inside of Python

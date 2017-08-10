@@ -89,6 +89,7 @@ def stefan_problem(Ste = 1.,
         newton_relative_tolerance = newton_relative_tolerance,
         final_time = final_time,
         time_step_bounds = dt,
+        output_times = (),
         linearize = False)
         
     return w
@@ -118,8 +119,8 @@ def test_stefan_problem_linearized():
     R_s = 0.005
 
     for Ste in [1., 0.1]:
+    
         w = phaseflow.run(
-            write_output = False,
             Pr = 1.,
             Ste = Ste,
             g = [0.],
@@ -135,6 +136,7 @@ def test_stefan_problem_linearized():
             regularization = {'a_s': 2., 'theta_s': 0.01, 'R_s': R_s},
             final_time = 0.01,
             time_step_bounds = 0.001,
+            output_times = (),
             linearize = True)
 
         verify_pci_position(Ste, R_s, w)
@@ -201,6 +203,7 @@ def test_boundary_refinement():
         newton_relative_tolerance = 1.e-4,
         final_time = 0.002,
         time_step_bounds = 0.001,
+        output_times = (),
         linearize = False)
         
         
@@ -268,6 +271,7 @@ def test_pci_refinement():
         newton_relative_tolerance = 1.e-3,
         final_time = 0.01,
         time_step_bounds = 0.001,
+        output_times = (),
         linearize = False)
         
     verify_pci_position(Ste, R_s, w)
