@@ -27,6 +27,7 @@ def test_wang2010_natural_convection_air():
         mesh = fenics.UnitSquareMesh(m, m, 'crossed'),
         time_step_bounds = (1.e-3, 1.e-3, 10.),
         final_time = 10.,
+        output_times = (),
         stop_when_steady = True,
         linearize = True,
         initial_values_expression = (
@@ -119,6 +120,7 @@ def test_regression_natural_convection_water():
         mesh = fenics.UnitSquareMesh(m, m, 'crossed'),
         time_step_bounds = (0.005, 0.005, 0.01),
         final_time = 0.18,
+        output_times = (),
         linearize = linearize,
         initial_values_expression = (
             "0.",
