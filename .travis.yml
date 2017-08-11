@@ -14,7 +14,7 @@ notifications:
   email: false
 
 before_install:
-- docker pull zimmerman/phaseflow-fenics:latest
+- docker pull zimmerman/fenics-h5py:latest
 
 group: deprecated-2017Q2
 
