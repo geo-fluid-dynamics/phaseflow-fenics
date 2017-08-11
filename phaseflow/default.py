@@ -10,7 +10,7 @@ ddtheta_m_B = lambda theta : parameters['Ra']/(parameters['Pr']*globals.Re**2)
 
 regularization = {'a_s': 2., 'theta_s': 0.01, 'R_s': 0.005}
 
-mesh = fenics.UnitSquareMesh(20, 20, 'crossed')
+mesh = fenics.UnitSquareMesh(fenics.dolfin.mpi_comm_world(), 20, 20, 'crossed')
 
 pressure_degree = 1
 

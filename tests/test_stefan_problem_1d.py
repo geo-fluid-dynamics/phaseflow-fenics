@@ -69,7 +69,7 @@ def stefan_problem(Ste = 1.,
                 
         mesh = fenics.refine(mesh, cell_markers)
 
-    w = phaseflow.run(
+    w, mesh = phaseflow.run(
         output_dir = 'output/test_stefan_problem_Ste'+str(Ste).replace('.', 'p')+'/',
         output_format = 'table',
         Pr = 1.,
@@ -120,7 +120,7 @@ def test_stefan_problem_linearized():
 
     for Ste in [1., 0.1]:
     
-        w = phaseflow.run(
+        w, mesh = phaseflow.run(
             Pr = 1.,
             Ste = Ste,
             g = [0.],
@@ -184,7 +184,7 @@ def test_boundary_refinement():
         mesh = fenics.refine(mesh, cell_markers)
     
     #
-    w = phaseflow.run(
+    w, mesh = phaseflow.run(
         output_dir = 'output/test_stefan_problem_refine_boundary/',
         output_format = 'table',
         Pr = 1.,
@@ -251,7 +251,7 @@ def test_pci_refinement():
         mesh = fenics.refine(mesh, cell_markers)
     
     #
-    w = phaseflow.run(
+    w, mesh = phaseflow.run(
         output_dir = 'output/test_stefan_problem_refine_pci/',
         output_format = 'table',
         Pr = 1.,

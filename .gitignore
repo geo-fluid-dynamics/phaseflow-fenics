@@ -5,4 +5,5 @@ old*
 .cache
 build
 dist
+.idea/
 phaseflow.egg-info

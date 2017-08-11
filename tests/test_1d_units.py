@@ -3,7 +3,7 @@ from .context import phaseflow
 import fenics
         
         
-def test_1D_output():
+def test_1d_output():
 
     theta_h = 1.
     
@@ -30,9 +30,9 @@ def test_1D_output():
         linearize = False)
 
         
-def test_1D_velocity():
+def test_1d_velocity():
 
-    mesh = fenics.UnitIntervalMesh(5)
+    mesh = fenics.UnitIntervalMesh(fenics.dolfin.mpi_comm_world(), 5)
 
     V = fenics.VectorFunctionSpace(mesh, 'P', 1)
 
@@ -45,6 +45,6 @@ def test_1D_velocity():
 
 if __name__=='__main__':
     
-    test_1D_output()
+    test_1d_output()
     
-    test_1D_velocity()
+    test_1d_velocity()
