@@ -43,7 +43,7 @@ def stefan_problem(Ste = 1.,
     max_pci_refinement_cycles = 10):
 
     
-    mesh = fenics.UnitIntervalMesh(initial_uniform_cell_count)
+    mesh = fenics.UnitIntervalMesh(fenics.dolfin.mpi_comm_world(), initial_uniform_cell_count)
     
     ''' Refine mesh near hot boundary
     The usual approach of using SubDomain and EdgeFunction isn't appearing to work
@@ -128,7 +128,7 @@ def test_stefan_problem_linearized():
             Pr = 1.,
             Ste = Ste,
             g = [0.],
-            mesh = fenics.UnitIntervalMesh(1000),
+            mesh = fenics.UnitIntervalMesh(fenics.dolfin.mpi_comm_world(), 1000),
             initial_values_expression = (
                 "0.",
                 "0.",
@@ -154,7 +154,7 @@ def test_boundary_refinement():
     
     R_s = 0.005
     
-    mesh = fenics.UnitIntervalMesh(10)
+    mesh = fenics.UnitIntervalMesh(fenics.dolfin.mpi_comm_world(), 10)
     
     hot_boundary_refinement_cycles = 6
 
@@ -221,7 +221,7 @@ def test_pci_refinement():
     
     R_s = 0.005
     
-    mesh = fenics.UnitIntervalMesh(1)
+    mesh = fenics.UnitIntervalMesh(fenis.dolfin.mpi_comm_world(), 1)
     
     hot_boundary_refinement_cycles = 10
 

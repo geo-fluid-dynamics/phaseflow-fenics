@@ -34,7 +34,7 @@ def test_ghia1982_steady_lid_driven_cavity():
 
     w, mesh = phaseflow.run(
         linearize = False,
-        mesh = fenics.UnitSquareMesh(m, m, 'crossed'),
+        mesh = fenics.UnitSquareMesh(fenics.dolfin.mpi_comm_world(), m, m, 'crossed'),
         final_time = 1.e12,
         time_step_bounds = 1.e12,
         output_times = (),
@@ -55,7 +55,7 @@ def test_ghia1982_steady_lid_driven_cavity_linearized():
     m = 20
 
     w, mesh = phaseflow.run(linearize = True,
-        mesh = fenics.UnitSquareMesh(m, m, 'crossed'),
+        mesh = fenics.UnitSquareMesh(fenics.dolfin.mpi_comm_world(), m, m, 'crossed'),
         final_time = 1.e12,
         time_step_bounds = 1.e12,
         output_times = (),
@@ -76,7 +76,7 @@ def test_ghia1982_steady_lid_driven_cavity_adaptive():
     m = 4
 
     w, mesh = phaseflow.run(linearize = False,
-        mesh = fenics.UnitSquareMesh(m, m, 'crossed'),
+        mesh = fenics.UnitSquareMesh(fenics.dolfin.mpi_comm_world(), m, m, 'crossed'),
         adaptive_space = True,
         adaptive_space_error_tolerance = 1.e-4,
         final_time = 1.e12,

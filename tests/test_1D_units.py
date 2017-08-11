@@ -32,7 +32,7 @@ def test_1D_output():
         
 def test_1D_velocity():
 
-    mesh = fenics.UnitIntervalMesh(5)
+    mesh = fenics.UnitIntervalMesh(fenics.dolfin.mpi_comm_world(), 5)
 
     V = fenics.VectorFunctionSpace(mesh, 'P', 1)
 
