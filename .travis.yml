@@ -12,14 +12,12 @@ branches:
   
 notifications:
   email: false
-  slack: aices-pcm-cfd:ShncJAFCJzx48zt8hrXpRwGw
 
 before_install:
-- docker pull quay.io/fenicsproject/stable:current
+- docker pull zimmerman/fenics-h5py:latest
 
 group: deprecated-2017Q2
 
 script:
-- docker run --rm -P -v `pwd`:/home/fenics/shared -w /home/fenics/shared quay.io/fenicsproject/stable:current "pip install --user h5py"
 - docker run --rm -P -v `pwd`:/home/fenics/shared -w /home/fenics/shared quay.io/fenicsproject/stable:current "mpirun -n 2 python -m pytest -k '(not linearized) and (not adaptive) and (not _1d)'" 
 - docker run --rm -P -v `pwd`:/home/fenics/shared -w /home/fenics/shared quay.io/fenicsproject/stable:current "python -m pytest"
