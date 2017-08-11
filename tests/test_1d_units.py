@@ -11,7 +11,6 @@ def test_1d_output():
     
     w = phaseflow.run(
         output_dir = 'output/test_1D_output/',
-        output_format = 'table',
         Pr = 1.,
         Ste = 1.,
         g = [0.],

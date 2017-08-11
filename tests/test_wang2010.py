@@ -22,18 +22,16 @@ def verify_against_wang2010(w, mesh):
             assert(abs(ux - true_ux) < 2.e-2)
         
 
-def test_wang2010_natural_convection_air():
+def wang2010_natural_convection_air(output_dir='output/test_wang2010_natural_convection', final_time=10., restart=False):
 
-    wang2010_data = {'Ra': 1.e6, 'Pr': 0.71, 'x': 0.5, 'y': [0., 0.15, 0.35, 0.5, 0.65, 0.85, 1.], 'ux': [0.0000, -0.0649, -0.0194, 0.0000, 0.0194, 0.0649, 0.0000]}
-    
     m = 20
     
     w, mesh = phaseflow.run(
         Ste = 1.e16,
         mesh = fenics.UnitSquareMesh(m, m, 'crossed'),
         time_step_bounds = (1.e-3, 1.e-3, 10.),
-        final_time = 10.,
-        output_times = (),
+        final_time = final_time,
+        output_times = ('final',),
         stop_when_steady = True,
         linearize = True,
         initial_values_expression = (
@@ -45,7 +43,28 @@ def test_wang2010_natural_convection_air():
         {'subspace': 0, 'value_expression': ("0.", "0."), 'degree': 3, 'location_expression': "near(x[0],  0.) | near(x[0],  1.) | near(x[1], 0.) | near(x[1],  1.)", 'method': "topological"},
         {'subspace': 2, 'value_expression': "0.", 'degree': 2, 'location_expression': "near(x[0],  0.)", 'method': "topological"},
         {'subspace': 2, 'value_expression': "0.", 'degree': 2, 'location_expression': "near(x[0],  1.)", 'method': "topological"}],
-        output_dir = 'output/test_wang2010_natural_convection')
+        output_dir = output_dir,
+        restart = restart)
+        
+    return w, mesh
+        
+        
+def test_wang2010_natural_convection_air():
+    
+    w, mesh = wang2010_natural_convection_air()
+        
+    verify_against_wang2010(w, mesh)
+    
+    
+def test_wang2010_natural_convection_air_restart():
+    
+    m = 20
+        
+    output_dir = 'output/test_wang2010_natural_convection_restart'
+    
+    w, mesh = wang2010_natural_convection_air(output_dir=output_dir, final_time=0.5, restart=False)
+    
+    w, mesh = wang2010_natural_convection_air(output_dir=output_dir, final_time=10., restart=True)
         
     verify_against_wang2010(w, mesh)
 
@@ -151,5 +170,7 @@ def test_regression_natural_convection_water():
 if __name__=='__main__':
     
     test_wang2010_natural_convection_air()
+    
+    test_wang2010_natural_convection_air_restart()
     
     test_regression_natural_convection_water()

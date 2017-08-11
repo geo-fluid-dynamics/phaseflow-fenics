@@ -17,7 +17,7 @@
     
 '''
 import fenics
-
+import h5py
 import helpers
 import globals
 import default
@@ -71,7 +71,6 @@ def function_spaces(mesh=default.mesh, pressure_degree=default.pressure_degree, 
 
 def run(
     output_dir = 'output/natural_convection',
-    output_format = 'vtk',
     Ra = default.parameters['Ra'],
     Pr = default.parameters['Pr'],
     Ste = default.parameters['Ste'],
@@ -99,6 +98,7 @@ def run(
     linearize = True,
     stop_when_steady = False,
     steady_relative_tolerance = 1.e-8,
+    restart = False,
     debug = False):
     
         
@@ -130,33 +130,35 @@ def run(
     helpers.print_once("Running "+str(dimensionality)+"D problem")
     
     
+    # Set derived parameters.
+    restart_filename = output_dir+"/restart.hdf5"
+   
+    
     # Initialize time
-    current_time = 0.    
+    if restart:
+    
+        with h5py.File(restart_filename, "r") as h5:
+                    
+            current_time = h5['t'].value
+    
+    else:
+    
+        current_time = 0.    
     
     
     # Open the output file(s)   
-    if output_format is 'vtk':
-    
-        solution_files = [fenics.File(output_dir + '/velocity.pvd'), fenics.File(output_dir + '/pressure.pvd'), fenics.File(output_dir + '/temperature.pvd')]
-        
-    elif output_format is 'xdmf': # Parallel format
-    
-        ''' @todo  explore info(f.parameters, verbose=True) 
-        to avoid duplicate mesh storage when appropriate 
-        per https://fenicsproject.org/qa/3051/parallel-output-of-a-time-series-in-hdf5-format '''
-    
-        solution_files = [fenics.XDMFFile(output_dir + '/velocity.xdmf'), fenics.XDMFFile(output_dir + '/pressure.xdmf'), fenics.XDMFFile(output_dir + '/temperature.xdmf')]
+    ''' @todo  explore info(f.parameters, verbose=True) 
+    to avoid duplicate mesh storage when appropriate 
+    per https://fenicsproject.org/qa/3051/parallel-output-of-a-time-series-in-hdf5-format '''
 
-    elif output_format is 'table':        
-    
-        solution_files = [open(output_dir + 'temperature.txt', 'w')]
+    solution_files = [fenics.XDMFFile(output_dir + '/velocity.xdmf'), fenics.XDMFFile(output_dir + '/pressure.xdmf'), fenics.XDMFFile(output_dir + '/temperature.xdmf')]
 
     
     # Solve each time step
     progress = fenics.Progress('Time-stepping')
 
     fenics.set_log_level(fenics.PROGRESS)
-    
+        
     output_count = 0
     
     if (output_times is not ()) and (output_times[0] == 'initial'):
@@ -168,6 +170,10 @@ def run(
     else:
     
         output_initial_time = False
+        
+    if stop_when_steady:
+    
+        steady = False
     
     while current_time < (final_time - fenics.dolfin.DOLFIN_EPS):
     
@@ -192,7 +198,21 @@ def run(
                     
             else:
             
-                w_n = fenics.project(w_n, W)
+                if restart and (ir == 0):
+                
+                    w_n = fenics.Function(W)
+                
+                    mesh = fenics.Mesh()
+        
+                    with fenics.HDF5File(mesh.mpi_comm(), restart_filename, 'r') as h5:
+                    
+                        h5.read(mesh, "mesh", True)
+                    
+                        h5.read(w_n, "w_n")
+                    
+                else:
+            
+                    w_n = fenics.project(w_n, W)
 
             
             # Initialize the functions that we will use to generate our variational form
@@ -213,12 +233,8 @@ def run(
 
             # Write the initial values                    
             if output_initial_time and fenics.near(current_time, 0.) and (ir is 0):
-            
-                if output_format is 'table':
                 
-                    solution_files[0].write("t, x, theta \n")
-                
-                output.write_solution(output_format, solution_files, W, w_n, current_time) 
+                output.write_solution(solution_files, W, w_n, current_time) 
              
              
             #
@@ -255,13 +271,32 @@ def run(
         
         current_time += time_step_size.value
         
+        if stop_when_steady and time.steady(W, w, w_n):
+        
+            steady = True
+            
+            if output_times[output_count] == 'final':
+            
+                output_this_time = True
+        
         if output_this_time:
         
-            output.write_solution(output_format, solution_files, W, w, current_time)
+            output.write_solution(solution_files, W, w, current_time)
+            
+            # Write checkpoint/restart files
+            with fenics.HDF5File(fenics.mpi_comm_world(), restart_filename, "w") as h5:
+    
+                h5.write(mesh, "mesh")
+            
+                h5.write(w_n, "w_n")
+                
+            with h5py.File(restart_filename, "r+") as h5:
+                
+                h5.create_dataset("t", data=current_time)
                     
         helpers.print_once('Reached time t = ' + str(current_time))
             
-        if stop_when_steady and time.steady(W, w, w_n):
+        if stop_when_steady and steady:
         
             helpers.print_once('Reached steady state at time t = ' + str(current_time))
             
@@ -273,15 +308,9 @@ def run(
         
         time_step_size.set(2*time_step_size.value) # @todo: Encapsulate the adaptive time stepping
             
-    if time >= (final_time - fenics.dolfin.DOLFIN_EPS):
+    if current_time >= (final_time - fenics.dolfin.DOLFIN_EPS):
     
         helpers.print_once("Reached final time, t = "+str(final_time))
-    
-    
-    # Clean up
-    if output_format is 'table':
-    
-        solution_files[0].close()
     
     
     # Return the interpolant to sample inside of Python
