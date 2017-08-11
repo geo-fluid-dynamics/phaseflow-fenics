@@ -136,7 +136,7 @@ def run(
     
     # Initialize time
     if restart:
-    
+
         with h5py.File(restart_filename, "r") as h5:
                     
             current_time = h5['t'].value
