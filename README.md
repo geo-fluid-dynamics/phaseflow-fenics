@@ -60,4 +60,4 @@ To enter a bash terminal inside of the running container
     
 # For developers:
 ## Project structure
-This project mostly follows the structure suggested by [The Hitchhiker's Guide to Python](https://python-guide-pt-br.readthedocs.io/en/latest/writing/structure/)
+This project mostly follows the structure suggested by [The Hitchhiker's Guide to Python](http://docs.python-guide.org/en/latest/)
