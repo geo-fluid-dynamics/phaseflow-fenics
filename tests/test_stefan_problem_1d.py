@@ -71,7 +71,6 @@ def stefan_problem(Ste = 1.,
 
     w, mesh = phaseflow.run(
         output_dir = 'output/test_stefan_problem_Ste'+str(Ste).replace('.', 'p')+'/',
-        output_format = 'table',
         Pr = 1.,
         Ste = Ste,
         g = [0.],
@@ -89,7 +88,7 @@ def stefan_problem(Ste = 1.,
         newton_relative_tolerance = newton_relative_tolerance,
         final_time = final_time,
         time_step_bounds = dt,
-        output_times = (),
+        output_times = ('initial', 'final'),
         linearize = False)
         
     return w
@@ -186,7 +185,6 @@ def test_boundary_refinement():
     #
     w, mesh = phaseflow.run(
         output_dir = 'output/test_stefan_problem_refine_boundary/',
-        output_format = 'table',
         Pr = 1.,
         Ste = 1.,
         g = [0.],
@@ -253,7 +251,6 @@ def test_pci_refinement():
     #
     w, mesh = phaseflow.run(
         output_dir = 'output/test_stefan_problem_refine_pci/',
-        output_format = 'table',
         Pr = 1.,
         Ste = Ste,
         g = [0.],
