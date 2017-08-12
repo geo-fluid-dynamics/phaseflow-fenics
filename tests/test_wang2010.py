@@ -22,7 +22,7 @@ def verify_against_wang2010(w, mesh):
             assert(abs(ux - true_ux) < 2.e-2)
         
 
-def wang2010_natural_convection_air(output_dir='output/test_wang2010_natural_convection', final_time=10., restart=False):
+def wang2010_natural_convection_air_linearized(output_dir='output/test_wang2010_natural_convection', final_time=10., restart=False):
 
     m = 20
     
@@ -49,22 +49,22 @@ def wang2010_natural_convection_air(output_dir='output/test_wang2010_natural_con
     return w, mesh
         
         
-def test_wang2010_natural_convection_air():
+def test_wang2010_natural_convection_air_linearized():
     
-    w, mesh = wang2010_natural_convection_air()
+    w, mesh = wang2010_natural_convection_air_linearized()
         
     verify_against_wang2010(w, mesh)
     
     
-def test_wang2010_natural_convection_air_restart():
+def test_wang2010_natural_convection_air_linearized_restart():
     
     m = 20
         
     output_dir = 'output/test_wang2010_natural_convection_restart'
     
-    w, mesh = wang2010_natural_convection_air(output_dir=output_dir, final_time=0.5, restart=False)
+    w, mesh = wang2010_natural_convection_air_linearized(output_dir=output_dir, final_time=0.5, restart=False)
     
-    w, mesh = wang2010_natural_convection_air(output_dir=output_dir, final_time=10., restart=True)
+    w, mesh = wang2010_natural_convection_air_linearized(output_dir=output_dir, final_time=10., restart=True)
         
     verify_against_wang2010(w, mesh)
 
@@ -91,7 +91,7 @@ def verify_regression_water(w, mesh):
             assert(abs(theta - true_theta) < 1.e-2)
 
             
-def test_regression_natural_convection_water():
+def test_regression_natural_convection_water_linearized():
     m = 10
 
     linearize = True
@@ -169,8 +169,8 @@ def test_regression_natural_convection_water():
 
 if __name__=='__main__':
     
-    test_wang2010_natural_convection_air()
+    test_wang2010_natural_convection_air_linearized()
     
-    test_wang2010_natural_convection_air_restart()
+    test_wang2010_natural_convection_air_linearized_restart()
     
-    test_regression_natural_convection_water()
+    test_regression_natural_convection_water_linearized()
