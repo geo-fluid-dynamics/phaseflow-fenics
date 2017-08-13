@@ -21,7 +21,7 @@ def verify_against_wang2010(w, mesh):
         
             assert(abs(ux - true_ux) < 2.e-2)
         
-
+        
 def wang2010_natural_convection_air_linearized(output_dir='output/test_wang2010_natural_convection', final_time=10., restart=False):
 
     m = 20
@@ -48,14 +48,14 @@ def wang2010_natural_convection_air_linearized(output_dir='output/test_wang2010_
         
     return w, mesh
         
-        
+
 def test_wang2010_natural_convection_air_linearized():
     
     w, mesh = wang2010_natural_convection_air_linearized()
         
     verify_against_wang2010(w, mesh)
     
-    
+
 def test_wang2010_natural_convection_air_linearized_restart():
     
     m = 20
