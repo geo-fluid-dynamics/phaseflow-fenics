@@ -14,25 +14,25 @@ Author: Alexander G. Zimmerman <zimmerman@aices.rwth-aachen.de>
 # For users:
 ## [Docker](https://www.docker.com)
 
-We have a [Docker image](https://hub.docker.com/r/fenicsproject/stable/) with a pre-configured Python environment and pre-built FEniCS, courtesy of the FEniCS developers. See their ["FEniCS in Docker" manual](https://fenics.readthedocs.io/projects/containers/en/latest/).
+The FEniCS project provides a [Docker image](https://hub.docker.com/r/fenicsproject/stable/) with a pre-configured Python environment and pre-built fenics. See their ["FEniCS in Docker" manual](https://fenics.readthedocs.io/projects/containers/en/latest/). Our [custom Docker image for Phaseflow](https://hub.docker.com/r/zimmerman/phaseflow-fenics/) only adds a Phaseflow installation including any missing dependencies.
 
 Get the [free community edition of Docker](https://www.docker.com/community-edition).
 
 Pull the image and run the container with Docker
 
-    docker run -ti quay.io/fenicsproject/stable:current
+    docker run -ti zimmerman/phaseflow-fenics:latest
     
 Or run the container with access to a shared folder (shared between the host and the container)
 
-    docker run -ti -v $(pwd):/home/fenics/shared quay.io/fenicsproject/stable:current
+    docker run -ti -v $(pwd):/home/fenics/shared zimmerman/phaseflow-fenics:latest
 
 If you plan to use this container repeatedly, then instead use this command to also give it a name
 
-    docker run -ti -v $(pwd):/home/fenics/shared --name fenics quay.io/fenicsproject/stable:current
+    docker run -ti -v $(pwd):/home/fenics/shared --name phaseflow-fenics zimmerman/phaseflow-fenics:latest
 
 After exiting the container, you can start it again with
 
-    docker start fenics
+    docker start phaseflow-fenics
     
 You can confirm that the container is running with
 
@@ -46,17 +46,21 @@ To enter a bash terminal inside of the running container
 
     docker start fenics
     
-    docker exec -ti -u fenics fenics /bin/bash -l
+    docker exec -ti -u fenics phaseflow-fenics /bin/bash -l
     
-## Run phaseflow in Docker
+Note that the "-u fenics" logs into the machine as the "fenics" user.
+    
+## Run Phaseflow in Docker
 
-    docker run -ti quay.io/fenicsproject/stable:current
-    
-    git clone git@github.com:geo-fluid-dynamics/phaseflow-fenics.git
+    docker run -ti zimmerman/phaseflow-fenics:latest
     
     cd phaseflow-fenics
     
     python -m pytest
+    
+Note that the Docker image has phaseflow installed, so in your own Python scripts you can
+
+    import phaseflow
     
 # For developers:
 ## Project structure
