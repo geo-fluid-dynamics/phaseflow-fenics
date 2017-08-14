@@ -69,7 +69,11 @@ def function_spaces(mesh=default.mesh, pressure_degree=default.pressure_degree, 
     return solution_function_space, solution_element
 
     
-def set_initial_values(current_time, initial_values_expression, W, W_ele, w_n, restart=False, ir=0):
+def set_initial_values(current_time, initial_values_expression, W, W_ele, w_n=(), restart=False, ir=0):
+
+    if w_n == ():
+    
+        assert(fenics.near(current_time, 0.))
 
     if restart and (ir == 0):
     
@@ -183,13 +187,9 @@ def run(
     # Set and write initial values
     W, W_ele = function_spaces(mesh, pressure_degree, temperature_degree)
     
-    w_n = set_initial_values(current_time, initial_values_expression, W, W_ele, w_n, restart)
+    w_n = set_initial_values(current_time, initial_values_expression, W, W_ele)
     
-    if output_format is 'table':
-                
-        solution_files[0].write("t, x, theta \n")
-                
-    output.write_solution(output_format, solution_files, W, w_n, current_time) 
+    output.write_solution(solution_files, W, w_n, current_time) 
         
         
     # Solve each time step
@@ -249,9 +249,9 @@ def run(
             
 
             # Write the initial values
-            if write_output and fenics.near(current_time, 0.) and (ir is 0):
+            if output_this_time and fenics.near(current_time, 0.) and (ir is 0):
             
-                output.write_solution(output_format, solution_files, W, w_n, current_time) 
+                output.write_solution(solution_files, W, w_n, current_time) 
 
                 
             #
