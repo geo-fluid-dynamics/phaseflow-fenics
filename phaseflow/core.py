@@ -69,9 +69,10 @@ def function_spaces(mesh=default.mesh, pressure_degree=default.pressure_degree, 
     return solution_function_space, solution_element
 
     
-def set_initial_values(current_time, initial_values_expression, W, W_ele, w_n=(), restart=False, ir=0):
+def set_initial_values(current_time, initial_values_expression, W, W_ele,
+        restart=False, restart_filename="", w_n=(), ir=0):
 
-    if w_n == ():
+    if (w_n == () and restart == False):
     
         assert(fenics.near(current_time, 0.))
 
@@ -187,7 +188,7 @@ def run(
     # Set and write initial values
     W, W_ele = function_spaces(mesh, pressure_degree, temperature_degree)
     
-    w_n = set_initial_values(current_time, initial_values_expression, W, W_ele)
+    w_n = set_initial_values(current_time, initial_values_expression, W, W_ele, restart, restart_filename)
     
     output.write_solution(solution_files, W, w_n, current_time) 
         
@@ -229,7 +230,7 @@ def run(
             
             
             # Set the initial values
-            w_n = set_initial_values(current_time, initial_values_expression, W, W_ele, w_n, restart, ir)
+            w_n = set_initial_values(current_time, initial_values_expression, W, W_ele, restart, restart_filename, w_n, ir)
             
             
             # Initialize the functions that we will use to generate our variational form
