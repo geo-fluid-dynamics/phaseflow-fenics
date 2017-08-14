@@ -5,7 +5,7 @@ import fenics
 
 def test_only_write_initial_values():
     
-    w, mesh = phaseflow.run(output_dir='output/test_only_write_initial_values', final_time=0.)
+    w, mesh = phaseflow.run(output_dir='output/test_only_write_initial_values', linearize=False, final_time=0.)
     
     
 if __name__=='__main__':
