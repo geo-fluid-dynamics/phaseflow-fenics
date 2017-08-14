@@ -78,6 +78,9 @@ class FormFactory():
 
         
         # Jacobian per http://home.simula.no/~hpl/homepage/fenics-tutorial/release-1.0-nonabla/webm/nonlinear.html
+        
+        #w_w = fenics.TrialFunction(self.W)
+        
         R = fenics.action(F, w_k)
         
         JR = fenics.derivative(R, w_k)
@@ -91,14 +94,16 @@ class FormFactory():
         
         ddtheta_mu_l = 0. # @todo Add variable viscosity
         
-        J = (
-            b(u_w, q) - gamma*p_w*q
+        u_k, p_k, theta_k = fenics.split(w_k)
+        
+        JR = (
+            b(u, q) - gamma*p*q
             - (b(u_k, q) - gamma*p_k*q)
-            + dot(u_w, v)/dt + c(u_w, u_k, v) + c(u_k, u_w, v) + a(mu_l, u_w, v) + a(ddtheta_mu_l*theta_w, u_k, v) + b(v, p_w) + dot(ddtheta_m_B(theta_k)*theta_w*g, v) 
+            + dot(u, v)/dt + c(u, u_k, v) + c(u_k, u, v) + a(mu_l, u, v) + a(ddtheta_mu_l*theta, u_k, v) + b(v, p) + dot(ddtheta_m_B(theta_k)*theta*g, v) 
             - (dot(u_k - u_n, v)/dt + c(u_k, u_k, v) + a(mu_l, u_k, v) + b(v, p_k) + dot(m_B(theta_k)*g, v))
-            + theta_w*phi/dt - dot(u_k, grad(phi))*theta_w - dot(u_w, grad(phi))*theta_k + dot(K/Pr*grad(theta_w), grad(phi))
+            + theta*phi/dt - dot(u_k, grad(phi))*theta - dot(u, grad(phi))*theta_k + dot(K/Pr*grad(theta), grad(phi))
             - ((theta_k - theta_n)*phi/dt - dot(u_k, grad(phi))*theta_k + dot(K/Pr*grad(theta_k), grad(phi)))
-            + dot(ddtheta_S(theta_k)*theta_w, phi)/dt
+            + dot(ddtheta_S(theta_k)*theta, phi)/dt
             - ((S(theta_k) - S(theta_n))*phi/dt)
             )*fenics.dx
         '''
