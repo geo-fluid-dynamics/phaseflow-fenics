@@ -41,20 +41,10 @@ class FormFactory():
         self.Re = fenics.Constant(globals.Re)
     
     
-    def make_nonlinear_form(self, dt, w_n):
+    def make_nonlinear_form(self, dt, w_k, w_n):
     
         dt = fenics.Constant(dt)
         
-        w = fenics.TrialFunction(self.W)
-        
-        u, p, theta = fenics.split(w)
-        
-        v, q, phi = fenics.TestFunctions(self.W)
-        
-        w_ = fenics.Function(self.W)
-
-        u_n, p_n, theta_n = fenics.split(w_n)
-    
         Ra, Pr, Ste, C, K, g, gamma, mu_l = fenics.Constant(self.parameters['Ra']), fenics.Constant(self.parameters['Pr']), fenics.Constant(self.parameters['Ste']), fenics.Constant(self.parameters['C']), fenics.Constant(self.parameters['K']), fenics.Constant(self.parameters['g']), fenics.Constant(self.parameters['gamma']), fenics.Constant(self.parameters['mu_l'])
         
         m_B = self.m_B
@@ -69,6 +59,16 @@ class FormFactory():
         
         S = lambda theta : heaviside_tanh(theta, f_s=S_s, f_l=S_l)
         
+        u_n, p_n, theta_n = fenics.split(w_n)
+        
+        
+        #
+        w = fenics.TrialFunction(self.W)
+        
+        u, p, theta = fenics.split(w)
+        
+        v, q, phi = fenics.TestFunctions(self.W)
+        
         F = (
             b(u, q) - gamma*p*q
             + dot(u, v)/dt + c(u, u, v) + a(mu_l, u, v) + b(v, p) + dot(m_B(theta)*g, v) - dot(u_n, v)/dt
@@ -76,18 +76,13 @@ class FormFactory():
             + C*S(theta)*phi/dt - S(theta_n)*phi/dt
             )*fenics.dx
 
-        #w_k = fenics.Function(self.W)
-            
-        F = fenics.action(F, w_)
-        
         
         # Jacobian per http://home.simula.no/~hpl/homepage/fenics-tutorial/release-1.0-nonabla/webm/nonlinear.html
-        w_w = fenics.TrialFunction(self.W)
+        R = fenics.action(F, w_k)
         
-        #u_w, p_w, theta_w = w_w.split()
+        JR = fenics.derivative(R, w_k)
         
-        #u_k, p_k, theta_k = w_k.split()
-        
+        '''
         ddtheta_m_B = self.ddtheta_m_B
         
         ddtheta_heaviside_tanh = lambda theta, f_s, f_l: -(a_s*(fenics.tanh((a_s*(theta_s - theta))/R_s)**2 - 1.)*(f_l/2. - f_s/2.))/R_s
@@ -96,8 +91,6 @@ class FormFactory():
         
         ddtheta_mu_l = 0. # @todo Add variable viscosity
         
-        J = fenics.derivative(F, w_, w)
-        '''
         J = (
             b(u_w, q) - gamma*p_w*q
             - (b(u_k, q) - gamma*p_k*q)
@@ -110,5 +103,5 @@ class FormFactory():
             )*fenics.dx
         '''
         
-        return F, J
+        return R, JR
         
