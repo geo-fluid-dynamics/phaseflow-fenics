@@ -41,15 +41,25 @@ class FormFactory():
         self.Re = fenics.Constant(globals.Re)
     
     
-    def make_nonlinear_form(self, dt, w_k, w_n):
+    def make_nonlinear_form(self, dt, w_, w_n, automatic_jacobian=True):
     
         dt = fenics.Constant(dt)
         
-        Ra, Pr, Ste, C, K, g, gamma, mu_l = fenics.Constant(self.parameters['Ra']), fenics.Constant(self.parameters['Pr']), fenics.Constant(self.parameters['Ste']), fenics.Constant(self.parameters['C']), fenics.Constant(self.parameters['K']), fenics.Constant(self.parameters['g']), fenics.Constant(self.parameters['gamma']), fenics.Constant(self.parameters['mu_l'])
+        Ra = fenics.Constant(self.parameters['Ra']), 
+        
+        Pr, Ste = fenics.Constant(self.parameters['Pr']), fenics.Constant(self.parameters['Ste'])
+        
+        C, K =  fenics.Constant(self.parameters['C']), fenics.Constant(self.parameters['K'])
+        
+        g, gamma = fenics.Constant(self.parameters['g']), fenics.Constant(self.parameters['gamma'])
+        
+        mu_l, mu_s = fenics.Constant(self.parameters['mu_l']), fenics.Constant(self.parameters['mu_s'])
         
         m_B = self.m_B
         
-        a_s, theta_s, R_s = fenics.Constant(self.regularization['a_s']), fenics.Constant(self.regularization['theta_s']), fenics.Constant(self.regularization['R_s'])
+        a_s, theta_s = fenics.Constant(self.regularization['a_s']), fenics.Constant(self.regularization['theta_s'])
+        
+        R_s = fenics.Constant(self.regularization['R_s'])
         
         heaviside_tanh = lambda theta, f_s, f_l: f_l + (f_s - f_l)/2.*(1. + fenics.tanh(a_s*(theta_s - theta)/R_s))
         
@@ -62,51 +72,56 @@ class FormFactory():
         u_n, p_n, theta_n = fenics.split(w_n)
         
         
-        #
-        w = fenics.TrialFunction(self.W)
+        # @todo: Variable viscosity 
         
-        u, p, theta = fenics.split(w)
+        #mu_sl = lambda theta : heaviside_tanh(theta, f_s=mu_s, f_l=mu_l)
+        
+        mu_sl = fenics.Constant(mu_l)
+        
+        
+        #
+        dw = fenics.TrialFunction(self.W)
+        
+        du, dp, dtheta = fenics.split(dw)
         
         v, q, phi = fenics.TestFunctions(self.W)
         
+        u_, p_, theta_ = fenics.split(w_)
+        
         F = (
-            b(u, q) - gamma*p*q
-            + dot(u, v)/dt + c(u, u, v) + a(mu_l, u, v) + b(v, p) + dot(m_B(theta)*g, v) - dot(u_n, v)/dt
-            + C*theta*phi/dt - dot(u, grad(phi))*C*theta + dot(K/Pr*grad(theta), grad(phi)) - C*theta_n*phi/dt 
-            + C*S(theta)*phi/dt - S(theta_n)*phi/dt
+            b(u_, q) - gamma*p_*q
+            + dot(u_, v)/dt + c(u_, u_, v) + a(mu_sl, u_, v) + b(v, p_)
+            + dot(m_B(theta_)*g, v) 
+            + C*(theta_ + S(theta_))*phi/dt - dot(u_, grad(phi))*C*theta_ + dot(K/Pr*grad(theta_), grad(phi)) 
+            - dot(u_n, v)/dt 
+            - C*(theta_n + S(theta_n))*phi/dt
             )*fenics.dx
 
+        if automatic_jacobian:
+
+            JF = fenics.derivative(F, w_, dw)
+            
+        else:
         
-        # Jacobian per http://home.simula.no/~hpl/homepage/fenics-tutorial/release-1.0-nonabla/webm/nonlinear.html
+            ddtheta_m_B = self.ddtheta_m_B
+            
+            ddtheta_heaviside_tanh = lambda theta, f_s, f_l: -(a_s*(fenics.tanh((a_s*(theta_s - theta))/R_s)**2 - 1.)*(f_l/2. - f_s/2.))/R_s
+            
+            ddtheta_S = lambda theta : ddtheta_heaviside_tanh(theta, f_s=S_s, f_l=S_l)   
         
-        #w_w = fenics.TrialFunction(self.W)
+            # @todo: Variable viscosity 
+            
+            #ddtheta_mu_sl = lambda theta : ddtheta_heaviside_tanh(theta, f_s=mu_s, f_l=mu_l)        
         
-        R = fenics.action(F, w_k)
+            ddtheta_mu_sl = fenics.Constant(0.)
         
-        JR = fenics.derivative(R, w_k)
+            JF = (
+                b(du, q) - gamma*dp*q 
+                + dot(du, v)/dt + c(u_, du, v) + c(du, u_, v) + a(ddtheta_mu_sl, u_, v) + a(mu_sl, du, v) + b(v, dp) 
+                + dot(m_B(dtheta), v)
+                + C(dtheta + S(dtheta))*phi/dt + dot(du, grad(phi))*C*theta_ + dot(u_, grad(phi))*theta_ + K/Pr*dot(grad(dtheta), grad(phi))
+                )*fenics.dx
+
         
-        '''
-        ddtheta_m_B = self.ddtheta_m_B
-        
-        ddtheta_heaviside_tanh = lambda theta, f_s, f_l: -(a_s*(fenics.tanh((a_s*(theta_s - theta))/R_s)**2 - 1.)*(f_l/2. - f_s/2.))/R_s
-        
-        ddtheta_S = lambda theta : ddtheta_heaviside_tanh(theta, f_s=S_s, f_l=S_l)   
-        
-        ddtheta_mu_l = 0. # @todo Add variable viscosity
-        
-        u_k, p_k, theta_k = fenics.split(w_k)
-        
-        JR = (
-            b(u, q) - gamma*p*q
-            - (b(u_k, q) - gamma*p_k*q)
-            + dot(u, v)/dt + c(u, u_k, v) + c(u_k, u, v) + a(mu_l, u, v) + a(ddtheta_mu_l*theta, u_k, v) + b(v, p) + dot(ddtheta_m_B(theta_k)*theta*g, v) 
-            - (dot(u_k - u_n, v)/dt + c(u_k, u_k, v) + a(mu_l, u_k, v) + b(v, p_k) + dot(m_B(theta_k)*g, v))
-            + theta*phi/dt - dot(u_k, grad(phi))*theta - dot(u, grad(phi))*theta_k + dot(K/Pr*grad(theta), grad(phi))
-            - ((theta_k - theta_n)*phi/dt - dot(u_k, grad(phi))*theta_k + dot(K/Pr*grad(theta_k), grad(phi)))
-            + dot(ddtheta_S(theta_k)*theta, phi)/dt
-            - ((S(theta_k) - S(theta_n))*phi/dt)
-            )*fenics.dx
-        '''
-        
-        return R, JR
+        return F, JF
         
