@@ -119,7 +119,7 @@ class FormFactory():
                 b(du, q) - gamma*dp*q 
                 + dot(du, v)/dt + c(u_, du, v) + c(du, u_, v) + a(dtheta*ddtheta_mu_sl, u_, v) + a(mu_sl, du, v) + b(v, dp) 
                 + dot(dtheta*ddtheta_m_B(theta_)*g, v)
-                + C*(dtheta*(1 + ddtheta_S(theta_)))*phi/dt + dot(du, grad(phi))*C*theta_ + dot(u_, grad(phi))*dtheta + K/Pr*dot(grad(dtheta), grad(phi))
+                + C*(dtheta*phi + dtheta*ddtheta_S(theta_)*phi)/dt - dot(du, grad(phi))*C*theta_ - dot(u_, grad(phi))*C*dtheta + K/Pr*dot(grad(dtheta), grad(phi))
                 )*fenics.dx
 
         

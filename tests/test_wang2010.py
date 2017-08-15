@@ -22,49 +22,57 @@ def verify_against_wang2010(w, mesh):
             assert(abs(ux - true_ux) < 2.e-2)
         
         
-def wang2010_natural_convection_air_linearized(output_dir='output/test_wang2010_natural_convection', final_time=10., restart=False):
+def wang2010_natural_convection_air(output_dir='output/test_wang2010_natural_convection_air', final_time=10., restart=False,
+        automatic_jacobian=True):
 
     m = 20
+    
+    theta_hot = 0.5
+    
+    theta_cold = -0.5
     
     w, mesh = phaseflow.run(
         Ste = 1.e16,
         mesh = fenics.UnitSquareMesh(m, m, 'crossed'),
         time_step_bounds = (1.e-3, 1.e-3, 10.),
+        newton_relative_tolerance = 1.e-5,
         final_time = final_time,
         output_times = ('final',),
         stop_when_steady = True,
-        linearize = True,
+        automatic_jacobian = automatic_jacobian,
         initial_values_expression = (
             "0.",
             "0.",
             "0.",
-            "0.5*near(x[0],  0.) -0.5*near(x[0],  1.)"),
+            str(theta_hot)+"*near(x[0],  0.) "+str(theta_cold)+"*near(x[0],  1.)"),
         boundary_conditions = [
-        {'subspace': 0, 'value_expression': ("0.", "0."), 'degree': 3, 'location_expression': "near(x[0],  0.) | near(x[0],  1.) | near(x[1], 0.) | near(x[1],  1.)", 'method': "topological"},
-        {'subspace': 2, 'value_expression': "0.", 'degree': 2, 'location_expression': "near(x[0],  0.)", 'method': "topological"},
-        {'subspace': 2, 'value_expression': "0.", 'degree': 2, 'location_expression': "near(x[0],  1.)", 'method': "topological"}],
+            {'subspace': 0, 'value_expression': ("0.", "0."), 'degree': 3, 'location_expression': "near(x[0],  0.) | near(x[0],  1.) | near(x[1], 0.) | near(x[1],  1.)", 'method': "topological"},
+            {'subspace': 2, 'value_expression': str(theta_hot), 'degree': 2, 'location_expression': "near(x[0],  0.)", 'method': "topological"},
+            {'subspace': 2, 'value_expression': str(theta_cold), 'degree': 2, 'location_expression': "near(x[0],  1.)", 'method': "topological"}],
         output_dir = output_dir,
         restart = restart)
         
     return w, mesh
-        
-
-def test_wang2010_natural_convection_air_linearized():
     
-    w, mesh = wang2010_natural_convection_air_linearized()
+    
+def test_wang2010_natural_convection_air_manualJ():
+    
+    w, mesh = wang2010_natural_convection_air(automatic_jacobian=False)
         
     verify_against_wang2010(w, mesh)
     
 
-def test_wang2010_natural_convection_air_linearized_restart():
+def test_wang2010_natural_convection_air_manualJ_restart():
     
     m = 20
         
-    output_dir = 'output/test_wang2010_natural_convection_restart'
+    output_dir = 'output/test_wang2010_natural_convection_air_restart'
     
-    w, mesh = wang2010_natural_convection_air_linearized(output_dir=output_dir, final_time=0.5, restart=False)
+    w, mesh = wang2010_natural_convection_air(output_dir=output_dir, final_time=0.5, restart=False,
+        automatic_jacobian=False)
     
-    w, mesh = wang2010_natural_convection_air_linearized(output_dir=output_dir, final_time=10., restart=True)
+    w, mesh = wang2010_natural_convection_air(output_dir=output_dir, final_time=10., restart=True,
+        automatic_jacobian=False)
         
     verify_against_wang2010(w, mesh)
 
@@ -91,10 +99,10 @@ def verify_regression_water(w, mesh):
             assert(abs(theta - true_theta) < 1.e-2)
 
             
-def test_regression_natural_convection_water_linearized():
+def test_regression_natural_convection_water_manualJ():
     m = 10
 
-    linearize = True
+    automatic_jacobian = False,
     
     Ra = 2.518084e6
     
@@ -107,10 +115,6 @@ def test_regression_natural_convection_water_linearized():
     theta_hot = 1.
     
     theta_cold = 0.
-    
-    bc_theta_hot = theta_hot
-    
-    bc_theta_cold = theta_cold
     
     T_f = T_fusion = 0. # [deg C]
     
@@ -137,10 +141,6 @@ def test_regression_natural_convection_water_linearized():
     Re = phaseflow.globals.Re
     
     beta = 6.91e-5 # [K^-1]
-    
-    if linearize:
-    
-        bc_theta_hot = bc_theta_cold = 0.  
 
     w, mesh = phaseflow.run(
         Ra = Ra,
@@ -152,7 +152,7 @@ def test_regression_natural_convection_water_linearized():
         time_step_bounds = (0.005, 0.005, 0.01),
         final_time = 0.18,
         output_times = (),
-        linearize = linearize,
+        automatic_jacobian = automatic_jacobian,
         initial_values_expression = (
             "0.",
             "0.",
@@ -160,8 +160,8 @@ def test_regression_natural_convection_water_linearized():
             str(theta_hot)+"*near(x[0],  0.) + "+str(theta_cold)+"*near(x[0],  1.)"),
         boundary_conditions = [
             {'subspace': 0, 'value_expression': ("0.", "0."), 'degree': 3, 'location_expression': "near(x[0],  0.) | near(x[0],  1.) | near(x[1], 0.) | near(x[1],  1.)", 'method': "topological"},
-            {'subspace': 2, 'value_expression':str(bc_theta_hot), 'degree': 2, 'location_expression': "near(x[0],  0.)", 'method': "topological"},
-            {'subspace': 2, 'value_expression':str(bc_theta_cold), 'degree': 2, 'location_expression': "near(x[0],  1.)", 'method': "topological"}],
+            {'subspace': 2, 'value_expression':str(theta_hot), 'degree': 2, 'location_expression': "near(x[0],  0.)", 'method': "topological"},
+            {'subspace': 2, 'value_expression':str(theta_cold), 'degree': 2, 'location_expression': "near(x[0],  1.)", 'method': "topological"}],
         output_dir = 'output/test_regression_natural_convection_water')
         
     verify_regression_water(w, mesh)
@@ -169,8 +169,8 @@ def test_regression_natural_convection_water_linearized():
 
 if __name__=='__main__':
     
-    test_wang2010_natural_convection_air_linearized()
+    test_wang2010_natural_convection_air_manualJ()
     
-    test_wang2010_natural_convection_air_linearized_restart()
+    test_wang2010_natural_convection_air_manualJ_restart()
     
-    test_regression_natural_convection_water_linearized()
+    test_regression_natural_convection_water_manualJ()
