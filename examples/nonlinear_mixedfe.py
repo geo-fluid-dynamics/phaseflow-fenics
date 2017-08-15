@@ -12,7 +12,10 @@ Here we attempt to use the scripts from section 1.2.4 of the FEniCS book.
 
 def nonlinear_mixedfe(automatic_jacobian=True):
 
-
+    # Set physical parameters
+    mu = 0.01
+    
+    
     # Set numerical parameters.
     mesh = fenics.UnitSquareMesh(10, 10, 'crossed')
     
@@ -54,7 +57,7 @@ def nonlinear_mixedfe(automatic_jacobian=True):
     
     D = lambda u : sym(grad(u))
     
-    a = lambda u, v : 2.*inner(D(u), D(v))
+    a = lambda mu, u, v : 2.*mu*inner(D(u), D(v))
     
     b = lambda u, q : -div(u)*q
     
@@ -72,7 +75,7 @@ def nonlinear_mixedfe(automatic_jacobian=True):
     
     u_, p_ = fenics.split(w_)
     
-    F = (b(u_, q) - gamma*p_*q + c(u_, u_, v) + a(u_, v) + b(v, p_))*fenics.dx
+    F = (b(u_, q) - gamma*p_*q + c(u_, u_, v) + a(mu, u_, v) + b(v, p_))*fenics.dx
     
     if automatic_jacobian:
     
@@ -80,13 +83,27 @@ def nonlinear_mixedfe(automatic_jacobian=True):
         
     else:
 
-        JF = (b(du, q) - gamma*dp*q + c(u_, du, v) + c(du, u_, v) + a(du, v) + b(v, dp))*fenics.dx
+        JF = (b(du, q) - gamma*dp*q + c(u_, du, v) + c(du, u_, v) + a(mu, du, v) + b(v, dp))*fenics.dx
     
     problem = fenics.NonlinearVariationalProblem(F, w_, bcs, JF)
 
     solver  = fenics.NonlinearVariationalSolver(problem)
 
     solver.solve()
+        
+    velocity, pressure = w_.split()
+    
+    velocity.rename("u", "velocity")
+    
+    pressure.rename("p", "pressure")
+    
+    output_dir = 'output/nonlinear_mixedfe_autoJ'+str(automatic_jacobian)
+    
+    solution_files = [fenics.XDMFFile(output_dir + '/velocity.xdmf'), fenics.XDMFFile(output_dir + '/pressure.xdmf')]
+        
+    for i, var in enumerate([velocity, pressure]):
+    
+        solution_files[i].write(var)
 
 
 
