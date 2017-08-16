@@ -88,13 +88,13 @@ class FormFactory():
         
         u_k, p_k, theta_k = fenics.split(w_k)
         
+        f_B = lambda theta : m_B(theta)*g
+
         F = (
             b(u_k, q) - gamma*p_k*q
-            + dot(u_k, v)/dt + c(u_k, u_k, v) + a(mu_sl, u_k, v) + b(v, p_k)
-            + dot(m_B(theta_k)*g, v) 
-            + C*(theta_k + S(theta_k))*phi/dt - dot(u_k, grad(phi))*C*theta_k + dot(K/Pr*grad(theta_k), grad(phi)) 
-            - dot(u_n, v)/dt 
-            - C*(theta_n + S(theta_n))*phi/dt
+            + dot(u_k, v)/dt + c(u_k, u_k, v) + a(mu_sl, u_k, v) + b(v, p_k) + dot(f_B(theta_k), v) - dot(u_n, v)/dt 
+            + C*theta_k*phi/dt - dot(u_k, grad(phi))*C*theta_k + K/Pr*dot(grad(theta_k), grad(phi)) - C*theta_n*phi/dt 
+            + C*S(theta_k)*phi/dt - C*S(theta_n)*phi/dt
             )*fenics.dx
 
         if automatic_jacobian:
@@ -104,6 +104,8 @@ class FormFactory():
         else:
         
             ddtheta_m_B = self.ddtheta_m_B
+            
+            ddtheta_f_B = lambda theta : ddtheta_m_B(theta)*g
             
             ddtheta_heaviside_tanh = lambda theta, f_s, f_l: -(a_s*(fenics.tanh((a_s*(theta_s - theta))/R_s)**2 - 1.)*(f_l/2. - f_s/2.))/R_s
             
@@ -118,7 +120,7 @@ class FormFactory():
             JF = (
                 b(u_w, q) - gamma*p_w*q 
                 + dot(u_w, v)/dt + c(u_k, u_w, v) + c(u_w, u_k, v) + a(theta_w*ddtheta_mu_sl, u_k, v) + a(mu_sl, u_w, v) + b(v, p_w) 
-                + dot(theta_w*ddtheta_m_B(theta_k)*g, v)
+                + dot(theta_w*ddtheta_f_B(theta_k), v)
                 + C*theta_w*phi/dt + C*theta_w*ddtheta_S(theta_k)*phi/dt
                 - dot(u_w, grad(phi))*C*theta_k - dot(u_k, grad(phi))*C*theta_w
                 + K/Pr*dot(grad(theta_w), grad(phi))
