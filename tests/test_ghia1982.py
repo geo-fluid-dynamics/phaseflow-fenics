@@ -81,7 +81,6 @@ def unsteady_lid_driven_cavity(automatic_jacobian=True):
     verify_against_ghia1982(w, mesh)
 
 
-            
 def test_debug_ghia1982_steady_lid_driven_cavity_autoJ():
 
     ghia1982_steady_lid_driven_cavity(automatic_jacobian=True)
