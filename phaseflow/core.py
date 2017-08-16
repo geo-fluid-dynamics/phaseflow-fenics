@@ -277,7 +277,7 @@ def run(
         
             steady = True
             
-            if output_times[output_count] == 'final':
+            if output_times[-1] == 'final':
             
                 output_this_time = True
         
