@@ -82,7 +82,7 @@ def unsteady_lid_driven_cavity(automatic_jacobian=True):
 
 
             
-def test_ghia1982_steady_lid_driven_cavity_autoJ():
+def test_debug_ghia1982_steady_lid_driven_cavity_autoJ():
 
     ghia1982_steady_lid_driven_cavity(automatic_jacobian=True)
     
@@ -92,15 +92,15 @@ def test_ghia1982_steady_lid_driven_cavity_manualJ():
     ghia1982_steady_lid_driven_cavity(automatic_jacobian=False)
     
 
-def test_unsteady_lid_driven_cavity_manualJ():
+def test_debug_unsteady_lid_driven_cavity_manualJ():
 
     unsteady_lid_driven_cavity(automatic_jacobian=False)
     
     
 if __name__=='__main__':
 
-    test_ghia1982_steady_lid_driven_cavity_autoJ()
+    test_debug_ghia1982_steady_lid_driven_cavity_autoJ()
 
     test_ghia1982_steady_lid_driven_cavity_manualJ()
 
-    test_unsteady_lid_driven_cavity_manualJ()
+    test_debug_unsteady_lid_driven_cavity_manualJ()

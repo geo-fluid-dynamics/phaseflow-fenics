@@ -35,16 +35,15 @@ def wang2010_natural_convection_air(output_dir='output/test_wang2010_natural_con
         Ste = 1.e16,
         mesh = fenics.UnitSquareMesh(m, m, 'crossed'),
         time_step_bounds = (1.e-3, 1.e-3, 10.),
-        newton_relative_tolerance = 1.e-5,
         final_time = final_time,
-        output_times = ('final',),
+        output_times = ('initial', 1.e-3, 0.01, 0.1, 1., 'final',),
         stop_when_steady = True,
         automatic_jacobian = automatic_jacobian,
         initial_values_expression = (
             "0.",
             "0.",
             "0.",
-            str(theta_hot)+"*near(x[0],  0.) "+str(theta_cold)+"*near(x[0],  1.)"),
+            str(theta_hot)+"*near(x[0],  0.) + "+str(theta_cold)+"*near(x[0],  1.)"),
         boundary_conditions = [
             {'subspace': 0, 'value_expression': ("0.", "0."), 'degree': 3, 'location_expression': "near(x[0],  0.) | near(x[0],  1.) | near(x[1], 0.) | near(x[1],  1.)", 'method': "topological"},
             {'subspace': 2, 'value_expression': str(theta_hot), 'degree': 2, 'location_expression': "near(x[0],  0.)", 'method': "topological"},
@@ -53,6 +52,13 @@ def wang2010_natural_convection_air(output_dir='output/test_wang2010_natural_con
         restart = restart)
         
     return w, mesh
+    
+    
+def test_debug_wang2010_natural_convection_air_autoJ():
+    
+    w, mesh = wang2010_natural_convection_air(automatic_jacobian=True)
+        
+    verify_against_wang2010(w, mesh)
     
     
 def test_wang2010_natural_convection_air_manualJ():
@@ -168,6 +174,8 @@ def test_regression_natural_convection_water_manualJ():
 
 
 if __name__=='__main__':
+
+    test_debug_wang2010_natural_convection_air_autoJ()
     
     test_wang2010_natural_convection_air_manualJ()
     
