@@ -61,7 +61,7 @@ def test_debug_wang2010_natural_convection_air_autoJ():
     verify_against_wang2010(w, mesh)
     
     
-def test_wang2010_natural_convection_air_manualJ():
+def test_debug_wang2010_natural_convection_air_manualJ():
     
     w, mesh = wang2010_natural_convection_air(automatic_jacobian=False)
         
@@ -177,7 +177,7 @@ if __name__=='__main__':
 
     test_debug_wang2010_natural_convection_air_autoJ()
     
-    test_wang2010_natural_convection_air_manualJ()
+    test_debug_wang2010_natural_convection_air_manualJ()
     
     test_wang2010_natural_convection_air_manualJ_restart()
     

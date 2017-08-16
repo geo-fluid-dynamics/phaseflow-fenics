@@ -92,8 +92,10 @@ class FormFactory():
 
         F = (
             b(u_k, q) - gamma*p_k*q
-            + dot(u_k, v)/dt + c(u_k, u_k, v) + a(mu_sl, u_k, v) + b(v, p_k) + dot(f_B(theta_k), v) - dot(u_n, v)/dt 
-            + C*theta_k*phi/dt - dot(u_k, grad(phi))*C*theta_k + K/Pr*dot(grad(theta_k), grad(phi)) - C*theta_n*phi/dt 
+            + dot(u_k - u_n, v)/dt + c(u_k, u_k, v) + a(mu_sl, u_k, v) + b(v, p_k)
+            + dot(f_B(theta_k), v)
+            + C/dt*(theta_k - theta_n)*phi - dot(u_k, grad(phi))*C*theta_k + K/Pr*dot(grad(theta_k), grad(phi))
+            + C/dt*(S(theta_k) - S(theta_n))*phi
             )*fenics.dx
 
         if automatic_jacobian:
@@ -120,7 +122,8 @@ class FormFactory():
                 b(u_w, q) - gamma*p_w*q 
                 + dot(u_w, v)/dt + c(u_k, u_w, v) + c(u_w, u_k, v) + a(theta_w*ddtheta_mu_sl, u_k, v) + a(mu_sl, u_w, v) + b(v, p_w) 
                 + dot(theta_w*ddtheta_f_B(theta_k), v)
-                + C*theta_w*phi/dt - dot(u_w, grad(phi))*C*theta_k - dot(u_k, grad(phi))*C*theta_w + K/Pr*dot(grad(theta_w), grad(phi))
+                + C/dt*theta_w*phi - dot(u_w, grad(phi))*C*theta_k - dot(u_k, grad(phi))*C*theta_w + K/Pr*dot(grad(theta_w), grad(phi))
+                + C/dt*theta_w*ddtheta_S(theta_k)*phi
                 )*fenics.dx
 
         
