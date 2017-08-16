@@ -21,7 +21,7 @@ def make(form_factory, newton_relative_tolerance=1.e-8, max_newton_iterations=12
 
     def solve_time_step(dt, w, w_n, bcs):
 
-        F, J = form_factory.make_nonlinear_form(dt=dt, w_=w, w_n=w_n, automatic_jacobian=automatic_jacobian)
+        F, J = form_factory.make_nonlinear_form(dt=dt, w_k=w, w_n=w_n, automatic_jacobian=automatic_jacobian)
         
         problem = fenics.NonlinearVariationalProblem(F, w, bcs, J)
         

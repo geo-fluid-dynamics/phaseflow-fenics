@@ -41,7 +41,7 @@ class FormFactory():
         self.Re = fenics.Constant(globals.Re)
     
     
-    def make_nonlinear_form(self, dt, w_, w_n, automatic_jacobian=True):
+    def make_nonlinear_form(self, dt, w_k, w_n, automatic_jacobian=True):
     
         dt = fenics.Constant(dt)
         
@@ -80,26 +80,26 @@ class FormFactory():
         
         
         #
-        dw = fenics.TrialFunction(self.W)
+        w_w = fenics.TrialFunction(self.W)
         
-        du, dp, dtheta = fenics.split(dw)
+        u_w, p_w, theta_w = fenics.split(w_w)
         
         v, q, phi = fenics.TestFunctions(self.W)
         
-        u_, p_, theta_ = fenics.split(w_)
+        u_k, p_k, theta_k = fenics.split(w_k)
         
         F = (
-            b(u_, q) - gamma*p_*q
-            + dot(u_, v)/dt + c(u_, u_, v) + a(mu_sl, u_, v) + b(v, p_)
-            + dot(m_B(theta_)*g, v) 
-            + C*(theta_ + S(theta_))*phi/dt - dot(u_, grad(phi))*C*theta_ + dot(K/Pr*grad(theta_), grad(phi)) 
+            b(u_k, q) - gamma*p_k*q
+            + dot(u_k, v)/dt + c(u_k, u_k, v) + a(mu_sl, u_k, v) + b(v, p_k)
+            + dot(m_B(theta_k)*g, v) 
+            + C*(theta_k + S(theta_k))*phi/dt - dot(u_k, grad(phi))*C*theta_k + dot(K/Pr*grad(theta_k), grad(phi)) 
             - dot(u_n, v)/dt 
             - C*(theta_n + S(theta_n))*phi/dt
             )*fenics.dx
 
         if automatic_jacobian:
 
-            JF = fenics.derivative(F, w_, dw)
+            JF = fenics.derivative(F, w_k, w_w)
             
         else:
         
@@ -116,10 +116,12 @@ class FormFactory():
             ddtheta_mu_sl = fenics.Constant(0.)
         
             JF = (
-                b(du, q) - gamma*dp*q 
-                + dot(du, v)/dt + c(u_, du, v) + c(du, u_, v) + a(dtheta*ddtheta_mu_sl, u_, v) + a(mu_sl, du, v) + b(v, dp) 
-                + dot(dtheta*ddtheta_m_B(theta_)*g, v)
-                + C*(dtheta*phi + dtheta*ddtheta_S(theta_)*phi)/dt - dot(du, grad(phi))*C*theta_ - dot(u_, grad(phi))*C*dtheta + K/Pr*dot(grad(dtheta), grad(phi))
+                b(u_w, q) - gamma*p_w*q 
+                + dot(u_w, v)/dt + c(u_k, u_w, v) + c(u_w, u_k, v) + a(theta_w*ddtheta_mu_sl, u_k, v) + a(mu_sl, u_w, v) + b(v, p_w) 
+                + dot(theta_w*ddtheta_m_B(theta_k)*g, v)
+                + C*theta_w*phi/dt + C*theta_w*ddtheta_S(theta_k)*phi/dt
+                - dot(u_w, grad(phi))*C*theta_k - dot(u_k, grad(phi))*C*theta_w
+                + K/Pr*dot(grad(theta_w), grad(phi))
                 )*fenics.dx
 
         
