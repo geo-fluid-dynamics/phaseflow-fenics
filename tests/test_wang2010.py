@@ -105,11 +105,9 @@ def verify_regression_water(w, mesh):
             assert(abs(theta - true_theta) < 1.e-2)
 
             
-def test_regression_natural_convection_water_manualJ():
+def regression_natural_convection_water(automatic_jacobian=False):
     m = 10
 
-    automatic_jacobian = False,
-    
     Ra = 2.518084e6
     
     Pr = 6.99
@@ -155,10 +153,10 @@ def test_regression_natural_convection_water_manualJ():
         m_B = lambda theta : Ra/(Pr*Re*Re)/(beta*(T_h - T_c))*(rho(theta_f) - rho(theta))/rho(theta_f),
         ddtheta_m_B = lambda theta : -Ra/(Pr*Re*Re)/(beta*(T_h - T_c))*(ddtheta_rho(theta))/rho(theta_f),
         mesh = fenics.UnitSquareMesh(m, m, 'crossed'),
-        time_step_bounds = (0.005, 0.005, 0.01),
+        time_step_bounds = (0.001, 0.005, 0.005),
         final_time = 0.18,
         output_times = (),
-        automatic_jacobian = automatic_jacobian,
+        automatic_jacobian = False,
         initial_values_expression = (
             "0.",
             "0.",
@@ -173,6 +171,16 @@ def test_regression_natural_convection_water_manualJ():
     verify_regression_water(w, mesh)
 
 
+def test_debug_regression_natural_convection_water_autoJ():
+
+    regression_natural_convection_water(automatic_jacobian=True)
+    
+
+def test_debug_regression_natural_convection_water_manualJ():
+    
+    regression_natural_convection_water(automatic_jacobian=False)
+    
+    
 if __name__=='__main__':
 
     test_debug_wang2010_natural_convection_air_autoJ()
@@ -181,4 +189,6 @@ if __name__=='__main__':
     
     test_wang2010_natural_convection_air_manualJ_restart()
     
-    test_regression_natural_convection_water_manualJ()
+    test_debug_regression_natural_convection_water_autoJ()
+    
+    test_debug_regression_natural_convection_water_manualJ()
