@@ -19,4 +19,4 @@ before_install:
 group: deprecated-2017Q2
 
 script:
-- docker run --rm -P -v `pwd`:/home/fenics/shared -w /home/fenics/shared zimmerman/phaseflow-fenics:latest "pip install --user --upgrade . && python -m pytest -v -k '(not debug)'" 
+- docker run --rm -P -v `pwd`:/home/fenics/shared -w /home/fenics/shared zimmerman/phaseflow-fenics:latest "pip install --user --upgrade . && python -m pytest -v -k '(not debug) and _1d' && mpirun -n 2 python -m pytest -v -k '(not debug) and (not _1d)'" 
