@@ -292,9 +292,11 @@ def run(
             
                 h5.write(w_n, "w_n")
                 
-            with h5py.File(restart_filename, "r+") as h5:
-                
-                h5.create_dataset("t", data=current_time)
+            if fenics.dolfin.MPI.rank(fenics.dolfin.mpi_comm_world()) is 0:
+            
+                with h5py.File(restart_filename, "r+") as h5:
+                    
+                    h5.create_dataset("t", data=current_time)
                     
         helpers.print_once('Reached time t = ' + str(current_time))
             
