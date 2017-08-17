@@ -1,6 +1,7 @@
 from .context import phaseflow
 
 import fenics
+import pytest
 
 
 def verify_against_wang2010(w, mesh):
@@ -61,24 +62,18 @@ def test_debug_wang2010_natural_convection_air_autoJ():
     verify_against_wang2010(w, mesh)
     
     
-def test_debug_wang2010_natural_convection_air_manualJ():
+@pytest.mark.dependency()
+def test_wang2010_natural_convection_air_manualJ():
     
     w, mesh = wang2010_natural_convection_air(automatic_jacobian=False)
         
     verify_against_wang2010(w, mesh)
     
 
-def test_wang2010_natural_convection_air_manualJ_restart():
-    
-    m = 20
-        
-    output_dir = 'output/test_wang2010_natural_convection_air_restart'
-    
-    w, mesh = wang2010_natural_convection_air(output_dir=output_dir, final_time=0.5, restart=False,
-        automatic_jacobian=False)
-    
-    w, mesh = wang2010_natural_convection_air(output_dir=output_dir, final_time=10., restart=True,
-        automatic_jacobian=False)
+@pytest.mark.dependency(depends=["test_wang2010_natural_convection_air_manualJ"])
+def test_wang2010_restart():
+
+    w, mesh = wang2010_natural_convection_air(final_time=10.5, restart=True, automatic_jacobian=False)
         
     verify_against_wang2010(w, mesh)
 
@@ -185,9 +180,9 @@ if __name__=='__main__':
 
     test_debug_wang2010_natural_convection_air_autoJ()
     
-    test_debug_wang2010_natural_convection_air_manualJ()
+    test_wang2010_natural_convection_air_manualJ()
     
-    test_wang2010_natural_convection_air_manualJ_restart()
+    test_wang2010_restart()
     
     test_debug_regression_natural_convection_water_autoJ()
     
