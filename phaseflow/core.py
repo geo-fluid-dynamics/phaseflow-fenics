@@ -77,6 +77,7 @@ def run(
     C = default.parameters['C'],
     K = default.parameters['K'],
     mu_l = default.parameters['mu_l'],
+    mu_s = default.parameters['mu_s'],
     g = default.parameters['g'],
     m_B = default.m_B,
     ddtheta_m_B = default.ddtheta_m_B,
@@ -86,16 +87,14 @@ def run(
     boundary_conditions = [{'subspace': 0, 'value_expression': ("0.", "0."), 'degree': 3, 'location_expression': "near(x[0],  0.) | near(x[0],  1.) | near(x[1], 0.) | near(x[1],  1.)", 'method': 'topological'}, {'subspace': 2, 'value_expression': "0.", 'degree': 2, 'location_expression': "near(x[0],  0.)", 'method': 'topological'}, {'subspace': 2, 'value_expression': "0.", 'degree': 2, 'location_expression': "near(x[0],  1.)", 'method': 'topological'}],
     final_time = 1.,
     time_step_bounds = (1.e-3, 1.e-3, 1.),
-    output_times = ('initial', 1.e-3, 1.e-2, 1.e-1, 'final'),
+    output_times = ('initial', 'final'),
     max_pci_refinement_cycles = 0,
-    adaptive_space = False,
-    adaptive_space_error_tolerance = 1.e-4,
     gamma = 1.e-7,
     newton_relative_tolerance = 1.e-8,
     max_newton_iterations = 12,
     pressure_degree = default.pressure_degree,
     temperature_degree = default.temperature_degree,
-    linearize = True,
+    automatic_jacobian = True,
     stop_when_steady = False,
     steady_relative_tolerance = 1.e-8,
     restart = False,
@@ -216,11 +215,14 @@ def run(
 
             
             # Initialize the functions that we will use to generate our variational form
-            form_factory = forms.FormFactory(W, {'Ra': Ra, 'Pr': Pr, 'Ste': Ste, 'C': C, 'K': K, 'g': g, 'gamma': gamma, 'mu_l': mu_l}, m_B, ddtheta_m_B, regularization)
+            form_factory = forms.FormFactory(W, {'Ra': Ra, 'Pr': Pr, 'Ste': Ste, 'C': C, 'K': K, 'g': g, 'gamma': gamma, 'mu_l': mu_l, 'mu_s': mu_s}, m_B, ddtheta_m_B, regularization)
 
             
             # Make the time step solver
-            solve_time_step = solver.make(form_factory, newton_relative_tolerance, max_newton_iterations, linearize, adaptive_space, adaptive_space_error_tolerance)
+            solve_time_step = solver.make(form_factory=form_factory,
+                newton_relative_tolerance=newton_relative_tolerance,
+                max_newton_iterations=max_newton_iterations,      
+                automatic_jacobian=automatic_jacobian)
             
             
             # Organize boundary conditions
@@ -275,7 +277,7 @@ def run(
         
             steady = True
             
-            if output_times[output_count] == 'final':
+            if output_times[-1] == 'final':
             
                 output_this_time = True
         
@@ -290,9 +292,11 @@ def run(
             
                 h5.write(w_n, "w_n")
                 
-            with h5py.File(restart_filename, "r+") as h5:
-                
-                h5.create_dataset("t", data=current_time)
+            if fenics.dolfin.MPI.rank(fenics.dolfin.mpi_comm_world()) is 0:
+            
+                with h5py.File(restart_filename, "r+") as h5:
+                    
+                    h5.create_dataset("t", data=current_time)
                     
         helpers.print_once('Reached time t = ' + str(current_time))
             

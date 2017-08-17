@@ -29,6 +29,10 @@ def adaptive_time_step(time_step_size, w, w_n, bcs, solve_time_step):
     
         converged = solve_time_step(dt=time_step_size.value, w=w, w_n=w_n, bcs=bcs)
         
+        if not converged:
+        
+            w.assign(w_n)
+        
         if time_step_size.value <= time_step_size.min + dolfin.DOLFIN_EPS:
             
             break;

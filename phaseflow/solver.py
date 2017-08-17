@@ -1,138 +1,33 @@
 import fenics
-import helpers
 
-def make(form_factory, newton_relative_tolerance=1.e-8, max_newton_iterations=12, linearize=False, adaptive_space=False, adaptive_space_error_tolerance=1.e-4):
-    ''' This function allows us to create a time solver function with a consistent interface. Among other reasons for this, the interfaces for the FEniCS classes AdaptiveLinearVariationalSolver and LinearVariationalSolver are not consistent. '''
-    
-    if linearize:
+
+def make(form_factory, newton_relative_tolerance=1.e-8, max_newton_iterations=12, automatic_jacobian=True):
+    ''' This function allows us to create a time solver function with a consistent interface. Among other reasons for this, the interfaces for the FEniCS classes AdaptiveLinearVariationalSolver and LinearVariationalSolver are not consistent. '''  
+            
+    def solve(problem):
         
-        '''w_w was previously a TrialFunction, but must be a Function when defining M and when calling solve(). The details here are opaque to me. Here is a related issue: https://fenicsproject.org/qa/12271/adaptive-stokes-perform-compilation-unable-extract-indices'''
-        w_w = fenics.Function(form_factory.W)
-
-        u_w, p_w, theta_w = fenics.split(w_w)
+        solver = fenics.NonlinearVariationalSolver(problem)
         
-        if not adaptive_space:
-            
-            def solve(A, L, w_w, bcs, M):
-            
-                fenics.solve(A == L, w_w, bcs=bcs, M=M)
-            
-        else:
-                
-            M = fenics.sqrt((u_k[0] - u_w[0])**2 + (theta_k - theta_w)**2)*fenics.dx # @todo Handle n-D
-                
-            def solve(A, L, w_w, bcs, M):
-            
-                problem = fenics.LinearVariationalProblem(A, L, w_w, bcs=bcs)
-
-                solver = fenics.AdaptiveLinearVariationalSolver(problem, M)
-
-                solver.solve(adaptive_space_error_tolerance)
-
-                solver.summary()
-                
-    
-        def solve_time_step(dt, w, w_n, bcs):
-            
-            helpers.print_once("\nIterating Newton method")
-            
-            converged = False
-            
-            iteration_count = 0
-            
-            w_k = w_n.copy(deepcopy=True)
-            
-            u_k, p_k, theta_k = fenics.split(w_k)
-            
-            for k in range(max_newton_iterations):
-            
-                A, L = form_factory.make_newton_linearized_form(dt=dt, w_n=w_n, w_k=w_k)
-                
-                
-                # Adaptive mesh refinement metric
-                M = fenics.sqrt((u_k[0] - u_w[0])**2 + (theta_k - theta_w)**2)*fenics.dx # @todo Handle n-D
-                
-                
-                #
-                solve(A=A, L=L, w_w=w_w, bcs=bcs, M=M)
-
-                w_k.assign(w_k - w_w)
-                
-                norm_residual = fenics.norm(w_w, 'L2')/fenics.norm(w_k, 'L2')
-
-                helpers.print_once("\nL2 norm of relative residual, || w_w || / || w_k || = "+str(norm_residual)+"\n")
-                
-                if norm_residual < newton_relative_tolerance:
-                    
-                    iteration_count = k + 1
-                    
-                    helpers.print_once("Converged after "+str(k)+" iterations")
-                    
-                    converged = True
-                    
-                    break
-                     
-            w.assign(w_k)
-            
-            return converged
-    
-    else:
+        solver.parameters['newton_solver']['maximum_iterations'] = max_newton_iterations
         
-        if not adaptive_space:     
-                
-            def solve(problem):
-                
-                solver = fenics.NonlinearVariationalSolver(problem)
-                
-                solver.parameters['newton_solver']['maximum_iterations'] = max_newton_iterations
-                
-                solver.parameters['newton_solver']['relative_tolerance'] = newton_relative_tolerance
-            
-                solver.parameters['newton_solver']['error_on_nonconvergence'] = False
-            
-                iteration_count, converged = solver.solve()
-                
-                return converged
-                
-        else:
+        solver.parameters['newton_solver']['relative_tolerance'] = newton_relative_tolerance
     
-            def solve(problem, M):
+        solver.parameters['newton_solver']['error_on_nonconvergence'] = False
+    
+        iteration_count, converged = solver.solve()
+        
+        return converged
             
-                solver = fenics.AdaptiveNonlinearVariationalSolver(problem, M)
 
-                solver.solve(adaptive_space_error_tolerance)
+    def solve_time_step(dt, w, w_n, bcs):
 
-                solver.summary()
-                
-                converged = True 
-                
-                return converged
-                
-    
-        def solve_time_step(dt, w, w_n, bcs, pci_refinement_cycles=0):
-    
-            '''  @todo Implement adaptive time for nonlinear version.
-            How to get residual from solver.solve() to check if diverging? 
-            Related: Set solver.parameters.nonlinear_variational_solver.newton_solver["error_on_nonconvergence"] = False and figure out how to read convergence data.'''
-            F = form_factory.make_nonlinear_form(dt=dt, w=w, w_n=w_n)
+        F, J = form_factory.make_nonlinear_form(dt=dt, w_k=w, w_n=w_n, automatic_jacobian=automatic_jacobian)
+        
+        problem = fenics.NonlinearVariationalProblem(F, w, bcs, J)
+        
+        converged = solve(problem=problem)
             
-            J = fenics.derivative(F, w)
-            
-            problem = fenics.NonlinearVariationalProblem(F, w, bcs, J)
-            
-            u, p, theta = fenics.split(w)
-            
-            if adaptive_space:
-            
-                M = fenics.sqrt(u[0]**2 + theta**2)*fenics.dx # @todo Handle n-D
-                
-                converged = solve(problem=problem, M=M)
-            
-            else:
-            
-                converged = solve(problem=problem)
-                
-            return converged
+        return converged
             
         
     return solve_time_step

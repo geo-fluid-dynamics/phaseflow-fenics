@@ -26,7 +26,7 @@ def test_1d_output():
         regularization = {'a_s': 2., 'theta_s': 0.01, 'R_s': 0.005},
         final_time = 0.001,
         time_step_bounds = 0.001,
-        linearize = False)
+        automatic_jacobian=False)
 
         
 def test_1d_velocity():
