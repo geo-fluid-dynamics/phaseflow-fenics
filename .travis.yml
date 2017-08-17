@@ -19,5 +19,5 @@ before_install:
 group: deprecated-2017Q2
 
 script:
-- docker run --rm -P -v `pwd`:/home/fenics/shared -w /home/fenics/shared zimmerman/phaseflow-fenics:latest "mpirun -n 2 python -m pytest -k '(not debug) and (not _1d)'" 
+- docker run --rm -P -v `pwd`:/home/fenics/shared -w /home/fenics/shared zimmerman/phaseflow-fenics:latest "mpirun -n 4 python -m pytest -k '(not debug) and (not _1d)'" 
 - docker run --rm -P -v `pwd`:/home/fenics/shared -w /home/fenics/shared zimmerman/phaseflow-fenics:latest "python -m pytest -k '_1d and (not debug)'" 
