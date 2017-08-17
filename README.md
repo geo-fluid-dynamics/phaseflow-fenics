@@ -65,3 +65,19 @@ Note that the Docker image has phaseflow installed, so in your own Python script
 # For developers:
 ## Project structure
 This project mostly follows the structure suggested by [The Hitchhiker's Guide to Python](http://docs.python-guide.org/en/latest/)
+
+## Updating the Docker image
+We mostly follow the [Docker getting started instructions](https://docs.docker.com/get-started/part2/#build-the-app).
+
+Edit the Dockerfile, then
+
+    docker build -t phaseflow-fenics .
+    
+    docker tag phaseflow-fenics zimmerman/phaseflow-fenics:latest
+    
+    docker push zimmerman/phaseflow-fenics:latest
+
+    
+
+
+
