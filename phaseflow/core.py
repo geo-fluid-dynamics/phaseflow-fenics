@@ -90,13 +90,13 @@ def run(
     output_times = ('initial', 'final'),
     max_pci_refinement_cycles = 0,
     gamma = 1.e-7,
-    newton_relative_tolerance = 1.e-8,
+    newton_relative_tolerance = 1.e-6,
     max_newton_iterations = 12,
     pressure_degree = default.pressure_degree,
     temperature_degree = default.temperature_degree,
     automatic_jacobian = True,
     stop_when_steady = False,
-    steady_relative_tolerance = 1.e-8,
+    steady_relative_tolerance = 1.e-6,
     restart = False,
     debug = False):
     
@@ -236,12 +236,12 @@ def run(
             # Write the initial values                    
             if output_initial_time and fenics.near(current_time, 0.) and (ir is 0):
                 
-                output.write_solution(solution_files, W, w_n, current_time) 
+                output.write_solution(solution_files, w_n, current_time) 
              
              
             #
             converged = time.adaptive_time_step(time_step_size=time_step_size, w=w, w_n=w_n, bcs=bcs,
-                solve_time_step=solve_time_step)
+                solve_time_step=solve_time_step, debug=debug)
             
             
             #
@@ -283,7 +283,7 @@ def run(
         
         if output_this_time:
         
-            output.write_solution(solution_files, W, w, current_time)
+            output.write_solution(solution_files, w, current_time)
             
             # Write checkpoint/restart files
             with fenics.HDF5File(fenics.mpi_comm_world(), restart_filename, "w") as h5:

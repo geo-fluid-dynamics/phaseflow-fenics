@@ -1,6 +1,7 @@
 import fenics
 import dolfin
 import helpers
+import output
 
 
 class TimeStepSize(helpers.BoundedValue):
@@ -21,7 +22,7 @@ class TimeStepSize(helpers.BoundedValue):
             helpers.print_once("Set time step size to dt = "+str(value))
 
 
-def adaptive_time_step(time_step_size, w, w_n, bcs, solve_time_step):
+def adaptive_time_step(time_step_size, w, w_n, bcs, solve_time_step, debug=False):
     
     converged = False
     
@@ -30,6 +31,14 @@ def adaptive_time_step(time_step_size, w, w_n, bcs, solve_time_step):
         converged = solve_time_step(dt=time_step_size.value, w=w, w_n=w_n, bcs=bcs)
         
         if not converged:
+        
+            if debug:
+        
+                newton_files = [fenics.XDMFFile('debug/newton_velocity.xdmf'),
+                    fenics.XDMFFile('debug/newton_pressure.xdmf'),
+                    fenics.XDMFFile('debug/newton_temperature.xdmf')]
+        
+                output.write_solution(newton_files, w, time=-1.) 
         
             w.assign(w_n)
         
@@ -57,8 +66,12 @@ def check(current_time, time_step_size, final_time, output_times, output_count):
         next_time = final_time
     
     if output_times is not ():
+    
+        if output_times[output_count] == 'all':
+        
+            output_this_time = True
 
-        if output_times[output_count] == 'final':
+        elif output_times[output_count] == 'final':
 
             if abs(next_time - final_time) < fenics.dolfin.DOLFIN_EPS:
     
