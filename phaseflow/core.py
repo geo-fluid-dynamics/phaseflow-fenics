@@ -108,7 +108,7 @@ def run(
     
     helpers.mkdir_p(output_dir)
     
-    if fenics.dolfin.MPI.rank(fenics.dolfin.mpi_comm_world()) is 0:
+    if fenics.MPI.rank(fenics.mpi_comm_world()) is 0:
         
         arguments_file = open(output_dir + '/arguments.txt', 'w')
         
@@ -292,7 +292,7 @@ def run(
             
                 h5.write(w_n, "w_n")
                 
-            if fenics.dolfin.MPI.rank(fenics.dolfin.mpi_comm_world()) is 0:
+            if fenics.MPI.rank(fenics.mpi_comm_world()) is 0:
             
                 with h5py.File(restart_filename, "r+") as h5:
                     
