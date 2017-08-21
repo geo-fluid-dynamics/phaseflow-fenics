@@ -90,13 +90,14 @@ def run(
     output_times = ('initial', 'final'),
     max_pci_refinement_cycles = 0,
     gamma = 1.e-7,
-    newton_relative_tolerance = 1.e-6,
-    max_newton_iterations = 12,
+    nlp_method = 'newton',
+    nlp_relative_tolerance = 1.e-8,
+    nlp_max_iterations = 12,
     pressure_degree = default.pressure_degree,
     temperature_degree = default.temperature_degree,
     automatic_jacobian = True,
     stop_when_steady = False,
-    steady_relative_tolerance = 1.e-6,
+    steady_relative_tolerance = 1.e-8,
     restart = False,
     debug = False):
     
@@ -160,11 +161,17 @@ def run(
         
     output_count = 0
     
-    if (output_times is not ()) and (output_times[0] == 'initial'):
+    if (output_times is not ()):
     
-        output_initial_time = True
+        if output_times[0] == 'initial':
         
-        output_count += 1
+            output_initial_time = True
+            
+            output_count += 1
+        
+        if output_times[0] == 'all':
+        
+            output_initial_time = True
         
     else:
     
@@ -220,8 +227,9 @@ def run(
             
             # Make the time step solver
             solve_time_step = solver.make(form_factory=form_factory,
-                newton_relative_tolerance=newton_relative_tolerance,
-                max_newton_iterations=max_newton_iterations,      
+                nlp_relative_tolerance=nlp_relative_tolerance,
+                nlp_max_iterations=nlp_max_iterations,      
+                nlp_method = nlp_method,
                 automatic_jacobian=automatic_jacobian)
             
             
