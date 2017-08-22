@@ -10,14 +10,14 @@ def variable_viscosity():
 
     left_middle = 'near(x[0], 0.) && near(x[1], 0.5)'
 
-    m = 41
+    m = 42
 
     w, mesh = phaseflow.run(
         debug = True,
         automatic_jacobian = False,
         mesh = fenics.UnitSquareMesh(fenics.mpi_comm_world(), m, m, 'crossed'),
-        final_time = 0.3,
-        time_step_bounds = 0.1,
+        final_time = 100.,
+        time_step_bounds = (0.1, 0.1, 10.),
         output_times = ('all',),
         stop_when_steady = True,
         K = 0.,
