@@ -15,9 +15,9 @@ def variable_viscosity():
     w, mesh = phaseflow.run(
         debug = True,
         automatic_jacobian = False,
-        mesh = fenics.UnitSquareMesh(fenics.mpi_comm_world(), m, m, 'crossed'),
-        final_time = 100.,
-        time_step_bounds = (0.1, 0.1, 10.),
+        mesh = fenics.RectangleMesh(fenics.Point(0., -0.25), fenics.Point(1., 1.), m, m, 'crossed'),
+        final_time = 1000.,
+        time_step_bounds = (0.1, 0.1, 1.),
         output_times = ('all',),
         stop_when_steady = True,
         K = 0.,
@@ -30,7 +30,7 @@ def variable_viscosity():
         g = (0., 0.),
         Ste = 1.e16,
         output_dir='output/test_variable_viscosity',
-        initial_values_expression = (lid, "0.", "0.", "1. - 2.*(x[1] <= 0.250000001)"),
+        initial_values_expression = (lid, "0.", "0.", "1. - 2.*(x[1] <= 0.)"),
         boundary_conditions = [
             {'subspace': 0, 'value_expression': ("1.", "0."), 'degree': 3, 'location_expression': lid, 'method': 'topological'},
             {'subspace': 0, 'value_expression': ("0.", "0."), 'degree': 3, 'location_expression': fixed_walls, 'method': 'topological'},
