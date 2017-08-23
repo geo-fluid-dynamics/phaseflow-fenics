@@ -85,9 +85,10 @@ def run(
     mesh=default.mesh,
     initial_values_expression = ("0.", "0.", "0.", "0.5*near(x[0],  0.) -0.5*near(x[0],  1.)"),
     boundary_conditions = [{'subspace': 0, 'value_expression': ("0.", "0."), 'degree': 3, 'location_expression': "near(x[0],  0.) | near(x[0],  1.) | near(x[1], 0.) | near(x[1],  1.)", 'method': 'topological'}, {'subspace': 2, 'value_expression': "0.", 'degree': 2, 'location_expression': "near(x[0],  0.)", 'method': 'topological'}, {'subspace': 2, 'value_expression': "0.", 'degree': 2, 'location_expression': "near(x[0],  1.)", 'method': 'topological'}],
-    final_time = 1.,
+    start_time = 0.,
+    end_time = 1.,
     time_step_bounds = (1.e-3, 1.e-3, 1.),
-    output_times = ('initial', 'final'),
+    output_times = ('start', 'end'),
     max_pci_refinement_cycles = 0,
     gamma = 1.e-7,
     nlp_method = 'newton',
@@ -99,6 +100,7 @@ def run(
     stop_when_steady = False,
     steady_relative_tolerance = 1.e-8,
     restart = False,
+    restart_filepath = '',
     debug = False):
     
         
@@ -130,20 +132,18 @@ def run(
     helpers.print_once("Running "+str(dimensionality)+"D problem")
     
     
-    # Set derived parameters.
-    restart_filename = output_dir+"/restart.hdf5"
-   
-    
     # Initialize time
     if restart:
-
-        with h5py.File(restart_filename, "r") as h5:
+    
+        with h5py.File(restart_filepath, 'r') as h5:
                     
             current_time = h5['t'].value
+            
+            assert(abs(current_time - start_time) < time.TIME_EPS)
     
     else:
     
-        current_time = 0.    
+        current_time = start_time
     
     
     # Open the output file(s)   
@@ -163,28 +163,28 @@ def run(
     
     if (output_times is not ()):
     
-        if output_times[0] == 'initial':
+        if output_times[0] == 'start':
         
-            output_initial_time = True
+            output_start_time = True
             
             output_count += 1
         
         if output_times[0] == 'all':
         
-            output_initial_time = True
+            output_start_time = True
         
     else:
     
-        output_initial_time = False
+        output_start_time = False
         
     if stop_when_steady:
     
         steady = False
     
-    while current_time < (final_time - fenics.dolfin.DOLFIN_EPS):
+    while current_time < (end_time - fenics.dolfin.DOLFIN_EPS):
     
         time_step_size, next_time, output_this_time, output_count = time.check(current_time,
-            time_step_size, final_time, output_times, output_count)
+            time_step_size, end_time, output_times, output_count)
         
         pci_refinement_cycle = 0
             
@@ -210,11 +210,11 @@ def run(
                 
                     mesh = fenics.Mesh()
         
-                    with fenics.HDF5File(mesh.mpi_comm(), restart_filename, 'r') as h5:
+                    with fenics.HDF5File(mesh.mpi_comm(), restart_filepath, 'r') as h5:
                     
-                        h5.read(mesh, "mesh", True)
+                        h5.read(mesh, 'mesh', True)
                     
-                        h5.read(w_n, "w_n")
+                        h5.read(w_n, 'w_n')
                     
                 else:
             
@@ -242,7 +242,7 @@ def run(
             
 
             # Write the initial values                    
-            if output_initial_time and fenics.near(current_time, 0.) and (ir is 0):
+            if output_start_time and fenics.near(current_time, 0.) and (ir is 0):
                 
                 output.write_solution(solution_files, w_n, current_time) 
              
@@ -285,7 +285,7 @@ def run(
         
             steady = True
             
-            if output_times[-1] == 'final':
+            if output_times[-1] == 'end':
             
                 output_this_time = True
         
@@ -294,39 +294,41 @@ def run(
             output.write_solution(solution_files, w, current_time)
             
             # Write checkpoint/restart files
-            with fenics.HDF5File(fenics.mpi_comm_world(), restart_filename, "w") as h5:
-    
-                h5.write(mesh, "mesh")
+            restart_filepath = output_dir+'/restart_t'+str(current_time)+'.hdf5'
             
-                h5.write(w_n, "w_n")
+            with fenics.HDF5File(fenics.mpi_comm_world(), restart_filepath, 'w') as h5:
+    
+                h5.write(mesh, 'mesh')
+            
+                h5.write(w_n, 'w_n')
                 
             if fenics.MPI.rank(fenics.mpi_comm_world()) is 0:
             
-                with h5py.File(restart_filename, "r+") as h5:
+                with h5py.File(restart_filepath, 'r+') as h5:
                     
-                    h5.create_dataset("t", data=current_time)
+                    h5.create_dataset('t', data=current_time)
                     
-        helpers.print_once('Reached time t = ' + str(current_time))
+        helpers.print_once("Reached time t = " + str(current_time))
             
         if stop_when_steady and steady:
         
-            helpers.print_once('Reached steady state at time t = ' + str(current_time))
+            helpers.print_once("Reached steady state at time t = " + str(current_time))
             
             break
 
         w_n.assign(w)  # The current solution becomes the new initial values
         
-        progress.update(current_time / final_time)
+        progress.update(current_time / end_time)
         
         time_step_size.set(2*time_step_size.value) # @todo: Encapsulate the adaptive time stepping
             
-    if current_time >= (final_time - fenics.dolfin.DOLFIN_EPS):
+    if current_time >= (end_time - fenics.dolfin.DOLFIN_EPS):
     
-        helpers.print_once("Reached final time, t = "+str(final_time))
+        helpers.print_once("Reached end time, t = "+str(end_time))
     
     
     # Return the interpolant to sample inside of Python
-    w_n.rename("w", "state")
+    w_n.rename('w', "state")
         
     fe_field_interpolant = fenics.interpolate(w_n.leaf_node(), W)
     

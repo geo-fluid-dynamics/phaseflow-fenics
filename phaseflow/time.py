@@ -15,7 +15,7 @@ class TimeStepSize(helpers.BoundedValue):
     
     def set(self, value):
     
-        assert(value > TIME_EPS)
+        assert(value > -TIME_EPS)
         
         old_value = self.value
         
@@ -57,15 +57,15 @@ def adaptive_time_step(time_step_size, w, w_n, bcs, solve_time_step, debug=False
     return converged
    
    
-def check(current_time, time_step_size, final_time, output_times, output_count):
+def check(current_time, time_step_size, end_time, output_times, output_count):
 
     output_this_time = False
         
     next_time = current_time + time_step_size.value
     
-    if next_time > final_time:
+    if next_time > end_time:
     
-        next_time = final_time
+        next_time = end_time
         
         time_step_size.set(next_time - current_time)
     
@@ -79,9 +79,9 @@ def check(current_time, time_step_size, final_time, output_times, output_count):
             
             time_step_size.set(next_time - current_time)
         
-        if next_output_time == 'final':
+        if next_output_time == 'end':
            
-            next_output_time = final_time
+            next_output_time = end_time
     
         if output_times[output_count] == 'all':
         
