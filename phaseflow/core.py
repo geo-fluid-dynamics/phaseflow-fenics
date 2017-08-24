@@ -21,7 +21,7 @@ import h5py
 import helpers
 import globals
 import default
-import forms
+import problem
 import solver
 import time
 import refine
@@ -90,8 +90,10 @@ def run(
     time_step_bounds = (1.e-3, 1.e-3, 1.),
     output_times = ('start', 'end'),
     max_pci_refinement_cycles = 0,
+    initial_pci_refinement_cycles = 0,
     gamma = 1.e-7,
     nlp_method = 'newton',
+    nlp_absolute_tolerance = 1.,
     nlp_relative_tolerance = 1.e-8,
     nlp_max_iterations = 12,
     pressure_degree = default.pressure_degree,
@@ -181,13 +183,13 @@ def run(
     
         steady = False
     
+    pci_refinement_cycle = 0
+    
     while current_time < (end_time - fenics.dolfin.DOLFIN_EPS):
     
         time_step_size, next_time, output_this_time, output_count = time.check(current_time,
             time_step_size, end_time, output_times, output_count)
         
-        pci_refinement_cycle = 0
-            
         for ir in range(max_pci_refinement_cycles + 1):
         
             # Define function spaces and solution function
@@ -220,13 +222,22 @@ def run(
             
                     w_n = fenics.project(w_n, W)
 
+            if pci_refinement_cycle < initial_pci_refinement_cycles:
             
+                mesh = refine.refine_pci(regularization, pci_refinement_cycle, mesh, w_n)
+                
+                pci_refinement_cycle += 1
+                
+                continue
+                
+                
             # Initialize the functions that we will use to generate our variational form
-            form_factory = forms.FormFactory(W, {'Ra': Ra, 'Pr': Pr, 'Ste': Ste, 'C': C, 'K': K, 'g': g, 'gamma': gamma, 'mu_l': mu_l, 'mu_s': mu_s}, m_B, ddtheta_m_B, regularization)
+            form_factory = problem.FormFactory(W, {'Ra': Ra, 'Pr': Pr, 'Ste': Ste, 'C': C, 'K': K, 'g': g, 'gamma': gamma, 'mu_l': mu_l, 'mu_s': mu_s}, m_B, ddtheta_m_B, regularization)
 
             
             # Make the time step solver
             solve_time_step = solver.make(form_factory=form_factory,
+                nlp_absolute_tolerance=nlp_absolute_tolerance,
                 nlp_relative_tolerance=nlp_relative_tolerance,
                 nlp_max_iterations=nlp_max_iterations,      
                 nlp_method = nlp_method,
@@ -264,19 +275,10 @@ def run(
 
                 break
                 
+            mesh = refine.refine_pci(regularization, pci_refinement_cycle, mesh, w) # @todo Use w_n or w?
+                
             pci_refinement_cycle = pci_refinement_cycle + 1
             
-            contains_pci = refine.mark_pci_cells(regularization, mesh, w)
-
-            pci_cell_count = sum(contains_pci)
-
-            assert(pci_cell_count > 0)
-
-            helpers.print_once("PCI Refinement cycle #"+str(pci_refinement_cycle)+
-                ": Refining "+str(pci_cell_count)+" cells containing the PCI.")
-
-            mesh = fenics.refine(mesh, contains_pci)                    
-                
         assert(converged)
         
         current_time += time_step_size.value
