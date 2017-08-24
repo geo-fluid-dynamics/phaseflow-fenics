@@ -192,34 +192,39 @@ def run(
         
         for ir in range(max_pci_refinement_cycles + 1):
         
-            # Define function spaces and solution function
-            W, W_ele = function_spaces(mesh, pressure_degree, temperature_degree)
-
-            w = fenics.Function(W)
+        
+            # Define function spaces and solution function and set the initial values
+            if restart and (ir == 0):
             
-            
-            # Set the initial values
-            if fenics.near(current_time, 0.):
-            
-                w_n = fenics.interpolate(fenics.Expression(initial_values_expression,
-                    element=W_ele), W)
+                mesh = fenics.Mesh()
+                
+                with fenics.HDF5File(mesh.mpi_comm(), restart_filepath, 'r') as h5:
+                
+                    h5.read(mesh, 'mesh', True)
                     
+                W, W_ele = function_spaces(mesh, pressure_degree, temperature_degree)
+            
+                w_n = fenics.Function(W)
+                
+                with fenics.HDF5File(mesh.mpi_comm(), restart_filepath, 'r') as h5:
+                
+                    h5.read(w_n, 'w')
+                    
+                w = fenics.Function(W)
+                
             else:
             
-                if restart and (ir == 0):
+                W, W_ele = function_spaces(mesh, pressure_degree, temperature_degree)
+
+                w = fenics.Function(W)
                 
-                    w_n = fenics.Function(W)
-                
-                    mesh = fenics.Mesh()
+                if fenics.near(current_time, start_time):
         
-                    with fenics.HDF5File(mesh.mpi_comm(), restart_filepath, 'r') as h5:
-                    
-                        h5.read(mesh, 'mesh', True)
-                    
-                        h5.read(w_n, 'w_n')
-                    
+                    w_n = fenics.interpolate(fenics.Expression(initial_values_expression,
+                        element=W_ele), W)
+                
                 else:
-            
+        
                     w_n = fenics.project(w_n, W)
 
             if pci_refinement_cycle < initial_pci_refinement_cycles:
@@ -253,7 +258,7 @@ def run(
             
 
             # Write the initial values                    
-            if output_start_time and fenics.near(current_time, 0.) and (ir is 0):
+            if output_start_time and fenics.near(current_time, start_time) and (ir is 0):
                 
                 output.write_solution(solution_files, w_n, current_time) 
              
@@ -302,7 +307,7 @@ def run(
     
                 h5.write(mesh, 'mesh')
             
-                h5.write(w_n, 'w_n')
+                h5.write(w, 'w')
                 
             if fenics.MPI.rank(fenics.mpi_comm_world()) is 0:
             
