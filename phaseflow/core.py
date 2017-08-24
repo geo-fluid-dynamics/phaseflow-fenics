@@ -92,7 +92,7 @@ def run(
     max_pci_refinement_cycles = 0,
     initial_pci_refinement_cycles = 0,
     gamma = 1.e-7,
-    nlp_method = 'newton',
+    custom_newton = True,
     nlp_absolute_tolerance = 1.,
     nlp_relative_tolerance = 1.e-8,
     nlp_max_iterations = 12,
@@ -193,7 +193,13 @@ def run(
         for ir in range(max_pci_refinement_cycles + 1):
         
         
-            # Define function spaces and solution function and set the initial values
+            # Define function spaces and solution function 
+            W, W_ele = function_spaces(mesh, pressure_degree, temperature_degree)
+
+            w = fenics.Function(W)
+            
+            
+            # Set the initial values
             if restart and (ir == 0):
             
                 mesh = fenics.Mesh()
@@ -213,10 +219,6 @@ def run(
                 w = fenics.Function(W)
                 
             else:
-            
-                W, W_ele = function_spaces(mesh, pressure_degree, temperature_degree)
-
-                w = fenics.Function(W)
                 
                 if fenics.near(current_time, start_time):
         
@@ -241,12 +243,12 @@ def run(
 
             
             # Make the time step solver
-            solve_time_step = solver.make(form_factory=form_factory,
-                nlp_absolute_tolerance=nlp_absolute_tolerance,
-                nlp_relative_tolerance=nlp_relative_tolerance,
-                nlp_max_iterations=nlp_max_iterations,      
-                nlp_method = nlp_method,
-                automatic_jacobian=automatic_jacobian)
+            solve_time_step = solver.make(form_factory = form_factory,
+                nlp_absolute_tolerance = nlp_absolute_tolerance,
+                nlp_relative_tolerance = nlp_relative_tolerance,
+                nlp_max_iterations = nlp_max_iterations,
+                custom_newton = custom_newton,
+                automatic_jacobian = automatic_jacobian)
             
             
             # Organize boundary conditions
@@ -254,7 +256,8 @@ def run(
             
             for item in boundary_conditions:
             
-                bcs.append(fenics.DirichletBC(W.sub(item['subspace']), item['value_expression'], item['location_expression'], method=item['method']))
+                bcs.append(fenics.DirichletBC(W.sub(item['subspace']), item['value_expression'],
+                    item['location_expression'], method=item['method']))
             
 
             # Write the initial values                    

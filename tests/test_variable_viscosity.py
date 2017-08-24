@@ -71,14 +71,14 @@ def variable_viscosity(m=20, start_time = 0., end_time = 1000., time_step_bounds
             {'subspace': 1, 'value_expression': "0.", 'degree': 2, 'location_expression': left_middle, 'method': 'pointwise'}])
 
             
-def test_debug_variable_viscosity():
+def test_variable_viscosity():
 
-    variable_viscosity(end_time = 20., time_step_bounds = (0.1, 0.1, 2.), 
-        output_times = ('start', 0.1, 1., 10., 'end'),
+    variable_viscosity(end_time = 20., time_step_bounds = (0.1, 0.1, 3.), 
+        output_times = ('start', 'end'),
         theta_s = -0.01, R_s = 0.01, )
     
     
 if __name__=='__main__':
 
-    test_debug_variable_viscosity()
+    test_variable_viscosity()
     
