@@ -85,6 +85,7 @@ def run(
     mesh=default.mesh,
     initial_values_expression = ("0.", "0.", "0.", "0.5*near(x[0],  0.) -0.5*near(x[0],  1.)"),
     boundary_conditions = [{'subspace': 0, 'value_expression': ("0.", "0."), 'degree': 3, 'location_expression': "near(x[0],  0.) | near(x[0],  1.) | near(x[1], 0.) | near(x[1],  1.)", 'method': 'topological'}, {'subspace': 2, 'value_expression': "0.", 'degree': 2, 'location_expression': "near(x[0],  0.)", 'method': 'topological'}, {'subspace': 2, 'value_expression': "0.", 'degree': 2, 'location_expression': "near(x[0],  1.)", 'method': 'topological'}],
+    initial_time = 0.,
     final_time = 1.,
     time_step_bounds = (1.e-3, 1.e-3, 1.),
     output_times = ('initial', 'final'),
@@ -100,6 +101,7 @@ def run(
     stop_when_steady = False,
     steady_relative_tolerance = 1.e-8,
     restart = False,
+    restart_filepath = '',
     debug = False):
     
         
@@ -131,20 +133,18 @@ def run(
     helpers.print_once("Running "+str(dimensionality)+"D problem")
     
     
-    # Set derived parameters.
-    restart_filename = output_dir+"/restart.hdf5"
-   
-    
     # Initialize time
     if restart:
-
-        with h5py.File(restart_filename, "r") as h5:
+    
+        with h5py.File(restart_filepath, 'r') as h5:
                     
             current_time = h5['t'].value
+            
+            assert(abs(current_time - initial_time) < time.TIME_EPS)
     
     else:
     
-        current_time = 0.    
+        current_time = initial_time 
     
     
     # Open the output file(s)   
@@ -192,27 +192,33 @@ def run(
             
             
             # Set the initial values
-            if fenics.near(current_time, 0.):
+            if restart and (ir == 0):
             
-                w_n = fenics.interpolate(fenics.Expression(initial_values_expression,
-                    element=W_ele), W)
+                mesh = fenics.Mesh()
+                
+                with fenics.HDF5File(mesh.mpi_comm(), restart_filepath, 'r') as h5:
+                
+                    h5.read(mesh, 'mesh', True)
                     
+                W, W_ele = function_spaces(mesh, pressure_degree, temperature_degree)
+            
+                w_n = fenics.Function(W)
+                
+                with fenics.HDF5File(mesh.mpi_comm(), restart_filepath, 'r') as h5:
+                
+                    h5.read(w_n, 'w')
+                    
+                w = fenics.Function(W)
+                
             else:
-            
-                if restart and (ir == 0):
                 
-                    w_n = fenics.Function(W)
-                
-                    mesh = fenics.Mesh()
+                if fenics.near(current_time, initial_time):
         
-                    with fenics.HDF5File(mesh.mpi_comm(), restart_filename, 'r') as h5:
-                    
-                        h5.read(mesh, "mesh", True)
-                    
-                        h5.read(w_n, "w_n")
-                    
+                    w_n = fenics.interpolate(fenics.Expression(initial_values_expression,
+                        element=W_ele), W)
+                
                 else:
-            
+        
                     w_n = fenics.project(w_n, W)
 
             
@@ -290,23 +296,25 @@ def run(
             output.write_solution(solution_files, W, w, current_time)
             
             # Write checkpoint/restart files
-            with fenics.HDF5File(fenics.mpi_comm_world(), restart_filename, "w") as h5:
-    
-                h5.write(mesh, "mesh")
+            restart_filepath = output_dir+'/restart_t'+str(current_time)+'.hdf5'
             
-                h5.write(w_n, "w_n")
+            with fenics.HDF5File(fenics.mpi_comm_world(), restart_filepath, 'w') as h5:
+    
+                h5.write(mesh, 'mesh')
+            
+                h5.write(w, 'w')
                 
             if fenics.MPI.rank(fenics.mpi_comm_world()) is 0:
             
-                with h5py.File(restart_filename, "r+") as h5:
+                with h5py.File(restart_filepath, 'r+') as h5:
                     
-                    h5.create_dataset("t", data=current_time)
+                    h5.create_dataset('t', data=current_time)
                     
-        helpers.print_once('Reached time t = ' + str(current_time))
+        helpers.print_once("Reached time t = " + str(current_time))
             
         if stop_when_steady and steady:
         
-            helpers.print_once('Reached steady state at time t = ' + str(current_time))
+            helpers.print_once("Reached steady state at time t = " + str(current_time))
             
             break
 

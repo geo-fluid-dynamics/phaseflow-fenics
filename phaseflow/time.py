@@ -3,6 +3,8 @@ import dolfin
 import helpers
 
 
+TIME_EPS = 1.e-8
+
 class TimeStepSize(helpers.BoundedValue):
 
     def __init__(self, bounded_value):
@@ -11,6 +13,8 @@ class TimeStepSize(helpers.BoundedValue):
 
     
     def set(self, value):
+    
+        assert(value > TIME_EPS)
     
         old_value = self.value
         
@@ -49,37 +53,37 @@ def check(current_time, time_step_size, final_time, output_times, output_count):
     output_this_time = False
         
     next_time = current_time + time_step_size.value
-
+    
     if next_time > final_time:
     
-        time_step_size.set(final_time - current_time)
-        
         next_time = final_time
+        
+        time_step_size.set(next_time - current_time)
     
     if output_times is not ():
-
-        if output_times[output_count] == 'final':
-
-            if abs(next_time - final_time) < fenics.dolfin.DOLFIN_EPS:
     
-                output_this_time = True
-                
-                output_count += 1
+        next_output_time = output_times[output_count]
+        
+        if next_time > next_output_time:
+        
+            next_time = next_output_time
             
-        elif output_count < len(output_times):
+            time_step_size.set(next_time - current_time)
         
-            time_to_next_output = output_times[output_count] - current_time
-
-            if time_step_size.value > time_to_next_output:
-                
-                time_step_size.set(time_to_next_output)
-        
-            if abs(time_to_next_output - time_step_size.value) < fenics.dolfin.DOLFIN_EPS:
-                
-                output_this_time = True
+        if next_output_time == 'final':
+           
+            next_output_time = final_time
     
-                output_count += 1
-                
+        if output_times[output_count] == 'all':
+        
+            next_output_time = next_time
+            
+        if abs(next_time - next_output_time) < TIME_EPS:
+    
+            output_this_time = True
+            
+            output_count += 1
+            
     return time_step_size, next_time, output_this_time, output_count 
    
 
