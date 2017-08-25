@@ -24,7 +24,7 @@ def test_1d_output():
             {'subspace': 2, 'value_expression': theta_h, 'degree': 2, 'location_expression': "near(x[0],  0.)", 'method': "topological"},
             {'subspace': 2, 'value_expression': theta_c, 'degree': 2, 'location_expression': "near(x[0],  1.)", 'method': "topological"}],
         regularization = {'a_s': 2., 'theta_s': 0.01, 'R_s': 0.005},
-        final_time = 0.001,
+        end_time = 0.001,
         time_step_bounds = 0.001,
         automatic_jacobian=False)
 

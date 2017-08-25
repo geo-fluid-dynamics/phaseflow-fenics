@@ -24,14 +24,13 @@ class CustomNewtonSolver(fenics.NewtonSolver):
 
         
 ''' Create a time solver function with a consistent interface.
-Among other reasons for this, the interfaces for the FEniCS classes 
-AdaptiveLinearVariationalSolver and LinearVariationalSolver are not consistent. '''  
+Among other reasons for this, the interfaces for the FEniCS classes AdaptiveLinearVariationalSolver and LinearVariationalSolver are not consistent. '''  
 def make(form_factory,
-        newton_absolute_tolerance = 1.,
-        newton_relative_tolerance = 1.e-8,
-        newton_max_iterations = 12,
-        newton_custom_convergence = True,
-        automatic_jacobian = True):        
+        nlp_absolute_tolerance=1.,
+        nlp_relative_tolerance=1.e-8,
+        nlp_max_iterations=12,
+        custom_newton=True,
+        automatic_jacobian=True):
 
     '''
     Currently we have the option for which Newton solver to use for two reasons:
@@ -39,17 +38,17 @@ def make(form_factory,
     2. The wang tests are failing since adding the CustomNewtonSolver (among other changes). As of
        this writing, the tests also fail with the original Newton solver.
     '''
-    if newton_custom_convergence:
+    if custom_newton:
     
         def solve(problem, w):
         
             solver = CustomNewtonSolver()
         
-            solver.parameters['maximum_iterations'] = newton_max_iterations
+            solver.parameters['maximum_iterations'] = nlp_max_iterations
         
-            solver.parameters['absolute_tolerance'] = newton_absolute_tolerance
+            solver.parameters['absolute_tolerance'] = nlp_absolute_tolerance
             
-            solver.parameters['relative_tolerance'] = newton_relative_tolerance
+            solver.parameters['relative_tolerance'] = nlp_relative_tolerance
         
             solver.parameters['error_on_nonconvergence'] = False
         
@@ -79,7 +78,7 @@ def make(form_factory,
 
         F, J = form_factory.make_nonlinear_form(dt=dt, w_k=w, w_n=w_n, automatic_jacobian=automatic_jacobian)
         
-        if newton_custom_convergence:
+        if custom_newton:
         
             problem = phaseflow.problem.Problem(J, F, bcs)
             
