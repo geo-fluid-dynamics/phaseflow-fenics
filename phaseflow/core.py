@@ -21,7 +21,7 @@ import h5py
 import helpers
 import globals
 import default
-import forms
+import problem
 import solver
 import time
 import refine
@@ -90,8 +90,10 @@ def run(
     output_times = ('initial', 'final'),
     max_pci_refinement_cycles = 0,
     gamma = 1.e-7,
+    newton_absolute_tolerance = 1.,
     newton_relative_tolerance = 1.e-8,
-    max_newton_iterations = 12,
+    newton_max_iterations = 12,
+    newton_custom_convergence = True,
     pressure_degree = default.pressure_degree,
     temperature_degree = default.temperature_degree,
     automatic_jacobian = True,
@@ -215,13 +217,15 @@ def run(
 
             
             # Initialize the functions that we will use to generate our variational form
-            form_factory = forms.FormFactory(W, {'Ra': Ra, 'Pr': Pr, 'Ste': Ste, 'C': C, 'K': K, 'g': g, 'gamma': gamma, 'mu_l': mu_l, 'mu_s': mu_s}, m_B, ddtheta_m_B, regularization)
+            form_factory = problem.FormFactory(W, {'Ra': Ra, 'Pr': Pr, 'Ste': Ste, 'C': C, 'K': K, 'g': g, 'gamma': gamma, 'mu_l': mu_l, 'mu_s': mu_s}, m_B, ddtheta_m_B, regularization)
 
             
             # Make the time step solver
             solve_time_step = solver.make(form_factory=form_factory,
+                newton_absolute_tolerance=newton_absolute_tolerance,
                 newton_relative_tolerance=newton_relative_tolerance,
-                max_newton_iterations=max_newton_iterations,      
+                newton_max_iterations=newton_max_iterations,  
+                newton_custom_convergence = newton_custom_convergence,
                 automatic_jacobian=automatic_jacobian)
             
             

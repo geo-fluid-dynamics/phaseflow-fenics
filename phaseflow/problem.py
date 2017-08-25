@@ -128,4 +128,31 @@ class FormFactory():
 
         
         return F, JF
+
+
+class Problem(fenics.NonlinearProblem):
+
+    def __init__(self, a, L, bcs):
+
+        fenics.NonlinearProblem.__init__(self)
+        
+        self.a = a
+        
+        self.L = L
+        
+        self.bcs = bcs
+        
+
+    def F(self, b, x):
+
+        assembler = fenics.SystemAssembler(self.a, self.L, self.bcs)
+        
+        assembler.assemble(b, x)
+        
+        
+    def J(self, A, x):
+
+        assembler = fenics.SystemAssembler(self.a, self.L, self.bcs)
+        
+        assembler.assemble(A)
         
