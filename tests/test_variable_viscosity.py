@@ -69,6 +69,8 @@ def variable_viscosity(m=20, start_time = 0., end_time = 1000., time_step_bounds
             {'subspace': 0, 'value_expression': ("1.", "0."), 'degree': 3, 'location_expression': lid, 'method': 'topological'},
             {'subspace': 0, 'value_expression': ("0.", "0."), 'degree': 3, 'location_expression': fixed_walls, 'method': 'topological'},
             {'subspace': 1, 'value_expression': "0.", 'degree': 2, 'location_expression': left_middle, 'method': 'pointwise'}])
+            
+    verify_against_ghia1982(w, mesh)
 
             
 def test_variable_viscosity():
