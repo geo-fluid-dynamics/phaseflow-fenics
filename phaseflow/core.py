@@ -153,7 +153,7 @@ def run(
     to avoid duplicate mesh storage when appropriate 
     per https://fenicsproject.org/qa/3051/parallel-output-of-a-time-series-in-hdf5-format '''
 
-    solution_files = [fenics.XDMFFile(output_dir + '/velocity.xdmf'), fenics.XDMFFile(output_dir + '/pressure.xdmf'), fenics.XDMFFile(output_dir + '/temperature.xdmf')]
+    solution_file = fenics.XDMFFile(output_dir + '/solution.xdmf')
 
     
     # Solve each time step
@@ -263,7 +263,7 @@ def run(
             # Write the initial values                    
             if output_start_time and fenics.near(current_time, start_time):
                 
-                output.write_solution(solution_files, w_n, current_time) 
+                output.write_solution(solution_file, w_n, current_time) 
              
              
             #
@@ -301,7 +301,7 @@ def run(
         
         if output_this_time:
         
-            output.write_solution(solution_files, w, current_time)
+            output.write_solution(solution_file, w, current_time)
             
             # Write checkpoint/restart files
             restart_filepath = output_dir+'/restart_t'+str(current_time)+'.hdf5'
