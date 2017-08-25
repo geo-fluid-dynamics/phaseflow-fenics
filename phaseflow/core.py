@@ -96,6 +96,8 @@ def run(
     nlp_absolute_tolerance = 1.,
     nlp_relative_tolerance = 1.e-8,
     nlp_max_iterations = 12,
+    nlp_divergence_threshold = 1.e12,
+    nlp_relaxation = 1.,
     pressure_degree = default.pressure_degree,
     temperature_degree = default.temperature_degree,
     automatic_jacobian = True,
@@ -246,6 +248,8 @@ def run(
                     nlp_absolute_tolerance = nlp_absolute_tolerance,
                     nlp_relative_tolerance = nlp_relative_tolerance,
                     nlp_max_iterations = nlp_max_iterations,
+                    nlp_divergence_threshold = nlp_divergence_threshold,
+                    nlp_relaxation = nlp_relaxation,
                     custom_newton = custom_newton,
                     automatic_jacobian = automatic_jacobian)
                 
