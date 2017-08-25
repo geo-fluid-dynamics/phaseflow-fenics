@@ -59,7 +59,7 @@ def wang2010_natural_convection_air(output_dir='output/test_wang2010_natural_con
         debug = True,
         restart = restart,
         restart_filepath = output_dir+'/restart_t'+str(start_time)+'.hdf5')
-        
+
     return w, mesh
     
     
@@ -73,7 +73,7 @@ def test_debug_wang2010_natural_convection_air_autoJ():
 @pytest.mark.dependency()
 def test_wang2010_natural_convection_air_manualJ():
     
-    w, mesh = wang2010_natural_convection_air(automatic_jacobian=False)
+    w, mesh = wang2010_natural_convection_air(end_time = 10., automatic_jacobian=False)
         
     verify_against_wang2010(w, mesh)
     
@@ -158,7 +158,7 @@ def regression_natural_convection_water(automatic_jacobian=False):
         ddtheta_m_B = lambda theta : -Ra/(Pr*Re*Re)/(beta*(T_h - T_c))*(ddtheta_rho(theta))/rho(theta_f),
         mesh = fenics.UnitSquareMesh(m, m, 'crossed'),
         time_step_bounds = (0.001, 0.005, 0.005),
-        final_time = 0.18,
+        end_time = 0.18,
         output_times = (),
         automatic_jacobian = False,
         initial_values_expression = (

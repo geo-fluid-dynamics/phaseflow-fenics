@@ -1,6 +1,8 @@
 import fenics
 import numpy
 
+import helpers
+
 
 solution_at_point = numpy.array([1.e32, 1.e32, 1.e32, 1.e32, 1.e32], dtype=numpy.float_) # Oversized for up to 3D
 
@@ -39,3 +41,19 @@ def mark_pci_cells(regularization, mesh, w):
             contains_pci[cell] = True
                 
     return contains_pci
+    
+    
+def refine_pci(regularization, pci_refinement_cycle, mesh, w):
+
+    contains_pci = mark_pci_cells(regularization, mesh, w)
+
+    pci_cell_count = sum(contains_pci)
+
+    assert(pci_cell_count > 0)
+
+    helpers.print_once("PCI Refinement cycle #"+str(pci_refinement_cycle)+
+        ": Refining "+str(pci_cell_count)+" cells containing the PCI.")
+
+    mesh = fenics.refine(mesh, contains_pci)
+    
+    return mesh

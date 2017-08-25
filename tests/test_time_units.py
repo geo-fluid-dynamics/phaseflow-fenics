@@ -14,7 +14,7 @@ def test_time_check():
     ''' Here we set output times such that an additional time point at 0.5 will be added,
         and so output at times t = 2. will be skipped.
         The time step size will automatically be reduced to 0.5'''
-    output_times = ('initial', 0.5, 1., 'final')
+    output_times = ('start', 0.5, 1., 'end')
                 
     output_this_time = True
     
