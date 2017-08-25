@@ -1,6 +1,7 @@
 import fenics
 import dolfin
 import helpers
+import output
 
 
 TIME_EPS = 1.e-8
@@ -15,7 +16,7 @@ class TimeStepSize(helpers.BoundedValue):
     def set(self, value):
     
         assert(value > TIME_EPS)
-    
+
         old_value = self.value
         
         super(TimeStepSize, self).set(value)
@@ -25,7 +26,7 @@ class TimeStepSize(helpers.BoundedValue):
             helpers.print_once("Set time step size to dt = "+str(value))
 
 
-def adaptive_time_step(time_step_size, w, w_n, bcs, solve_time_step):
+def adaptive_time_step(time_step_size, w, w_n, bcs, solve_time_step, debug=False):
     
     converged = False
     
@@ -34,6 +35,14 @@ def adaptive_time_step(time_step_size, w, w_n, bcs, solve_time_step):
         converged = solve_time_step(dt=time_step_size.value, w=w, w_n=w_n, bcs=bcs)
         
         if not converged:
+        
+            if debug:
+        
+                newton_files = [fenics.XDMFFile('debug/newton_velocity.xdmf'),
+                    fenics.XDMFFile('debug/newton_pressure.xdmf'),
+                    fenics.XDMFFile('debug/newton_temperature.xdmf')]
+        
+                output.write_solution(newton_files, w, time=-1.) 
         
             w.assign(w_n)
         
@@ -48,15 +57,15 @@ def adaptive_time_step(time_step_size, w, w_n, bcs, solve_time_step):
     return converged
    
    
-def check(current_time, time_step_size, final_time, output_times, output_count):
+def check(current_time, time_step_size, end_time, output_times, output_count):
 
     output_this_time = False
         
     next_time = current_time + time_step_size.value
+
+    if next_time > end_time:
     
-    if next_time > final_time:
-    
-        next_time = final_time
+        next_time = end_time
         
         time_step_size.set(next_time - current_time)
     
@@ -70,9 +79,9 @@ def check(current_time, time_step_size, final_time, output_times, output_count):
             
             time_step_size.set(next_time - current_time)
         
-        if next_output_time == 'final':
+        if next_output_time == 'end':
            
-            next_output_time = final_time
+            next_output_time = end_time
     
         if output_times[output_count] == 'all':
         

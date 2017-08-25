@@ -32,8 +32,8 @@ def stefan_problem(Ste = 1.,
     a_s = 2.,
     R_s = 0.005,
     dt = 0.001,
-    final_time = 0.01,
-    newton_relative_tolerance = 1.e-3,
+    end_time = 0.01,
+    nlp_relative_tolerance = 1.e-3,
     initial_uniform_cell_count = 1,
     hot_boundary_refinement_cycles = 10,
     max_pci_refinement_cycles = 10,
@@ -86,10 +86,10 @@ def stefan_problem(Ste = 1.,
             {'subspace': 2, 'value_expression': theta_h, 'degree': 2, 'location_expression': "near(x[0],  0.)", 'method': "topological"},
             {'subspace': 2, 'value_expression': theta_c, 'degree': 2, 'location_expression': "near(x[0],  1.)", 'method': "topological"}],
         regularization = {'a_s': 2., 'theta_s': 0.01, 'R_s': R_s},
-        newton_relative_tolerance = newton_relative_tolerance,
-        final_time = final_time,
+        nlp_relative_tolerance = nlp_relative_tolerance,
+        end_time = end_time,
         time_step_bounds = dt,
-        output_times = ('initial', 'final'),
+        output_times = ('start', 'end'),
         automatic_jacobian = automatic_jacobian)
         
     return w
@@ -97,15 +97,15 @@ def stefan_problem(Ste = 1.,
         
 def test_stefan_problem_vary_Ste():
 
-    for p in [{'Ste': 1., 'R_s': 0.005, 'dt': 0.001, 'final_time': 0.01, 'initial_uniform_cell_count': 1, 'newton_relative_tolerance': 1.e-3},
-        {'Ste': 0.1, 'R_s': 0.05, 'dt': 0.0001, 'final_time': 0.01, 'initial_uniform_cell_count': 10, 'newton_relative_tolerance': 1.e-4}]:
+    for p in [{'Ste': 1., 'R_s': 0.005, 'dt': 0.001, 'end_time': 0.01, 'initial_uniform_cell_count': 1, 'nlp_relative_tolerance': 1.e-3},
+        {'Ste': 0.1, 'R_s': 0.05, 'dt': 0.0001, 'end_time': 0.01, 'initial_uniform_cell_count': 10, 'nlp_relative_tolerance': 1.e-4}]:
         ''' The Ste = 0.01 case takes too long to include in the standard test suite. Maybe something reasonable
         can be done with different parameters and with a different final time. The following should run,
         but took almost thirty minutes on my laptop:
-        {'Ste': 0.01, 'R_s': 0.1, 'dt': 0.0001, 'final_time': 0.1, 'initial_uniform_cell_count': 100, 'newton_relative_tolerance': 1.e-4}]'''
+        {'Ste': 0.01, 'R_s': 0.1, 'dt': 0.0001, 'end_time': 0.1, 'initial_uniform_cell_count': 100, 'nlp_relative_tolerance': 1.e-4}]'''
         
-        w = stefan_problem(Ste=p['Ste'], R_s=p['R_s'], dt=p['dt'], final_time = p['final_time'],
-            initial_uniform_cell_count=p['initial_uniform_cell_count'], newton_relative_tolerance=p['newton_relative_tolerance'], automatic_jacobian = False)
+        w = stefan_problem(Ste=p['Ste'], R_s=p['R_s'], dt=p['dt'], end_time = p['end_time'],
+            initial_uniform_cell_count=p['initial_uniform_cell_count'], nlp_relative_tolerance=p['nlp_relative_tolerance'], automatic_jacobian = False)
     
         verify_pci_position(p['Ste'], p['R_s'], w)
         
