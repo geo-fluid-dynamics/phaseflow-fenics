@@ -38,7 +38,7 @@ def adaptive_time_step(time_step_size, w, w_n, bcs, solve_time_step, debug=False
         
             if debug:
         
-                with fenics.XDMFFile(output_dir + '/newton_solution.xdmf') as newton_file:
+                with fenics.XDMFFile('debug/newton_solution.xdmf') as newton_file:
         
                     output.write_solution(newton_file, w, time=-1.) 
         
@@ -71,25 +71,27 @@ def check(current_time, time_step_size, end_time, output_times, output_count):
     
         next_output_time = output_times[output_count]
         
-        if next_time > next_output_time:
+        if next_output_time == 'all':
         
-            next_time = next_output_time
-            
-            time_step_size.set(next_time - current_time)
-        
-        if next_output_time == 'end':
-           
-            next_output_time = end_time
-    
-        if output_times[output_count] == 'all':
-        
-            next_output_time = next_time
-            
-        if abs(next_time - next_output_time) < TIME_EPS:
-    
             output_this_time = True
+        
+        elif next_output_time == 'end':
+               
+            next_output_time = end_time
+        
+        else:
+        
+            if next_time > next_output_time:
+                
+                next_time = next_output_time
+                
+                time_step_size.set(next_time - current_time)
             
-            output_count += 1
+            if abs(next_time - next_output_time) < TIME_EPS:
+        
+                output_this_time = True
+                
+                output_count += 1
             
     return time_step_size, next_time, output_this_time, output_count 
    
