@@ -261,7 +261,7 @@ def run(
             
 
             # Write the initial values                    
-            if output_start_time and fenics.near(current_time, start_time) and (ir is 0):
+            if output_start_time and fenics.near(current_time, start_time):
                 
                 output.write_solution(solution_files, w_n, current_time) 
              
