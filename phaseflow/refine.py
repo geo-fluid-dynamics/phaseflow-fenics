@@ -8,9 +8,9 @@ solution_at_point = numpy.array([1.e32, 1.e32, 1.e32, 1.e32, 1.e32], dtype=numpy
 
 def mark_pci_cells(regularization, mesh, w):
 
-    hot = (regularization['theta_s'] + 2*regularization['R_s'] - fenics.dolfin.DOLFIN_EPS)
+    hot = (regularization['theta_s'] + regularization['R_s'] - fenics.dolfin.DOLFIN_EPS)
             
-    cold = (regularization['theta_s'] - 2*regularization['R_s'] + fenics.dolfin.DOLFIN_EPS)
+    cold = (regularization['theta_s'] - regularization['R_s'] + fenics.dolfin.DOLFIN_EPS)
 
     contains_pci = fenics.CellFunction("bool", mesh)
 
@@ -36,7 +36,8 @@ def mark_pci_cells(regularization, mesh, w):
             
                 cold_vertex_count += 1
 
-        if (0 < hot_vertex_count < 1 + mesh.type().dim()) | (0 < cold_vertex_count < 1 + mesh.type().dim()):
+        if (0 < hot_vertex_count < 1 + mesh.type().dim()) | (0 < cold_vertex_count < 1 + mesh.type().dim()
+            | (hot_vertex_count == 0 & cold_vertex_count == 0)):
         
             contains_pci[cell] = True
                 
