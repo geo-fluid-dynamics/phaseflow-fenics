@@ -12,9 +12,9 @@ def mark_pci_cells(regularization, mesh, w):
             
     cold = (regularization['theta_s'] - regularization['R_s'] + fenics.dolfin.DOLFIN_EPS)
 
-    contains_pci = fenics.CellFunction("bool", mesh)
+    touches_pci = fenics.CellFunction("bool", mesh)
 
-    contains_pci.set_all(False)
+    touches_pci.set_all(False)
 
     for cell in fenics.cells(mesh):
         
@@ -36,12 +36,11 @@ def mark_pci_cells(regularization, mesh, w):
             
                 cold_vertex_count += 1
 
-        if (0 < hot_vertex_count < 1 + mesh.type().dim()) | (0 < cold_vertex_count < 1 + mesh.type().dim()
-            | (hot_vertex_count == 0 & cold_vertex_count == 0)):
+        if (hot_vertex_count < (1 + mesh.type().dim())) and cold_vertex_count < (1 + mesh.type().dim()):
         
-            contains_pci[cell] = True
+            touches_pci[cell] = True
                 
-    return contains_pci
+    return touches_pci
     
     
 def refine_pci(regularization, pci_refinement_cycle, mesh, w):
