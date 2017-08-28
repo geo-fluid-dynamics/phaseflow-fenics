@@ -201,7 +201,7 @@ def run(
                 
                 
                 # Set the initial values
-                if restart and (ir == 0):
+                if restart:
                 
                     mesh = fenics.Mesh()
                     
