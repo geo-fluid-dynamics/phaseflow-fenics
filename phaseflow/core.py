@@ -191,7 +191,7 @@ def run(
             time_step_size, next_time, output_this_time, output_count = time.check(current_time,
                 time_step_size, end_time, output_times, output_count)
             
-            while pci_refinement_cycle < max_pci_refinement_cycles:
+            while pci_refinement_cycle < (max_pci_refinement_cycles + 1):
             
             
                 # Define function spaces and solution function 
