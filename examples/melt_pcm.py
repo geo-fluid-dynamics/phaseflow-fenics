@@ -15,6 +15,7 @@ def melt_pcm(Ste = 0.045,
         end_time=1.,
         nlp_divergence_threshold = 1.e12,
         nlp_relaxation = 1.,
+        nlp_max_iterations = 30,
         restart=False,
         restart_filepath=''):
 
@@ -39,7 +40,7 @@ def melt_pcm(Ste = 0.045,
         regularization = {'a_s': 2., 'theta_s': epsilon_1, 'R_s': epsilon_1/2.},
         initial_pci_refinement_cycles = initial_pci_refinement_cycles,
         max_pci_refinement_cycles = max_pci_refinement_cycles,
-        nlp_max_iterations = 30,
+        nlp_max_iterations = nlp_max_iterations,
         nlp_divergence_threshold = nlp_divergence_threshold,
         nlp_relaxation = nlp_relaxation,
         initial_values_expression = (
@@ -67,6 +68,7 @@ def melt_pcm(Ste = 0.045,
     
 def run_melt_pcm():
     
+    '''
     w, mesh = melt_pcm(Ste = 1.,
         Ra = 1.,
         Pr = 1.,
@@ -74,11 +76,30 @@ def run_melt_pcm():
         epsilon_1 = 0.1,
         m = 10,
         time_step_bounds = (1.e-4, 1.e-3, 1.e-2),
-        initial_pci_refinement_cycles = 4,
+        end_time = 0.01,
+        initial_pci_refinement_cycles = 2,
         max_pci_refinement_cycles = 6,
         nlp_divergence_threshold = 1.e12,
         nlp_relaxation = 0.5,
         output_dir = 'output/melt_pcm_0')
+    '''
+    
+    '''
+    w, mesh = melt_pcm(Ste = 1.,
+        Ra = 1.,
+        Pr = 1.,
+        mu_s = 1.e4,
+        epsilon_1 = 0.1,
+        time_step_bounds = (1.e-4, 1.e-3, 1.e-3),
+        initial_pci_refinement_cycles = 2,
+        max_pci_refinement_cycles = 4,
+        nlp_divergence_threshold = 1.e12,
+        nlp_relaxation = 0.5,
+        restart = True,
+        restart_filepath = 'output/melt_pcm_0/restart_t0.01.hdf5',
+        start_time = 0.01,
+        output_dir = 'output/melt_pcm_1')
+    '''
     
     w, mesh = melt_pcm(Ste = 1.,
         Ra = 1.,
@@ -86,15 +107,14 @@ def run_melt_pcm():
         mu_s = 1.e4,
         epsilon_1 = 0.1,
         time_step_bounds = 1.e-3,
-        initial_pci_refinement_cycles = 1,
+        initial_pci_refinement_cycles = 0,
         max_pci_refinement_cycles = 4,
         nlp_divergence_threshold = 1.e12,
-        nlp_relaxation = 0.5,
+        nlp_relaxation = 0.4,
         restart = True,
-        restart_filepath = 'output/melt_pcm_0/restart_t0.012.hdf5',
-        start_time = 0.012,
-        output_dir = 'output/melt_pcm_1')
-
+        restart_filepath = 'output/melt_pcm_1/restart_t0.014.hdf5',
+        start_time = 0.014,
+        output_dir = 'output/melt_pcm_2')
  
     
 if __name__=='__main__':
