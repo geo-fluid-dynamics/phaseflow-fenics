@@ -191,7 +191,7 @@ def run(
             time_step_size, next_time, output_this_time, output_count = time.check(current_time,
                 time_step_size, end_time, output_times, output_count)
             
-            for ir in range(max_pci_refinement_cycles + 1):
+            while pci_refinement_cycle < max_pci_refinement_cycles:
             
             
                 # Define function spaces and solution function 
@@ -201,34 +201,40 @@ def run(
                 
                 
                 # Set the initial values
-                if restart:
+                if fenics.near(current_time, start_time):
                 
-                    mesh = fenics.Mesh()
-                    
-                    with fenics.HDF5File(mesh.mpi_comm(), restart_filepath, 'r') as h5:
-                    
-                        h5.read(mesh, 'mesh', True)
-                        
-                    W, W_ele = function_spaces(mesh, pressure_degree, temperature_degree)
+                    if restart:
                 
-                    w_n = fenics.Function(W)
-                    
-                    with fenics.HDF5File(mesh.mpi_comm(), restart_filepath, 'r') as h5:
-                    
-                        h5.read(w_n, 'w')
+                        if pci_refinement_cycle == 0:
                         
-                    w = fenics.Function(W)
+                            mesh = fenics.Mesh()
+                            
+                            with fenics.HDF5File(mesh.mpi_comm(), restart_filepath, 'r') as h5:
+                            
+                                h5.read(mesh, 'mesh', True)
+                            
+                            W, W_ele = function_spaces(mesh, pressure_degree, temperature_degree)
+                        
+                            w_n = fenics.Function(W)
+                        
+                            with fenics.HDF5File(mesh.mpi_comm(), restart_filepath, 'r') as h5:
+                            
+                                h5.read(w_n, 'w')
+                            
+                            w = fenics.Function(W)
+                            
+                        else:
+                        
+                            w_n = fenics.interpolate(w_n, W)
                     
-                else:
-                    
-                    if fenics.near(current_time, start_time):
+                    else:
             
                         w_n = fenics.interpolate(fenics.Expression(initial_values_expression,
                             element=W_ele), W)
                     
-                    else:
+                else:
             
-                        w_n = fenics.project(w_n, W)
+                    w_n = fenics.project(w_n, W)
 
                 if pci_refinement_cycle < initial_pci_refinement_cycles:
                 
@@ -281,14 +287,14 @@ def run(
                 
                 
                 # Refine mesh cells containing the PCI
-                if (max_pci_refinement_cycles is 0) or (pci_refinement_cycle
-                        is (max_pci_refinement_cycles - 1)):
+                if (max_pci_refinement_cycles == 0) or (pci_refinement_cycle
+                        == (max_pci_refinement_cycles - 1)):
 
                     break
                     
                 mesh = refine.refine_pci(regularization, pci_refinement_cycle, mesh, w) # @todo Use w_n or w?
-                    
-                pci_refinement_cycle = pci_refinement_cycle + 1
+                
+                pci_refinement_cycle += 1
                 
             assert(converged)
             
