@@ -71,13 +71,13 @@ def check(current_time, time_step_size, end_time, output_times, output_count):
     
         next_output_time = output_times[output_count]
         
+        if next_output_time == 'end':
+               
+            next_output_time = end_time
+            
         if next_output_time == 'all':
         
             output_this_time = True
-        
-        elif next_output_time == 'end':
-               
-            next_output_time = end_time
         
         else:
         
@@ -93,7 +93,7 @@ def check(current_time, time_step_size, end_time, output_times, output_count):
                 
                 output_count += 1
             
-    return time_step_size, next_time, output_this_time, output_count 
+    return time_step_size, next_time, output_this_time, output_count, next_output_time
    
 
 def steady(W, w, w_n):

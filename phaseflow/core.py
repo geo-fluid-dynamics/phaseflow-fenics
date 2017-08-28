@@ -188,7 +188,7 @@ def run(
         
         while current_time < (end_time - fenics.dolfin.DOLFIN_EPS):
         
-            time_step_size, next_time, output_this_time, output_count = time.check(current_time,
+            time_step_size, next_time, output_this_time, output_count, next_output_time = time.check(current_time,
                 time_step_size, end_time, output_times, output_count)
             
             while pci_refinement_cycle < (max_pci_refinement_cycles + 1):
