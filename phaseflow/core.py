@@ -88,7 +88,7 @@ def run(
     start_time = 0.,
     end_time = 1.,
     time_step_bounds = (1.e-3, 1.e-3, 1.),
-    output_times = ('start', 'end'),
+    output_times = ('all',),
     max_time_steps = 1000,
     max_pci_refinement_cycles = 1000,
     max_pci_refinement_cycles_per_time = 0,
@@ -102,7 +102,7 @@ def run(
     nlp_relaxation = 1.,
     pressure_degree = default.pressure_degree,
     temperature_degree = default.temperature_degree,
-    automatic_jacobian = True,
+    automatic_jacobian = False,
     stop_when_steady = False,
     steady_relative_tolerance = 1.e-8,
     restart = False,
@@ -301,8 +301,8 @@ def run(
                 
                 
                 # Refine mesh cells containing the PCI
-                if (max_pci_refinement_cycles == 0) or (pci_refinement_cycle
-                        == (max_pci_refinement_cycles - 1)):
+                if (max_pci_refinement_cycles_per_time == 0) or (pci_refinement_cycle
+                        == (max_pci_refinement_cycles_per_time - 1)):
 
                     break
                     
