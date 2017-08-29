@@ -72,7 +72,7 @@ def test_time_check():
         
     assert(output_this_time)
     
-    assert(output_count == 4)
+    assert(output_count == 3)
     
     current_time += time_step_size.value
     
