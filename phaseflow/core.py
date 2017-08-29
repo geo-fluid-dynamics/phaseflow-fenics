@@ -89,6 +89,7 @@ def run(
     end_time = 1.,
     time_step_bounds = (1.e-3, 1.e-3, 1.),
     output_times = ('start', 'end'),
+    max_time_steps = 1000,
     max_pci_refinement_cycles = 0,
     initial_pci_refinement_cycles = 0,
     gamma = 1.e-7,
@@ -186,12 +187,9 @@ def run(
         
         pci_refinement_cycle = 0
         
-        while current_time < (end_time - fenics.dolfin.DOLFIN_EPS):
-        
-            time_step_size, next_time, output_this_time, output_count, next_output_time = time.check(current_time,
-                time_step_size, end_time, output_times, output_count)
+        for it in range(max_time_steps):
             
-            while pci_refinement_cycle < (max_pci_refinement_cycles + 1):
+            while pci_refinement_cycle < max_pci_refinement_cycles + 1:
             
             
                 # Define function spaces and solution function 
@@ -244,7 +242,19 @@ def run(
                     
                     continue
                     
+                if start_time >= end_time - time.TIME_EPS:
+                
+                    helpers.print_once("Start time is already too close to end time. Only writing initial values.")
                     
+                    output.write_solution(solution_file, w_n, current_time)
+                    
+                    fe_field_interpolant = fenics.interpolate(w_n.leaf_node(), W)
+                    
+                    return fe_field_interpolant, mesh
+                
+                time_step_size, next_time, output_this_time, output_count, next_output_time = time.check(current_time,
+                time_step_size, end_time, output_times, output_count)
+                
                 # Initialize the functions that we will use to generate our variational form
                 form_factory = problem.FormFactory(W, {'Ra': Ra, 'Pr': Pr, 'Ste': Ste, 'C': C, 'K': K, 'g': g, 'gamma': gamma, 'mu_l': mu_l, 'mu_s': mu_s}, m_B, ddtheta_m_B, regularization)
 
@@ -339,13 +349,14 @@ def run(
             
             progress.update(current_time / end_time)
             
+            if current_time >= (end_time - fenics.dolfin.DOLFIN_EPS):
+            
+                helpers.print_once("Reached end time, t = "+str(end_time))
+            
+                break
+            
             time_step_size.set(2*time_step_size.value) # @todo: Encapsulate the adaptive time stepping
                 
-    if current_time >= (end_time - fenics.dolfin.DOLFIN_EPS):
-    
-        helpers.print_once("Reached end time, t = "+str(end_time))
-    
-    
     # Return the interpolant to sample inside of Python
     w_n.rename('w', "state")
         
