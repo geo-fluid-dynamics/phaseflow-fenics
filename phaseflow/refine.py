@@ -6,15 +6,15 @@ import helpers
 
 solution_at_point = numpy.array([1.e32, 1.e32, 1.e32, 1.e32, 1.e32], dtype=numpy.float_) # Oversized for up to 3D
 
-def mark_pci_cells(regularization, mesh, w):
+def mark_cells_touching_mushy_region(regularization, mesh, w):
 
     hot = (regularization['theta_s'] + regularization['R_s'] - fenics.dolfin.DOLFIN_EPS)
             
     cold = (regularization['theta_s'] - regularization['R_s'] + fenics.dolfin.DOLFIN_EPS)
 
-    touches_pci = fenics.CellFunction("bool", mesh)
+    touches_mushy_region = fenics.CellFunction("bool", mesh)
 
-    touches_pci.set_all(False)
+    touches_mushy_region.set_all(False)
 
     for cell in fenics.cells(mesh):
         
@@ -38,22 +38,63 @@ def mark_pci_cells(regularization, mesh, w):
 
         if (hot_vertex_count < (1 + mesh.type().dim())) and cold_vertex_count < (1 + mesh.type().dim()):
         
-            touches_pci[cell] = True
+            touches_mushy_region[cell] = True
                 
-    return touches_pci
+    return touches_mushy_region
     
     
-def refine_pci(regularization, pci_refinement_cycle, mesh, w):
+def mark_cells_containing_theta_s(regularization, mesh, w):
 
-    contains_pci = mark_pci_cells(regularization, mesh, w)
+    theta_s = regularization['theta_s']
 
-    pci_cell_count = sum(contains_pci)
+    contains_theta_s = fenics.CellFunction("bool", mesh)
+
+    contains_theta_s.set_all(False)
+
+    for cell in fenics.cells(mesh):
+        
+        hot_vertex_count = 0
+        
+        cold_vertex_count = 0
+        
+        for vertex in fenics.vertices(cell):
+        
+            w.eval_cell(solution_at_point, numpy.array([vertex.x(0), vertex.x(1), vertex.x(2)]), cell) # Works for 1/2/3D
+            
+            theta = solution_at_point[mesh.type().dim() + 1]
+            
+            if theta > theta_s:
+            
+                hot_vertex_count += 1
+                
+            if theta < theta_s:
+            
+                cold_vertex_count += 1
+
+        if (hot_vertex_count > 0 and cold_vertex_count > 0):
+        
+            contains_theta_s[cell] = True
+                
+    return contains_theta_s
+    
+    
+def refine_pci(regularization, pci_refinement_cycle, mesh, w, method='contains_theta_s'):
+
+    if method == 'touches_mushy_region':
+
+        refine_cell = mark_cells_touching_mushy_region(regularization, mesh, w)
+    
+    elif method == 'contains_theta_s':
+    
+        refine_cell = mark_cells_containing_theta_s(regularization, mesh, w)
+
+    pci_cell_count = sum(refine_cell)
 
     assert(pci_cell_count > 0)
 
     helpers.print_once("PCI Refinement cycle #"+str(pci_refinement_cycle)+
         ": Refining "+str(pci_cell_count)+" cells containing the PCI.")
 
-    mesh = fenics.refine(mesh, contains_pci)
+    mesh = fenics.refine(mesh, refine_cell)
     
     return mesh
