@@ -85,11 +85,19 @@ Note that the "-u fenics" logs into the machine as the "fenics" user.
     
 ## Run Phaseflow in Docker
 
+Run the container
+
     docker run -ti zimmerman/phaseflow-fenics:latest
-    
+
+Pull the latest version of the master branch
+
     cd phaseflow-fenics
     
-    python -m pytest
+    git pull
+
+Run tests
+
+    python -m pytest -v -s -k "not debug"
     
 Note that the Docker image has phaseflow installed, so in your own Python scripts you can
 
