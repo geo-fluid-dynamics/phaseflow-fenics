@@ -9,31 +9,37 @@ Author: Alexander G. Zimmerman <zimmerman@aices.rwth-aachen.de>
 
 ## Current capabilities
 - Unsteady incompressible Navier-Stokes
+
     Benchmark: Lid-driven cavity
     
     <img src="./docs/images/LidDrivenCavity.png" width="480">
 
 - Thermal convection: the momentum equation includes a temperature-based bouyancy force per the Boussinesq approximation
+
     Benchmark: Natural convection of air
     
     <img src="./docs/images/NaturalConvectionAir.png" width="480">
     
 - Nonlinear bouyancy
+
     Benchmark: Natural convection of water
     
     <img src="./docs/images/NaturalConvectionWater.png" width="480">
     
 - Phase-change: The energy equation written in enthalpy form, with latent heat sources/sinks from the phase-change
+
     Benchmark: Stefan problem
     
     <img src="./docs/images/StefanProblem.png" width="480">
     
 - Variable viscosity: Apply the same momentum equation throughout the single phase-change material domain
+
     Test: Analogy of lid-driven cavity
     
     <img src="./docs/images/VariableViscosity.png" width="480">
     
 - Monolithic coupling of all of the above features
+
     Qualitatively correct, still need to reproduce benchmark
     
     <img src="./docs/images/MeltingPCM.png" width="480">
