@@ -90,7 +90,7 @@ def check(current_time, time_step_size, end_time, output_times, output_count):
         
                 output_this_time = True
                 
-                if output_times[output_count] is not 'end':
+                if not (output_times[output_count] == 'end'):
                 
                     output_count += 1
             
