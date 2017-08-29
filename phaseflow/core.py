@@ -90,7 +90,8 @@ def run(
     time_step_bounds = (1.e-3, 1.e-3, 1.),
     output_times = ('start', 'end'),
     max_time_steps = 1000,
-    max_pci_refinement_cycles = 0,
+    max_pci_refinement_cycles = 1000,
+    max_pci_refinement_cycles_per_time = 0,
     initial_pci_refinement_cycles = 0,
     gamma = 1.e-7,
     custom_newton = True,
@@ -188,8 +189,11 @@ def run(
         pci_refinement_cycle = 0
         
         for it in range(max_time_steps):
+        
+            pci_refinement_cycle_this_time = 0
             
-            while pci_refinement_cycle < max_pci_refinement_cycles + 1:
+            while (pci_refinement_cycle < max_pci_refinement_cycles + 1) and (
+                pci_refinement_cycle_this_time < max_pci_refinement_cycles_per_time + 1):
             
             
                 # Define function spaces and solution function 
@@ -305,6 +309,8 @@ def run(
                 mesh = refine.refine_pci(regularization, pci_refinement_cycle, mesh, w) # @todo Use w_n or w?
                 
                 pci_refinement_cycle += 1
+                
+                pci_refinement_cycle_this_time += 1
                 
             assert(converged)
             
