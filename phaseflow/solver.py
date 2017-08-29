@@ -2,36 +2,38 @@ import fenics
 
 import phaseflow.problem
 
-
-class CustomNewtonSolver(fenics.NewtonSolver):
-
-    custom_parameters = {'divergence_threshold': 1.e12}
-
-    def converged(self, residual, problem, iteration):
     
-        rnorm = residual.norm("l2")
-        
-        print("Newton iteration %d: r (abs) = %.3e (tol = %.3e)" % (iteration, rnorm,
-            self.parameters['absolute_tolerance']))
-        
-        assert(rnorm < self.custom_parameters['divergence_threshold'])
-        
-        if rnorm < self.parameters['absolute_tolerance']:
-            
-            return True
-            
-        return False
-
-        
 ''' Create a time solver function with a consistent interface.
 Among other reasons for this, the interfaces for the FEniCS classes AdaptiveLinearVariationalSolver and LinearVariationalSolver are not consistent. '''  
 def make(form_factory,
         nlp_absolute_tolerance=1.,
         nlp_relative_tolerance=1.e-8,
         nlp_max_iterations=12,
+        nlp_divergence_threshold=1.e12,
+        nlp_relaxation=1.,
         custom_newton=True,
         automatic_jacobian=True):
 
+    class CustomNewtonSolver(fenics.NewtonSolver):
+
+        custom_parameters = {'divergence_threshold': nlp_divergence_threshold}
+
+        def converged(self, residual, problem, iteration):
+        
+            rnorm = residual.norm("l2")
+            
+            print("Newton iteration %d: r (abs) = %.3e (tol = %.3e)" % (iteration, rnorm,
+                self.parameters['absolute_tolerance']))
+            
+            assert(rnorm < self.custom_parameters['divergence_threshold'])
+            
+            if rnorm < self.parameters['absolute_tolerance']:
+                
+                return True
+                
+            return False
+        
+        
     '''
     Currently we have the option for which Newton solver to use for two reasons:
     1. I don't know how to get the relative residual in CustomNewtonSolver.
@@ -51,6 +53,8 @@ def make(form_factory,
             solver.parameters['relative_tolerance'] = nlp_relative_tolerance
         
             solver.parameters['error_on_nonconvergence'] = False
+            
+            solver.set_relaxation_parameter(nlp_relaxation)
         
             iteration_count, converged = solver.solve(problem, w.vector())
             

@@ -5,7 +5,7 @@ def test_time_check():
 
     time_step_size = phaseflow.helpers.BoundedValue(0.5, 1., 1.)
     
-    final_time = 3.
+    end_time = 3.
     
     output_count = 0
     
@@ -27,8 +27,8 @@ def test_time_check():
     print(current_time)
     
     
-    time_step_size, next_time, output_this_time, output_count = phaseflow.time.check(current_time,
-            time_step_size, final_time, output_times, output_count)
+    time_step_size, next_time, output_this_time, output_count, next_output_time = phaseflow.time.check(current_time,
+            time_step_size, end_time, output_times, output_count)
             
     assert(output_this_time)
     
@@ -41,8 +41,8 @@ def test_time_check():
     print(current_time)
     
     
-    time_step_size, next_time, output_this_time, output_count = phaseflow.time.check(current_time,
-            time_step_size, final_time, output_times, output_count)
+    time_step_size, next_time, output_this_time, output_count, next_output_time = phaseflow.time.check(current_time,
+            time_step_size, end_time, output_times, output_count)
             
     assert(output_this_time)
     
@@ -55,8 +55,8 @@ def test_time_check():
     
     time_step_size.set(1.)
     
-    time_step_size, next_time, output_this_time, output_count = phaseflow.time.check(current_time,
-            time_step_size, final_time, output_times, output_count)
+    time_step_size, next_time, output_this_time, output_count, next_output_time = phaseflow.time.check(current_time,
+            time_step_size, end_time, output_times, output_count)
 
     assert(not output_this_time)
     
@@ -67,12 +67,12 @@ def test_time_check():
     print(current_time)
     
     
-    time_step_size, next_time, output_this_time, output_count = phaseflow.time.check(current_time,
-        time_step_size, final_time, output_times, output_count)
+    time_step_size, next_time, output_this_time, output_count, next_output_time = phaseflow.time.check(current_time,
+        time_step_size, end_time, output_times, output_count)
         
     assert(output_this_time)
     
-    assert(output_count == 4)
+    assert(output_count == 3)
     
     current_time += time_step_size.value
     

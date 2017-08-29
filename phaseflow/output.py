@@ -1,6 +1,6 @@
 import helpers
 
-def write_solution(solution_files, w, time):
+def write_solution(solution_file, w, time):
 
     helpers.print_once("Writing solution to HDF5+XDMF")
     
@@ -14,4 +14,4 @@ def write_solution(solution_files, w, time):
     
     for i, var in enumerate([velocity, pressure, temperature]):
     
-        solution_files[i].write(var, time)
+        solution_file.write(var, time)

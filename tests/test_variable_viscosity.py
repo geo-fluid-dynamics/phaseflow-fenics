@@ -59,7 +59,7 @@ def variable_viscosity(m=20, start_time = 0., end_time = 1000., time_step_bounds
         regularization = {'a_s': 2., 'theta_s': theta_s, 'R_s': R_s},
         nlp_relative_tolerance = 1.e-4,
         nlp_max_iterations = 30,
-        max_pci_refinement_cycles = 4,
+        max_pci_refinement_cycles_per_time = 4,
         initial_pci_refinement_cycles = initial_pci_refinement_cycles,
         g = (0., 0.),
         Ste = 1.e16,

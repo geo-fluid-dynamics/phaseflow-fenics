@@ -36,7 +36,7 @@ def stefan_problem(Ste = 1.,
     nlp_relative_tolerance = 1.e-3,
     initial_uniform_cell_count = 1,
     hot_boundary_refinement_cycles = 10,
-    max_pci_refinement_cycles = 10,
+    max_pci_refinement_cycles_per_time = 10,
     automatic_jacobian = False):
 
     
@@ -76,7 +76,7 @@ def stefan_problem(Ste = 1.,
         Ste = Ste,
         g = [0.],
         mesh = mesh,
-        max_pci_refinement_cycles = max_pci_refinement_cycles,
+        max_pci_refinement_cycles_per_time = max_pci_refinement_cycles_per_time,
         initial_values_expression = (
             "0.",
             "0.",

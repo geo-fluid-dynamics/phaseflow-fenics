@@ -89,13 +89,17 @@ def run(
     end_time = 1.,
     time_step_bounds = (1.e-3, 1.e-3, 1.),
     output_times = ('start', 'end'),
-    max_pci_refinement_cycles = 0,
+    max_time_steps = 1000,
+    max_pci_refinement_cycles = 1000,
+    max_pci_refinement_cycles_per_time = 0,
     initial_pci_refinement_cycles = 0,
     gamma = 1.e-7,
     custom_newton = True,
     nlp_absolute_tolerance = 1.,
     nlp_relative_tolerance = 1.e-8,
     nlp_max_iterations = 12,
+    nlp_divergence_threshold = 1.e12,
+    nlp_relaxation = 1.,
     pressure_degree = default.pressure_degree,
     temperature_degree = default.temperature_degree,
     automatic_jacobian = True,
@@ -153,190 +157,212 @@ def run(
     to avoid duplicate mesh storage when appropriate 
     per https://fenicsproject.org/qa/3051/parallel-output-of-a-time-series-in-hdf5-format '''
 
-    solution_files = [fenics.XDMFFile(output_dir + '/velocity.xdmf'), fenics.XDMFFile(output_dir + '/pressure.xdmf'), fenics.XDMFFile(output_dir + '/temperature.xdmf')]
+    with fenics.XDMFFile(output_dir + '/solution.xdmf') as solution_file:
 
-    
-    # Solve each time step
-    progress = fenics.Progress('Time-stepping')
+        # Solve each time step
+        progress = fenics.Progress('Time-stepping')
 
-    fenics.set_log_level(fenics.PROGRESS)
-        
-    output_count = 0
-    
-    if (output_times is not ()):
-    
-        if output_times[0] == 'start':
-        
-            output_start_time = True
+        fenics.set_log_level(fenics.PROGRESS)
             
-            output_count += 1
+        output_count = 0
         
-        if output_times[0] == 'all':
+        if (output_times is not ()):
         
-            output_start_time = True
-        
-    else:
-    
-        output_start_time = False
-        
-    if stop_when_steady:
-    
-        steady = False
-    
-    pci_refinement_cycle = 0
-    
-    while current_time < (end_time - fenics.dolfin.DOLFIN_EPS):
-    
-        time_step_size, next_time, output_this_time, output_count = time.check(current_time,
-            time_step_size, end_time, output_times, output_count)
-        
-        for ir in range(max_pci_refinement_cycles + 1):
-        
-        
-            # Define function spaces and solution function 
-            W, W_ele = function_spaces(mesh, pressure_degree, temperature_degree)
-
-            w = fenics.Function(W)
+            if output_times[0] == 'start':
             
-            
-            # Set the initial values
-            if restart and (ir == 0):
-            
-                mesh = fenics.Mesh()
+                output_start_time = True
                 
-                with fenics.HDF5File(mesh.mpi_comm(), restart_filepath, 'r') as h5:
-                
-                    h5.read(mesh, 'mesh', True)
-                    
+                output_count += 1
+            
+            if output_times[0] == 'all':
+            
+                output_start_time = True
+            
+        else:
+        
+            output_start_time = False
+            
+        if stop_when_steady:
+        
+            steady = False
+        
+        pci_refinement_cycle = 0
+        
+        for it in range(max_time_steps):
+        
+            pci_refinement_cycle_this_time = 0
+            
+            while (pci_refinement_cycle < max_pci_refinement_cycles + 1) and (
+                pci_refinement_cycle_this_time < max_pci_refinement_cycles_per_time + 1):
+            
+            
+                # Define function spaces and solution function 
                 W, W_ele = function_spaces(mesh, pressure_degree, temperature_degree)
-            
-                w_n = fenics.Function(W)
-                
-                with fenics.HDF5File(mesh.mpi_comm(), restart_filepath, 'r') as h5:
-                
-                    h5.read(w_n, 'w')
-                    
+
                 w = fenics.Function(W)
                 
-            else:
                 
+                # Set the initial values
                 if fenics.near(current_time, start_time):
-        
-                    w_n = fenics.interpolate(fenics.Expression(initial_values_expression,
-                        element=W_ele), W)
                 
+                    if restart:
+                
+                        if pci_refinement_cycle == 0:
+                        
+                            mesh = fenics.Mesh()
+                            
+                            with fenics.HDF5File(mesh.mpi_comm(), restart_filepath, 'r') as h5:
+                            
+                                h5.read(mesh, 'mesh', True)
+                            
+                            W, W_ele = function_spaces(mesh, pressure_degree, temperature_degree)
+                        
+                            w_n = fenics.Function(W)
+                        
+                            with fenics.HDF5File(mesh.mpi_comm(), restart_filepath, 'r') as h5:
+                            
+                                h5.read(w_n, 'w')
+                            
+                            w = fenics.Function(W)
+                            
+                        else:
+                        
+                            w_n = fenics.interpolate(w_n, W)
+                    
+                    else:
+            
+                        w_n = fenics.interpolate(fenics.Expression(initial_values_expression,
+                            element=W_ele), W)
+                    
                 else:
-        
+            
                     w_n = fenics.project(w_n, W)
 
-            if pci_refinement_cycle < initial_pci_refinement_cycles:
-            
-                mesh = refine.refine_pci(regularization, pci_refinement_cycle, mesh, w_n)
+                if pci_refinement_cycle < initial_pci_refinement_cycles:
+                
+                    mesh = refine.refine_pci(regularization, pci_refinement_cycle, mesh, w_n)
+                    
+                    pci_refinement_cycle += 1
+                    
+                    continue
+                    
+                if start_time >= end_time - time.TIME_EPS:
+                
+                    helpers.print_once("Start time is already too close to end time. Only writing initial values.")
+                    
+                    output.write_solution(solution_file, w_n, current_time)
+                    
+                    fe_field_interpolant = fenics.interpolate(w_n.leaf_node(), W)
+                    
+                    return fe_field_interpolant, mesh
+                
+                time_step_size, next_time, output_this_time, output_count, next_output_time = time.check(current_time,
+                time_step_size, end_time, output_times, output_count)
+                
+                # Initialize the functions that we will use to generate our variational form
+                form_factory = problem.FormFactory(W, {'Ra': Ra, 'Pr': Pr, 'Ste': Ste, 'C': C, 'K': K, 'g': g, 'gamma': gamma, 'mu_l': mu_l, 'mu_s': mu_s}, m_B, ddtheta_m_B, regularization)
+
+                
+                # Make the time step solver
+                solve_time_step = solver.make(form_factory = form_factory,
+                    nlp_absolute_tolerance = nlp_absolute_tolerance,
+                    nlp_relative_tolerance = nlp_relative_tolerance,
+                    nlp_max_iterations = nlp_max_iterations,
+                    nlp_divergence_threshold = nlp_divergence_threshold,
+                    nlp_relaxation = nlp_relaxation,
+                    custom_newton = custom_newton,
+                    automatic_jacobian = automatic_jacobian)
+                
+                
+                # Organize boundary conditions
+                bcs = []
+                
+                for item in boundary_conditions:
+                
+                    bcs.append(fenics.DirichletBC(W.sub(item['subspace']), item['value_expression'],
+                        item['location_expression'], method=item['method']))
+                
+
+                # Write the initial values                    
+                if output_start_time and fenics.near(current_time, start_time):
+                    
+                    output.write_solution(solution_file, w_n, current_time) 
+                 
+                 
+                #
+                converged = time.adaptive_time_step(time_step_size=time_step_size, w=w, w_n=w_n, bcs=bcs,
+                    solve_time_step=solve_time_step, debug=debug)
+                
+                
+                #
+                if converged:
+                
+                    break
+                
+                
+                # Refine mesh cells containing the PCI
+                if (max_pci_refinement_cycles == 0) or (pci_refinement_cycle
+                        == (max_pci_refinement_cycles - 1)):
+
+                    break
+                    
+                mesh = refine.refine_pci(regularization, pci_refinement_cycle, mesh, w) # @todo Use w_n or w?
                 
                 pci_refinement_cycle += 1
                 
-                continue
+                pci_refinement_cycle_this_time += 1
                 
+            assert(converged)
+            
+            current_time += time_step_size.value
+            
+            if stop_when_steady and time.steady(W, w, w_n):
+            
+                steady = True
                 
-            # Initialize the functions that we will use to generate our variational form
-            form_factory = problem.FormFactory(W, {'Ra': Ra, 'Pr': Pr, 'Ste': Ste, 'C': C, 'K': K, 'g': g, 'gamma': gamma, 'mu_l': mu_l, 'mu_s': mu_s}, m_B, ddtheta_m_B, regularization)
+                if output_times[-1] == 'end':
+                
+                    output_this_time = True
+            
+            if output_this_time:
+            
+                output.write_solution(solution_file, w, current_time)
+                
+                # Write checkpoint/restart files
+                restart_filepath = output_dir+'/restart_t'+str(current_time)+'.hdf5'
+                
+                with fenics.HDF5File(fenics.mpi_comm_world(), restart_filepath, 'w') as h5:
+        
+                    h5.write(mesh, 'mesh')
+                
+                    h5.write(w, 'w')
+                    
+                if fenics.MPI.rank(fenics.mpi_comm_world()) is 0:
+                
+                    with h5py.File(restart_filepath, 'r+') as h5:
+                        
+                        h5.create_dataset('t', data=current_time)
+                        
+            helpers.print_once("Reached time t = " + str(current_time))
+                
+            if stop_when_steady and steady:
+            
+                helpers.print_once("Reached steady state at time t = " + str(current_time))
+                
+                break
 
+            w_n.assign(w)  # The current solution becomes the new initial values
             
-            # Make the time step solver
-            solve_time_step = solver.make(form_factory = form_factory,
-                nlp_absolute_tolerance = nlp_absolute_tolerance,
-                nlp_relative_tolerance = nlp_relative_tolerance,
-                nlp_max_iterations = nlp_max_iterations,
-                custom_newton = custom_newton,
-                automatic_jacobian = automatic_jacobian)
+            progress.update(current_time / end_time)
             
+            if current_time >= (end_time - fenics.dolfin.DOLFIN_EPS):
             
-            # Organize boundary conditions
-            bcs = []
-            
-            for item in boundary_conditions:
-            
-                bcs.append(fenics.DirichletBC(W.sub(item['subspace']), item['value_expression'],
-                    item['location_expression'], method=item['method']))
-            
-
-            # Write the initial values                    
-            if output_start_time and fenics.near(current_time, start_time) and (ir is 0):
-                
-                output.write_solution(solution_files, w_n, current_time) 
-             
-             
-            #
-            converged = time.adaptive_time_step(time_step_size=time_step_size, w=w, w_n=w_n, bcs=bcs,
-                solve_time_step=solve_time_step, debug=debug)
-            
-            
-            #
-            if converged:
+                helpers.print_once("Reached end time, t = "+str(end_time))
             
                 break
             
-            
-            # Refine mesh cells containing the PCI
-            if (max_pci_refinement_cycles is 0) or (pci_refinement_cycle
-                    is (max_pci_refinement_cycles - 1)):
-
-                break
+            time_step_size.set(2*time_step_size.value) # @todo: Encapsulate the adaptive time stepping
                 
-            mesh = refine.refine_pci(regularization, pci_refinement_cycle, mesh, w) # @todo Use w_n or w?
-                
-            pci_refinement_cycle = pci_refinement_cycle + 1
-            
-        assert(converged)
-        
-        current_time += time_step_size.value
-        
-        if stop_when_steady and time.steady(W, w, w_n):
-        
-            steady = True
-            
-            if output_times[-1] == 'end':
-            
-                output_this_time = True
-        
-        if output_this_time:
-        
-            output.write_solution(solution_files, w, current_time)
-            
-            # Write checkpoint/restart files
-            restart_filepath = output_dir+'/restart_t'+str(current_time)+'.hdf5'
-            
-            with fenics.HDF5File(fenics.mpi_comm_world(), restart_filepath, 'w') as h5:
-    
-                h5.write(mesh, 'mesh')
-            
-                h5.write(w, 'w')
-                
-            if fenics.MPI.rank(fenics.mpi_comm_world()) is 0:
-            
-                with h5py.File(restart_filepath, 'r+') as h5:
-                    
-                    h5.create_dataset('t', data=current_time)
-                    
-        helpers.print_once("Reached time t = " + str(current_time))
-            
-        if stop_when_steady and steady:
-        
-            helpers.print_once("Reached steady state at time t = " + str(current_time))
-            
-            break
-
-        w_n.assign(w)  # The current solution becomes the new initial values
-        
-        progress.update(current_time / end_time)
-        
-        time_step_size.set(2*time_step_size.value) # @todo: Encapsulate the adaptive time stepping
-            
-    if current_time >= (end_time - fenics.dolfin.DOLFIN_EPS):
-    
-        helpers.print_once("Reached end time, t = "+str(end_time))
-    
-    
     # Return the interpolant to sample inside of Python
     w_n.rename('w', "state")
         

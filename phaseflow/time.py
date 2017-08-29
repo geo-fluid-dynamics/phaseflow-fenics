@@ -3,7 +3,6 @@ import dolfin
 import helpers
 import output
 
-
 TIME_EPS = 1.e-8
 
 class TimeStepSize(helpers.BoundedValue):
@@ -38,11 +37,9 @@ def adaptive_time_step(time_step_size, w, w_n, bcs, solve_time_step, debug=False
         
             if debug:
         
-                newton_files = [fenics.XDMFFile('debug/newton_velocity.xdmf'),
-                    fenics.XDMFFile('debug/newton_pressure.xdmf'),
-                    fenics.XDMFFile('debug/newton_temperature.xdmf')]
+                with fenics.XDMFFile('debug/newton_solution.xdmf') as newton_file:
         
-                output.write_solution(newton_files, w, time=-1.) 
+                    output.write_solution(newton_file, w, time=-1.) 
         
             w.assign(w_n)
         
@@ -73,27 +70,31 @@ def check(current_time, time_step_size, end_time, output_times, output_count):
     
         next_output_time = output_times[output_count]
         
-        if next_time > next_output_time:
-        
-            next_time = next_output_time
-            
-            time_step_size.set(next_time - current_time)
-        
         if next_output_time == 'end':
-           
+               
             next_output_time = end_time
-    
-        if output_times[output_count] == 'all':
+            
+        if next_output_time == 'all':
         
-            next_output_time = next_time
-            
-        if abs(next_time - next_output_time) < TIME_EPS:
-    
             output_this_time = True
+        
+        else:
+        
+            if next_time > next_output_time:
+                
+                next_time = next_output_time
+                
+                time_step_size.set(next_time - current_time)
             
-            output_count += 1
+            if abs(next_time - next_output_time) < TIME_EPS:
+        
+                output_this_time = True
+                
+                if not (output_times[output_count] == 'end'):
+                
+                    output_count += 1
             
-    return time_step_size, next_time, output_this_time, output_count 
+    return time_step_size, next_time, output_this_time, output_count, next_output_time
    
 
 def steady(W, w, w_n):
