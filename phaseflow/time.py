@@ -74,7 +74,7 @@ def check(current_time, time_step_size, end_time, output_times, output_count):
                
             next_output_time = end_time
             
-        elif next_output_time == 'all':
+        if next_output_time == 'all':
         
             output_this_time = True
         
@@ -90,7 +90,9 @@ def check(current_time, time_step_size, end_time, output_times, output_count):
         
                 output_this_time = True
                 
-                output_count += 1
+                if output_times[output_count] is not 'end':
+                
+                    output_count += 1
             
     return time_step_size, next_time, output_this_time, output_count, next_output_time
    
