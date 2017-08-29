@@ -3,7 +3,6 @@ import dolfin
 import helpers
 import output
 
-
 TIME_EPS = 1.e-8
 
 class TimeStepSize(helpers.BoundedValue):
@@ -75,7 +74,7 @@ def check(current_time, time_step_size, end_time, output_times, output_count):
                
             next_output_time = end_time
             
-        if next_output_time == 'all':
+        elif next_output_time == 'all':
         
             output_this_time = True
         
