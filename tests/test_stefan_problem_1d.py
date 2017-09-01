@@ -80,7 +80,7 @@ def stefan_problem(Ste = 1.,
         initial_values_expression = (
             "0.",
             "0.",
-            "("+str(theta_h)+" - "+str(theta_c)+")*near(x[0],  0.) "+str(theta_c)),
+            "("+str(theta_h)+" - "+str(theta_c)+")*near(x[0],  0.) + "+str(theta_c)),
         boundary_conditions = [
             {'subspace': 0, 'value_expression': [0.], 'degree': 3, 'location_expression': "near(x[0],  0.) | near(x[0],  1.)", 'method': "topological"},
             {'subspace': 2, 'value_expression': theta_h, 'degree': 2, 'location_expression': "near(x[0],  0.)", 'method': "topological"},
@@ -108,9 +108,84 @@ def test_stefan_problem_vary_Ste():
             initial_uniform_cell_count=p['initial_uniform_cell_count'], nlp_relative_tolerance=p['nlp_relative_tolerance'], automatic_jacobian = False)
     
         verify_pci_position(p['Ste'], p['R_s'], w)
+
+
+def stefan_problem_solidify(Ste = 0.1,
+    theta_h = 0.01,
+    theta_c = -1.,
+    theta_s = 0.,
+    a_s = 2.,
+    R_s = 0.01,
+    dt = (0.0001, 0.001, 1.),
+    end_time = 1.,
+    nlp_relative_tolerance = 1.e-3,
+    initial_uniform_cell_count = 1,
+    cool_boundary_refinement_cycles = 10,
+    max_pci_refinement_cycles_per_time = 10,
+    automatic_jacobian = False):
+
+    
+    mesh = fenics.UnitIntervalMesh(initial_uniform_cell_count)
+    
+    ''' Refine mesh near hot boundary
+    The usual approach of using SubDomain and EdgeFunction isn't appearing to work
+    in 1D, so I'm going to just loop through the cells of the mesh and set markers manually.
+    '''
+    for i in range(cool_boundary_refinement_cycles):
+    
+        cell_markers = fenics.CellFunction("bool", mesh)
         
+        cell_markers.set_all(False)
         
+        for cell in fenics.cells(mesh):
+        
+            found_cool_boundary = False
+        
+            for vertex in fenics.vertices(cell):
+            
+                if fenics.near(vertex.x(0), 0., fenics.dolfin.DOLFIN_EPS):
+                
+                    found_cool_boundary = True
+                    
+            if found_cool_boundary:
+            
+                cell_markers[cell] = True
+
+                break # There should only be one such point.
+                
+        mesh = fenics.refine(mesh, cell_markers)
+
+    w, mesh = phaseflow.run(
+        output_dir = 'output/test_stefan_problem_solidify/',
+        Pr = 1.,
+        Ste = Ste,
+        g = [0.],
+        mesh = mesh,
+        max_pci_refinement_cycles_per_time = max_pci_refinement_cycles_per_time,
+        initial_values_expression = (
+            "0.",
+            "0.",
+            "("+str(theta_c)+" - "+str(theta_h)+")*near(x[0],  0.) + "+str(theta_h)),
+        boundary_conditions = [
+            {'subspace': 0, 'value_expression': [0.], 'degree': 3, 'location_expression': "near(x[0],  0.) | near(x[0],  1.)", 'method': "topological"},
+            {'subspace': 2, 'value_expression': theta_c, 'degree': 2, 'location_expression': "near(x[0],  0.)", 'method': "topological"},
+            {'subspace': 2, 'value_expression': theta_h, 'degree': 2, 'location_expression': "near(x[0],  1.)", 'method': "topological"}],
+        regularization = {'a_s': a_s, 'theta_s': theta_s, 'R_s': R_s},
+        nlp_relative_tolerance = nlp_relative_tolerance,
+        end_time = end_time,
+        time_step_bounds = dt,
+        automatic_jacobian = automatic_jacobian)
+        
+    return w
+  
+
+def test_stefan_problem_solidify():
+
+    stefan_problem_solidify()
+    
+  
 if __name__=='__main__':
     
     test_stefan_problem_vary_Ste()
 
+    test_stefan_problem_solidify()
