@@ -116,12 +116,12 @@ def stefan_problem_solidify(Ste = 0.1,
     theta_s = 0.,
     a_s = 2.,
     R_s = 0.01,
-    dt = (0.0001, 0.001, 1.),
+    dt = 0.01,
     end_time = 1.,
     nlp_relative_tolerance = 1.e-3,
-    initial_uniform_cell_count = 1,
-    cool_boundary_refinement_cycles = 10,
-    max_pci_refinement_cycles_per_time = 10,
+    initial_uniform_cell_count = 100,
+    cool_boundary_refinement_cycles = 0,
+    max_pci_refinement_cycles_per_time = 0,
     automatic_jacobian = False):
 
     
