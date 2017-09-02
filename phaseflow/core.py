@@ -192,8 +192,8 @@ def run(
         
             pci_refinement_cycle_this_time = 0
             
-            while (pci_refinement_cycle < max_pci_refinement_cycles + 1) and (
-                pci_refinement_cycle_this_time < max_pci_refinement_cycles_per_time + 1):
+            while (pci_refinement_cycle < (max_pci_refinement_cycles + 1)) and (
+                pci_refinement_cycle_this_time < (max_pci_refinement_cycles_per_time + 1)):
             
             
                 # Define function spaces and solution function 
@@ -299,14 +299,13 @@ def run(
                 
                     break
                 
-                
                 # Refine mesh cells containing the PCI
-                if (max_pci_refinement_cycles_per_time == 0) or (pci_refinement_cycle
-                        == (max_pci_refinement_cycles_per_time - 1)):
+                if (max_pci_refinement_cycles_per_time == 0) or (pci_refinement_cycle_this_time
+                        == max_pci_refinement_cycles_per_time):
 
                     break
                     
-                mesh = refine.refine_pci(regularization, pci_refinement_cycle, mesh, w) # @todo Use w_n or w?
+                mesh = refine.refine_pci(regularization, pci_refinement_cycle_this_time, mesh, w) # @todo Use w_n or w?
                 
                 pci_refinement_cycle += 1
                 
