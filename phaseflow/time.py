@@ -36,10 +36,12 @@ def adaptive_time_step(time_step_size, w, w_n, bcs, solve_time_step, debug=False
         if not converged:
         
             if debug:
+            
+                newton_files = [fenics.File('debug/newton_velocity.pvd'),
+                    fenics.File('debug/newton_pressure.pvd'),
+                    fenics.File('debug/newton_temperature.pvd')]
         
-                with fenics.XDMFFile('debug/newton_solution.xdmf') as newton_file:
-        
-                    output.write_solution(newton_file, w, time=-1.) 
+                output.write_solution(newton_files, w, time=-1.) 
         
             w.assign(w_n)
         

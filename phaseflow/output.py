@@ -1,6 +1,6 @@
 import helpers
 
-def write_solution(solution_files, _w, current_time):
+def write_solution(solution_files, _w, time):
 
     w = _w.leaf_node()
         
@@ -14,5 +14,5 @@ def write_solution(solution_files, _w, current_time):
         
     for i, var in enumerate([velocity, pressure, temperature]):
     
-        solution_files[i] << (var, current_time)
+        solution_files[i] << (var, time)
     
