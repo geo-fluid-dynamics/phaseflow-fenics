@@ -36,9 +36,7 @@ def melt_pcm(Ste = 0.045,
         nlp_absolute_tolerance = 1.,
         nlp_divergence_threshold = 1.e12,
         nlp_relaxation = 1.,
-        nlp_max_iterations = 30,
-        restart=False,
-        restart_filepath=''):
+        nlp_max_iterations = 30):
 
     theta_hot = 1.
     
@@ -81,9 +79,7 @@ def melt_pcm(Ste = 0.045,
                 'location_expression': "near(x[0],  1.)",
                 'method': "topological"}],
         output_dir = output_dir,
-        debug = True,
-        restart = restart,
-        restart_filepath = restart_filepath)
+        debug = True)
 
     return w, mesh
     

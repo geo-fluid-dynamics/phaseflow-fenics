@@ -1,7 +1,6 @@
 from .context import phaseflow
 
 import fenics
-import pytest
 
 
 def verify_against_wang2010(w, mesh):
@@ -24,7 +23,7 @@ def verify_against_wang2010(w, mesh):
         
         
 def wang2010_natural_convection_air(output_dir='output/test_wang2010_natural_convection_air',
-        start_time=0., end_time=1., restart=False, output_times=('start', 1.e-3, 0.01, 0.1, 'end',),
+        start_time=0., end_time=1., output_times=('start', 1.e-3, 0.01, 0.1, 'end',),
         automatic_jacobian=True):
 
     m = 20
@@ -56,9 +55,7 @@ def wang2010_natural_convection_air(output_dir='output/test_wang2010_natural_con
             {'subspace': 2, 'value_expression': str(theta_hot), 'degree': 2, 'location_expression': "near(x[0],  0.)", 'method': "topological"},
             {'subspace': 2, 'value_expression': str(theta_cold), 'degree': 2, 'location_expression': "near(x[0],  1.)", 'method': "topological"}],
         output_dir = output_dir,
-        debug = True,
-        restart = restart,
-        restart_filepath = output_dir+'/restart_t'+str(start_time)+'.hdf5')
+        debug = True)
 
     return w, mesh
     
@@ -70,19 +67,9 @@ def test_debug_wang2010_natural_convection_air_autoJ():
     verify_against_wang2010(w, mesh)
     
     
-@pytest.mark.dependency()
 def test_wang2010_natural_convection_air_manualJ():
     
     w, mesh = wang2010_natural_convection_air(end_time = 10., automatic_jacobian=False)
-        
-    verify_against_wang2010(w, mesh)
-    
-
-@pytest.mark.dependency(depends=["test_wang2010_natural_convection_air_manualJ"])
-def test_wang2010_restart():
-
-    w, mesh = wang2010_natural_convection_air(start_time = 0.1, output_times = ('start', 'end'),
-        restart=True, automatic_jacobian=False)
         
     verify_against_wang2010(w, mesh)
 
@@ -186,8 +173,6 @@ if __name__=='__main__':
     test_debug_wang2010_natural_convection_air_autoJ()
     
     test_wang2010_natural_convection_air_manualJ()
-    
-    test_wang2010_restart()
     
     test_debug_regression_natural_convection_water_autoJ()
     
