@@ -27,7 +27,9 @@ def variable_viscosity(m=20, start_time = 0., end_time = 1000., time_step_bounds
 
     lid = 'near(x[1],  1.)'
 
-    fixed_walls = 'near(x[0],  0.) | near(x[0],  1.) | near(x[1],  0.)'
+    ymin = -0.25
+    
+    fixed_walls = 'near(x[0],  0.) | near(x[0],  1.) | near(x[1],  '+str(ymin)+')'
 
     left_middle = 'near(x[0], 0.) && near(x[1], 0.5)'
     
@@ -46,7 +48,7 @@ def variable_viscosity(m=20, start_time = 0., end_time = 1000., time_step_bounds
         restart = restart,
         restart_filepath = restart_filepath,
         automatic_jacobian = False,
-        mesh = fenics.RectangleMesh(fenics.Point(0., -0.25), fenics.Point(1., 1.), m, m, 'crossed'),
+        mesh = fenics.RectangleMesh(fenics.Point(0., ymin), fenics.Point(1., 1.), m, m, 'crossed'),
         start_time = start_time,
         end_time = end_time,
         time_step_bounds = time_step_bounds,
