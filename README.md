@@ -1,7 +1,11 @@
 # phaseflow-fenics
-Phaseflow simulates the unsteady conservation of mass, momentum, and energy for an incompressible fluid using the Python finite element library FEniCS.
+Phaseflow simulates the melting and solidification of phase-change materials (PCM).
 
-Currently only a homogeneous fluid is supported. The project is currently under heavy development to support phase-change materials, particularly the melting and freezing of water-ice.
+Phaseflow adopts an enthalpy-based, single domain phase-field, variable viscosity approach, with monolithic system coupling and global Newton linearization of the system of nonlinear partial differential equations (PDE's). The system is composed of
+- Incompressible flow driven by buoyancy: unsteady Navier-Stokes momentum and mass (penalty formulation) with Boussinesq approximation
+- Convection-diffusion of the enthalpy field, with an enthalpy source term accounting for the latent heat of the phase-change material
+
+Phaseflow spatially discretizes the PDE's with the finite element method, and to this end uses the Python/C++ finite element library [FEniCS](https://fenicsproject.org/). Many other features are provided by FEniCS, including the Newton iterative algorithm and solution output to HDF5, among others.
 
 Author: Alexander G. Zimmerman <zimmerman@aices.rwth-aachen.de>
 
@@ -44,6 +48,9 @@ Author: Alexander G. Zimmerman <zimmerman@aices.rwth-aachen.de>
     
     <img src="./docs/images/MeltingPCM.png" width="480">
 
+## References
+- Danaila, I., Moglan, R., Hecht, F., & Le Masson, S. (2014). A Newton method with adaptive finite elements for solving phase-change problems with natural convection. Journal of Computational Physics, 826-840.
+    
 # For users:
 ## [Docker](https://www.docker.com)
 
