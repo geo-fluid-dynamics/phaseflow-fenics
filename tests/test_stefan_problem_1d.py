@@ -113,7 +113,7 @@ def test_stefan_problem_vary_Ste():
 ''' Verify based on analytical model from Worster 2000'''        
 def verify_solidification_pci_position(w, R_s):
 
-    data = [{'Ste': 0.1, 'time': 1., 'true_pci_pos': 0.4901}] # From MATLAB script solving Worster2000
+    data = [{'Ste': 0.125, 'time': 1., 'true_pci_pos': 0.49}] # From MATLAB script solving Worster2000
         
     def theta(x):
     
