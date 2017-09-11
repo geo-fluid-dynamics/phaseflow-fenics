@@ -1,20 +1,16 @@
 import fenics
 import phaseflow
         
-def melt_pcm(Ste = 0.045,
-        Ra = 3.27e5,
-        Pr = 56.2,
-        mu_s = 1.e8,
-        epsilon_1 = 0.01,
+def melt_pcm(
         m = 10,
-        time_step_bounds = (1.e-3, 1.e-3, 1.e-3),
-        initial_pci_refinement_cycles = 6,
-        max_pci_refinement_cycles = 6,
+        dt = 1.e-3,
+        initial_pci_refinement_cycles = 2,
+        max_pci_refinement_cycles_per_time = 6,
         output_dir='output/melt_pcm',
         start_time=0.,
-        end_time=1.,
+        end_time=0.05,
         nlp_divergence_threshold = 1.e12,
-        nlp_relaxation = 1.,
+        nlp_relaxation = 0.45,
         nlp_max_iterations = 30,
         restart=False,
         restart_filepath=''):
@@ -24,22 +20,19 @@ def melt_pcm(Ste = 0.045,
     theta_cold = -0.1
 
     w, mesh = phaseflow.run(
-        Ste = Ste,
-        Ra = Ra,
-        Pr = Pr,
-        mu_s = mu_s,
+        Ste = 1.,
+        Ra = 1.,
+        Pr = 1.,
+        mu_s = 1.e4,
         mu_l = 1.,
         mesh = fenics.UnitSquareMesh(m, m),
-        time_step_bounds = time_step_bounds,
+        time_step_bounds = dt,
         start_time = start_time,
         end_time = end_time,
-        output_times = ('all',),
         stop_when_steady = True,
-        automatic_jacobian = False,
-        custom_newton = True,
-        regularization = {'a_s': 2., 'theta_s': epsilon_1, 'R_s': epsilon_1/2.},
+        regularization = {'a_s': 2., 'theta_s': 0.1, 'R_s': 0.05},
         initial_pci_refinement_cycles = initial_pci_refinement_cycles,
-        max_pci_refinement_cycles = max_pci_refinement_cycles,
+        max_pci_refinement_cycles_per_time = max_pci_refinement_cycles_per_time,
         nlp_max_iterations = nlp_max_iterations,
         nlp_divergence_threshold = nlp_divergence_threshold,
         nlp_relaxation = nlp_relaxation,
@@ -68,54 +61,22 @@ def melt_pcm(Ste = 0.045,
     
 def run_melt_pcm():
     
-    '''
-    w, mesh = melt_pcm(Ste = 1.,
-        Ra = 1.,
-        Pr = 1.,
-        mu_s = 1.e4,
-        epsilon_1 = 0.1,
-        m = 10,
-        time_step_bounds = (1.e-4, 1.e-3, 1.e-2),
-        end_time = 0.01,
-        initial_pci_refinement_cycles = 2,
-        max_pci_refinement_cycles = 6,
-        nlp_divergence_threshold = 1.e12,
-        nlp_relaxation = 0.5,
-        output_dir = 'output/melt_pcm_0')
-    '''
+    """As of this writing, the following will diverge
+    after reaching t = 0.02. When doing this for the first time,
+    it was a simple matter of restarting with further relaxing the
+    Newton method. So that this example will run smoothly,
+    here we choose to end at t = 0.02, and then do the restart.
+    """
+    w, mesh = melt_pcm(output_dir = 'output/melt_pcm_0',
+        end_time=0.02)
     
-    '''
-    w, mesh = melt_pcm(Ste = 1.,
-        Ra = 1.,
-        Pr = 1.,
-        mu_s = 1.e4,
-        epsilon_1 = 0.1,
-        time_step_bounds = (1.e-4, 1.e-3, 1.e-3),
-        initial_pci_refinement_cycles = 2,
-        max_pci_refinement_cycles = 4,
-        nlp_divergence_threshold = 1.e12,
-        nlp_relaxation = 0.5,
+    w, mesh = melt_pcm(
+        nlp_relaxation = 0.3,
         restart = True,
-        restart_filepath = 'output/melt_pcm_0/restart_t0.01.hdf5',
-        start_time = 0.01,
+        restart_filepath = 'output/melt_pcm_0/restart_t0.02.hdf5',
+        start_time = 0.02,
         output_dir = 'output/melt_pcm_1')
-    '''
-    
-    w, mesh = melt_pcm(Ste = 1.,
-        Ra = 1.,
-        Pr = 1.,
-        mu_s = 1.e4,
-        epsilon_1 = 0.1,
-        time_step_bounds = 1.e-3,
-        initial_pci_refinement_cycles = 0,
-        max_pci_refinement_cycles = 4,
-        nlp_divergence_threshold = 1.e12,
-        nlp_relaxation = 0.4,
-        restart = True,
-        restart_filepath = 'output/melt_pcm_1/restart_t0.014.hdf5',
-        start_time = 0.014,
-        output_dir = 'output/melt_pcm_2')
- 
+
     
 if __name__=='__main__':
 
