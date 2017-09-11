@@ -32,8 +32,8 @@ def stefan_problem_solidify(Ste = 0.125,
     mesh = fenics.UnitIntervalMesh(initial_uniform_cell_count)
 
     w, mesh = phaseflow.run(
-        output_dir = 'output/test_stefan_problem_solidify/dt'+str(dt)+
-            '/tol'+str(nlp_absolute_tolerance)+'/',
+        output_dir = 'output/convergence_stefan_problem_solidify/dt'+str(dt)+
+            '/dx'+str(1./float(initial_uniform_cell_count))+'/',
         Pr = 1.,
         Ste = Ste,
         g = [0.],
@@ -50,14 +50,18 @@ def stefan_problem_solidify(Ste = 0.125,
         nlp_absolute_tolerance = nlp_absolute_tolerance,
         end_time = end_time,
         time_step_bounds = dt,
+        output_times = ('end',),
         automatic_jacobian = automatic_jacobian)
         
     return w
   
 
 def convergence_stefan_problem_1d():
+
+    phaseflow.helpers.mkdir_p('output')
     
-    with open('output/convergence.txt', 'a') as file:
+    with open('output/convergence_stefan_problem_solidify/convergence.txt',
+            'a+') as file:
     
         file.write("dt,dx,pci_pos\n")
     
