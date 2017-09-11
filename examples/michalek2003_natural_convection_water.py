@@ -3,11 +3,10 @@ import phaseflow
 
 
 def verify_regression_water(w, mesh):
-    ''' Comparing directly to the steady state benchmark data 
-    from Michalek2003 in this case would take longer 
-    than we should spend on a this part of the test suite. 
-    So instead we subsitute this cheaper regression test.'''
-    verified_solution = {'y': 0.5, 'x': [0.00, 0.10, 0.20, 0.30, 0.40, 0.70, 0.90, 1.00], 'theta': [1.000, 0.551, 0.202, 0.166, 0.211, 0.209, 0.238, 0.000]}
+    """Verify directly against steady-state data from michalek2003"""
+    verified_solution = {'y': 0.5,
+        'x': [0.00, 0.05, 0.12, 0.23, 0.40, 0.59, 0.80, 0.88, 1.00],
+        'theta': [1.00, 0.66, 0.56, 0.58, 0.59, 0.62, 0.20, 0.22, 0.00]}
     
     bbt = mesh.bounding_box_tree()
     
@@ -24,11 +23,12 @@ def verify_regression_water(w, mesh):
             assert(abs(theta - true_theta) < 1.e-2)
 
             
-def wang2010_natural_convection_water(output_dir = 'output/wang2010_natural_convection_water',
-    restart = False,
-    restart_filepath = '',
-    start_time = 0.,
-    time_step_bounds = (0.001, 0.005, 0.005)):
+def michalek2003_natural_convection_water(
+        output_dir = 'output/michalek2003_natural_convection_water',
+        restart = False,
+        restart_filepath = '',
+        start_time = 0.,
+        time_step_bounds = (0.001, 0.005, 0.005)):
 
     m = 10
 
@@ -97,11 +97,10 @@ def wang2010_natural_convection_water(output_dir = 'output/wang2010_natural_conv
     verify_regression_water(w, mesh)
 
 
-def run_wang2010_natural_convection_water():
+def run_michalek2003_natural_convection_water():
     
-    '''
-    wang2010_natural_convection_water('output/wang2010_natural_convection_water_0')
-    '''
+    michalek2003_natural_convection_water(
+        output_dir = 'output/michalek2003_natural_convection_water')
     
     '''
     wang2010_natural_convection_water(restart=True,
@@ -111,11 +110,14 @@ def run_wang2010_natural_convection_water():
         restart_filepath='output/test_regression_natural_convection_water/restart_t0.11125.hdf5')
     '''
     
+    '''
     wang2010_natural_convection_water(restart=True,
         start_time = 0.25825,
         time_step_bounds = (0.001, 0.001, 0.002),
         output_dir='output/wang2010_natural_convection_water_2', 
         restart_filepath='output/wang2010_natural_convection_water_1/restart_t0.25825.hdf5')
+    '''
+    
     
 if __name__=='__main__':
 
