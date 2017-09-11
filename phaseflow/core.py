@@ -316,7 +316,8 @@ def run(
             
             current_time += time_step_size.value
             
-            if stop_when_steady and time.steady(W, w, w_n):
+            if stop_when_steady and time.steady(W, w, w_n, 
+                    steady_relative_tolerance):
             
                 steady = True
                 
