@@ -1,8 +1,22 @@
+"""This example solves a natural convection in water benchmark
+
+and verifies against the result published in 
+
+    @article{michalek2003simulations,
+      title={Simulations of the water freezing process--numerical benchmarks},
+      author={MICHA{\L}EK, TOMASZ and KOWALEWSKI, TOMASZ A},
+      journal={Task Quarterly},
+      volume={7},
+      number={3},
+      pages={389--408},
+      year={2003}
+    }
+"""
 import fenics
 import phaseflow
 
 
-def verify_regression_water(w, mesh):
+def verify_michalek2003_natural_convection_water(w, mesh):
     """Verify directly against steady-state data from michalek2003"""
     verified_solution = {'y': 0.5,
         'x': [0.00, 0.05, 0.12, 0.23, 0.40, 0.59, 0.80, 0.88, 1.00],
@@ -20,7 +34,7 @@ def verify_regression_water(w, mesh):
             
             theta = wval[3]
             
-            assert(abs(theta - true_theta) < 1.e-2)
+            assert(abs(theta - true_theta) < 3.e-2)
 
             
 def michalek2003_natural_convection_water(
@@ -28,9 +42,10 @@ def michalek2003_natural_convection_water(
         restart = False,
         restart_filepath = '',
         start_time = 0.,
-        time_step_bounds = (0.001, 0.005, 0.005)):
+        end_time = 2.0,
+        time_step_bounds = (0.001, 0.002, 0.002)):
 
-    m = 10
+    m = 20
 
     Ra = 2.518084e6
     
@@ -80,45 +95,29 @@ def michalek2003_natural_convection_water(
         mesh = fenics.UnitSquareMesh(m, m, 'crossed'),
         time_step_bounds = time_step_bounds,
         start_time = start_time,
-        end_time = 1.,
+        end_time = end_time,
+        stop_when_steady = True,
+        steady_relative_tolerance = 1.e-4,
+        nlp_absolute_tolerance = 1.e-8,
         initial_values_expression = (
             "0.",
             "0.",
             "0.",
             str(theta_hot)+"*near(x[0],  0.) + "+str(theta_cold)+"*near(x[0],  1.)"),
         boundary_conditions = [
-            {'subspace': 0, 'value_expression': ("0.", "0."), 'degree': 3, 'location_expression': "near(x[0],  0.) | near(x[0],  1.) | near(x[1], 0.) | near(x[1],  1.)", 'method': "topological"},
-            {'subspace': 2, 'value_expression':str(theta_hot), 'degree': 2, 'location_expression': "near(x[0],  0.)", 'method': "topological"},
-            {'subspace': 2, 'value_expression':str(theta_cold), 'degree': 2, 'location_expression': "near(x[0],  1.)", 'method': "topological"}],
+            {'subspace': 0, 'value_expression': ("0.", "0."), 'degree': 3, 'location_expression': "near(x[0],  0.) | near(x[0],  1.) | near(x[1], 0.) | near(x[1],  1.)",
+            'method': "topological"},
+            {'subspace': 2, 'value_expression':str(theta_hot), 'degree': 2, 'location_expression': "near(x[0],  0.)",
+            'method': "topological"},
+            {'subspace': 2, 'value_expression':str(theta_cold), 'degree': 2, 'location_expression': "near(x[0],  1.)",
+            'method': "topological"}],
         restart = restart,
         restart_filepath = restart_filepath,
         output_dir = output_dir)
         
-    verify_regression_water(w, mesh)
+    verify_michalek2003_natural_convection_water(w, mesh)
 
-
-def run_michalek2003_natural_convection_water():
-    
-    michalek2003_natural_convection_water(
-        output_dir = 'output/michalek2003_natural_convection_water')
-    
-    '''
-    wang2010_natural_convection_water(restart=True,
-        start_time = 0.11125,
-        time_step_bounds = (0.001, 0.001, 0.005),
-        output_dir='output/wang2010_natural_convection_water_1', 
-        restart_filepath='output/test_regression_natural_convection_water/restart_t0.11125.hdf5')
-    '''
-    
-    '''
-    wang2010_natural_convection_water(restart=True,
-        start_time = 0.25825,
-        time_step_bounds = (0.001, 0.001, 0.002),
-        output_dir='output/wang2010_natural_convection_water_2', 
-        restart_filepath='output/wang2010_natural_convection_water_1/restart_t0.25825.hdf5')
-    '''
-    
     
 if __name__=='__main__':
 
-    run_wang2010_natural_convection_water()
+    michalek2003_natural_convection_water()
