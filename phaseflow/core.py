@@ -177,6 +177,10 @@ def run(
             if output_times[0] == 'all':
             
                 output_start_time = True
+                
+            if output_times[0] == 'end':
+            
+                output_start_time = False
             
         else:
         
