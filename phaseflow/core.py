@@ -89,7 +89,7 @@ def run(
     temperature_degree = default.temperature_degree,
     automatic_jacobian = False,
     stop_when_steady = False,
-    steady_relative_tolerance = 1.e-8,
+    steady_relative_tolerance = 1.e-4,
     restart = False,
     restart_filepath = '',
     debug = False):
@@ -318,7 +318,8 @@ def run(
             
             current_time += time_step_size.value
             
-            if stop_when_steady and time.steady(W, w, w_n):
+            if stop_when_steady and time.steady(W, w, w_n, 
+                    steady_relative_tolerance):
             
                 steady = True
                 
