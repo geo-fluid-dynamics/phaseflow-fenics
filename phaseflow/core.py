@@ -80,8 +80,7 @@ def run(
     initial_pci_refinement_cycles = 0,
     gamma = 1.e-7,
     custom_newton = True,
-    nlp_absolute_tolerance = 1.,
-    nlp_relative_tolerance = 1.e-8,
+    nlp_absolute_tolerance = 1.e-4,
     nlp_max_iterations = 12,
     nlp_divergence_threshold = 1.e12,
     nlp_relaxation = 1.,
@@ -89,7 +88,7 @@ def run(
     temperature_degree = default.temperature_degree,
     automatic_jacobian = False,
     stop_when_steady = False,
-    steady_relative_tolerance = 1.e-8,
+    steady_relative_tolerance = 1.e-4,
     restart = False,
     restart_filepath = '',
     debug = False):
@@ -269,7 +268,6 @@ def run(
                 # Make the time step solver
                 solve_time_step = solver.make(form_factory = form_factory,
                     nlp_absolute_tolerance = nlp_absolute_tolerance,
-                    nlp_relative_tolerance = nlp_relative_tolerance,
                     nlp_max_iterations = nlp_max_iterations,
                     nlp_divergence_threshold = nlp_divergence_threshold,
                     nlp_relaxation = nlp_relaxation,
