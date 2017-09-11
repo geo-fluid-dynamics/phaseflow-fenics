@@ -68,7 +68,7 @@ def run(
     ddtheta_m_B = default.ddtheta_m_B,
     regularization = default.regularization,
     mesh=default.mesh,
-    initial_values_expression = (lid, "0.", "0.", "1."),
+    initial_values_expression = ('near(x[1],  1.)', "0.", "0.", "1."),
     boundary_conditions = [
         {'subspace': 0, 'value_expression': ("1.", "0."), 'degree': 3, 'location_expression': 'near(x[1],  1.)',
         'method': 'topological'},
