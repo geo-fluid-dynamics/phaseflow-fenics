@@ -1,10 +1,33 @@
+"""This module contains routines to make the solver."""
 import fenics
 
-import phaseflow.problem
 
+class Problem(fenics.NonlinearProblem):
+    """This derived class is required for the derived Newton solver class."""
+    def __init__(self, a, L, bcs):
     
-''' Create a time solver function with a consistent interface.
-Among other reasons for this, the interfaces for the FEniCS classes AdaptiveLinearVariationalSolver and LinearVariationalSolver are not consistent. '''  
+        fenics.NonlinearProblem.__init__(self)
+        
+        self.a = a
+        
+        self.L = L
+        
+        self.bcs = bcs
+    
+    def F(self, b, x):
+
+        assembler = fenics.SystemAssembler(self.a, self.L, self.bcs)
+        
+        assembler.assemble(b, x)
+        
+        
+    def J(self, A, x):
+
+        assembler = fenics.SystemAssembler(self.a, self.L, self.bcs)
+        
+        assembler.assemble(A)
+        
+
 def make(form_factory,
         nlp_absolute_tolerance=1.,
         nlp_relative_tolerance=1.e-8,
@@ -13,9 +36,21 @@ def make(form_factory,
         nlp_relaxation=1.,
         custom_newton=True,
         automatic_jacobian=True):
+    """ Create a time solver function with a consistent interface.
+    
+    Among other reasons for this, the interfaces for the FEniCS classes 
+    AdaptiveLinearVariationalSolver and LinearVariationalSolver are not
+    consistent. 
+    """
+    
+    """@todo This may be deprecated 
+    now that we always use a nonlinear solver and 
+    also since we no longer any of FEniCS's adaptive solvers,
+    since their adaptive solvers do not work in parallel.
+    """        
 
     class CustomNewtonSolver(fenics.NewtonSolver):
-
+        """This derived class allows us to catch divergence."""
         custom_parameters = {'divergence_threshold': nlp_divergence_threshold}
 
         def converged(self, residual, problem, iteration):
@@ -32,8 +67,8 @@ def make(form_factory,
                 return True
                 
             return False
-        
-        
+    
+    
     '''
     Currently we have the option for which Newton solver to use for two reasons:
     1. I don't know how to get the relative residual in CustomNewtonSolver.
@@ -79,12 +114,13 @@ def make(form_factory,
             
         
     def solve_time_step(dt, w, w_n, bcs):
-
+        """Solve the problem for one time step."""
+        
         F, J = form_factory.make_nonlinear_form(dt=dt, w_k=w, w_n=w_n, automatic_jacobian=automatic_jacobian)
         
         if custom_newton:
         
-            problem = phaseflow.problem.Problem(J, F, bcs)
+            problem = Problem(J, F, bcs)
             
             converged = solve(problem=problem, w=w)
             
@@ -98,3 +134,9 @@ def make(form_factory,
             
         
     return solve_time_step
+    
+    
+if __name__=='__main__':
+
+    pass
+    

@@ -1,13 +1,19 @@
+"""This module contains routines for adaptive mesh refinement."""
 import fenics
 import numpy
-
 import helpers
 
+"""@todo Formalize approach with an error estimator."""
 
+"""fenics requires this exact data structure to evaluate w at a point."""
 solution_at_point = numpy.array([1.e32, 1.e32, 1.e32, 1.e32, 1.e32], dtype=numpy.float_) # Oversized for up to 3D
 
 def mark_cells_touching_mushy_region(regularization, mesh, w):
-
+    """Mark cells to refine if they touch the mushy region.
+    
+    This includes any cell that has at least one vertex both in the
+    hot region and the cold region.
+    """
     hot = (regularization['theta_s'] + regularization['R_s'] - fenics.dolfin.DOLFIN_EPS)
             
     cold = (regularization['theta_s'] - regularization['R_s'] + fenics.dolfin.DOLFIN_EPS)
@@ -44,7 +50,11 @@ def mark_cells_touching_mushy_region(regularization, mesh, w):
     
     
 def mark_cells_containing_theta_s(regularization, mesh, w):
-
+    """Mark cells to refine if they contain the central fusion temperature.
+    
+    This includes any cell that has both at least one vertex hotter
+    than the fusion temperature and at least one colder.
+    """
     theta_s = regularization['theta_s']
 
     contains_theta_s = fenics.CellFunction("bool", mesh)
@@ -78,7 +88,8 @@ def mark_cells_containing_theta_s(regularization, mesh, w):
     return contains_theta_s
     
     
-def refine_pci(regularization, pci_refinement_cycle, mesh, w, method='contains_theta_s'):
+def refine_pci(regularization, pci_refinement_cycle, mesh, w,
+        method='contains_theta_s'):
 
     if method == 'touches_mushy_region':
 
@@ -98,3 +109,9 @@ def refine_pci(regularization, pci_refinement_cycle, mesh, w, method='contains_t
     mesh = fenics.refine(mesh, refine_cell)
     
     return mesh
+
+    
+if __name__=='__main__':
+
+    pass
+    

@@ -3,7 +3,7 @@ from .context import phaseflow
 
 def test_time_check():
 
-    time_step_size = phaseflow.helpers.BoundedValue(0.5, 1., 1.)
+    time_step_size = phaseflow.bounded_value.BoundedValue(0.5, 1., 1.)
     
     end_time = 3.
     

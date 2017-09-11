@@ -1,12 +1,14 @@
 import fenics
 import dolfin
 import helpers
+import bounded_value
 import output
+
 
 TIME_EPS = 1.e-8
 
-class TimeStepSize(helpers.BoundedValue):
-
+class TimeStepSize(bounded_value.BoundedValue):
+    """This class sets bounds on the adaptive time step size."""
     def __init__(self, bounded_value):
     
         super(TimeStepSize, self).__init__(bounded_value.min, bounded_value.value, bounded_value.max)
@@ -26,7 +28,7 @@ class TimeStepSize(helpers.BoundedValue):
 
 
 def adaptive_time_step(time_step_size, w, w_n, bcs, solve_time_step, debug=False):
-    
+    """Solve one time step with an adaptive time step size."""
     converged = False
     
     while not converged:
@@ -55,7 +57,17 @@ def adaptive_time_step(time_step_size, w, w_n, bcs, solve_time_step, debug=False
    
    
 def check(current_time, time_step_size, end_time, output_times, output_count):
-
+    """Check if outputs should be written at this time.
+    
+    This also returns a modified time step size that assures we will
+    compute a solution at a specified output time.
+    """
+    
+    """@todo This is too complicated,
+    especially because it's doing two things.
+    One function should do one thing!
+    """
+    
     output_this_time = False
         
     next_time = current_time + time_step_size.value
