@@ -1,3 +1,8 @@
+"""This module contains default values for some arguments/parameters.
+
+Do not repeat yourself: With this module we can set such values 
+in a single place.
+"""
 import fenics
 import globals
 
@@ -20,3 +25,4 @@ temperature_degree = 1
 if __name__=='__main__':
 
     pass
+    

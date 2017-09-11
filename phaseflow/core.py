@@ -1,28 +1,12 @@
-''' Solve the benchmark "differentially heated cavity" natural convection problem using finite elements.
-        
-    Solve the natural convection test problem from
-
-        @article
-        {danaila2014newton,
-          title={A Newton method with adaptive finite elements for solving phase-change problems with natural convection},
-          author={Danaila, Ionut and Moglan, Raluca and Hecht, Fr{\'e}d{\'e}ric and Le Masson, St{\'e}phane},
-          journal={Journal of Computational Physics},
-          volume={274},
-          pages={826--840},
-          year={2014},
-          publisher={Academic Press}
-        }
-    
-    Match the notation in danaila2014newton as best as possible.
-    
-'''
+"""This module contains the core functionalty of Phaseflow."""
 import fenics
 import h5py
 import helpers
 import globals
 import default
-import problem
+import form
 import solver
+import bounded_value
 import time
 import refine
 import output
@@ -33,7 +17,7 @@ Conceptually this will be like having a PCM with zero latent heat.
 The melting front should move quickly.'''
 
 def function_spaces(mesh=default.mesh, pressure_degree=default.pressure_degree, temperature_degree=default.temperature_degree):
-    """ Define function spaces for the variational form """
+    """ Define function spaces for the variational form."""
     
     velocity_degree = pressure_degree + 1
     
@@ -43,20 +27,21 @@ def function_spaces(mesh=default.mesh, pressure_degree=default.pressure_degree, 
 
     temperature_space = fenics.FunctionSpace(mesh, 'P', temperature_degree)
 
-    '''
-    MixedFunctionSpace used to be available but is now deprecated. 
+    ''' MixedFunctionSpace used to be available but is now deprecated. 
     The way that fenics separates function spaces and elements is confusing.
     To create the mixed space, I'm using the approach from https://fenicsproject.org/qa/11983/mixedfunctionspace-in-2016-2-0
     '''
     velocity_element = fenics.VectorElement('P', mesh.ufl_cell(), velocity_degree)
 
     '''
-    @todo How can we use the space $Q = \left{q \in L^2(\Omega) | \int{q = 0}\right}$ ?
+    @todo How can we use the space
+        $Q = \left{q \in L^2(\Omega) | \int{q = 0}\right}$ ?
 
     All Navier-Stokes FEniCS examples I've found simply use P2P1. danaila2014newton says that
-    they are using the "classical Hilbert spaces" for velocity and pressure, but then they write
-    down the space Q with less restrictions than H^1_0.
-
+    they are using the "classical Hilbert spaces" for velocity and pressure, but then they write down the space Q with less restrictions than H^1_0.
+    
+    My understanding is that the space Q relates to the divergence-free
+    requirement.
     '''
     pressure_element = fenics.FiniteElement('P', mesh.ufl_cell(), pressure_degree)
 
@@ -108,8 +93,20 @@ def run(
     restart = False,
     restart_filepath = '',
     debug = False):
+    """Run Phaseflow.
     
-        
+    Rather than using an input file, Phaseflow is configured entirely through
+    the arguments in this run() function.
+    
+    See the tests and examples for demonstrations of how to use this.
+    """
+    
+    '''@todo Describe the arguments in the docstring.
+    Phaseflow has been in rapid development and these have been changing.
+    Now that things are stabilizing somewhat, it's about time to document
+    these arguments properly.
+    '''
+    
     # Display inputs
     helpers.print_once("Running Phaseflow with the following arguments:")
     
@@ -131,7 +128,9 @@ def run(
     
         time_step_bounds = (time_step_bounds, time_step_bounds, time_step_bounds)
     
-    time_step_size = time.TimeStepSize(helpers.BoundedValue(time_step_bounds[0], time_step_bounds[1], time_step_bounds[2]))
+    time_step_size = time.TimeStepSize(
+        bounded_value.BoundedValue(time_step_bounds[0],
+            time_step_bounds[1], time_step_bounds[2]))
         
     dimensionality = mesh.type().dim()
     
@@ -264,7 +263,7 @@ def run(
                 time_step_size, end_time, output_times, output_count)
                 
                 # Initialize the functions that we will use to generate our variational form
-                form_factory = problem.FormFactory(W, {'Ra': Ra, 'Pr': Pr, 'Ste': Ste, 'C': C, 'K': K, 'g': g, 'gamma': gamma, 'mu_l': mu_l, 'mu_s': mu_s}, m_B, ddtheta_m_B, regularization)
+                form_factory = form.FormFactory(W, {'Ra': Ra, 'Pr': Pr, 'Ste': Ste, 'C': C, 'K': K, 'g': g, 'gamma': gamma, 'mu_l': mu_l, 'mu_s': mu_s}, m_B, ddtheta_m_B, regularization)
 
                 
                 # Make the time step solver
