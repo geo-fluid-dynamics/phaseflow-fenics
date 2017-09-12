@@ -34,7 +34,7 @@ def verify_michalek2003_natural_convection_water(w, mesh):
             
             theta = wval[3]
             
-            assert(abs(theta - true_theta) < 3.e-2)
+            assert(abs(theta - true_theta) < 2.e-2)
 
             
 def michalek2003_natural_convection_water(
@@ -45,7 +45,7 @@ def michalek2003_natural_convection_water(
         end_time = 2.0,
         time_step_bounds = (0.001, 0.002, 0.002)):
 
-    m = 20
+    m = 40
 
     Ra = 2.518084e6
     
@@ -97,7 +97,7 @@ def michalek2003_natural_convection_water(
         start_time = start_time,
         end_time = end_time,
         stop_when_steady = True,
-        steady_relative_tolerance = 1.e-4,
+        steady_relative_tolerance = 1.e-5,
         nlp_absolute_tolerance = 1.e-8,
         initial_values_expression = (
             "0.",
