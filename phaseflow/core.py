@@ -88,7 +88,7 @@ def run(
     initial_pci_refinement_cycles = 0,
     gamma = 1.e-7,
     custom_newton = True,
-    nlp_absolute_tolerance = 1.,
+    nlp_absolute_tolerance = 1.e-4,
     nlp_relative_tolerance = 1.e-8,
     nlp_max_iterations = 12,
     nlp_divergence_threshold = 1.e12,
@@ -340,7 +340,7 @@ def run(
                 output.write_solution(solution_file, w, current_time)
                 
                 # Write checkpoint/restart files
-                restart_filepath = output_dir+'/restart_t'+str(current_time)+'.hdf5'
+                restart_filepath = output_dir+'/restart_t'+str(current_time)+'.h5'
                 
                 with fenics.HDF5File(fenics.mpi_comm_world(), restart_filepath, 'w') as h5:
         
