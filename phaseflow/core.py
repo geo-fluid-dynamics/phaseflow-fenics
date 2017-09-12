@@ -338,7 +338,7 @@ def run(
                 output.write_solution(solution_file, w, current_time)
                 
                 # Write checkpoint/restart files
-                restart_filepath = output_dir+'/restart_t'+str(current_time)+'.hdf5'
+                restart_filepath = output_dir+'/restart_t'+str(current_time)+'.h5'
                 
                 with fenics.HDF5File(fenics.mpi_comm_world(), restart_filepath, 'w') as h5:
         
