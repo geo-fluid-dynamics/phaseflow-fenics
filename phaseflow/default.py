@@ -7,7 +7,7 @@ import fenics
 import globals
 
 
-parameters = {'Ra': 1., 'Pr': 1., 'Ste': 1., 'C': 1., 'K': 1., 'g': (0., 0.), 'mu_l': 1., 'mu_s': 1.e8}
+parameters = {'Ra': 1.e6, 'Pr': 0.71, 'Ste': 0.045, 'C': 1, 'K': 1., 'g': (0., -1.), 'mu_l': 1., 'mu_s': 1.e8}
 
 m_B = lambda theta : theta*parameters['Ra']/(parameters['Pr']*globals.Re**2)
 
@@ -20,7 +20,6 @@ mesh = fenics.UnitSquareMesh(fenics.dolfin.mpi_comm_world(), 20, 20, 'crossed')
 pressure_degree = 1
 
 temperature_degree = 1
-
 
 if __name__=='__main__':
 
