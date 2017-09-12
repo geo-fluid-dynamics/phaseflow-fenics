@@ -1,5 +1,6 @@
+from .context import phaseflow
+
 import fenics
-import phaseflow
 
 
 def verify_regression_water(w, mesh):
@@ -24,12 +25,7 @@ def verify_regression_water(w, mesh):
             assert(abs(theta - true_theta) < 1.e-2)
 
             
-def wang2010_natural_convection_water(output_dir = 'output/wang2010_natural_convection_water',
-    restart = False,
-    restart_filepath = '',
-    start_time = 0.,
-    time_step_bounds = (0.001, 0.005, 0.005)):
-
+def regression_natural_convection_water(automatic_jacobian=False):
     m = 10
 
     Ra = 2.518084e6
@@ -78,9 +74,10 @@ def wang2010_natural_convection_water(output_dir = 'output/wang2010_natural_conv
         m_B = lambda theta : Ra/(Pr*Re*Re)/(beta*(T_h - T_c))*(rho(theta_f) - rho(theta))/rho(theta_f),
         ddtheta_m_B = lambda theta : -Ra/(Pr*Re*Re)/(beta*(T_h - T_c))*(ddtheta_rho(theta))/rho(theta_f),
         mesh = fenics.UnitSquareMesh(m, m, 'crossed'),
-        time_step_bounds = time_step_bounds,
-        start_time = start_time,
-        end_time = 1.,
+        time_step_bounds = (0.001, 0.002, 0.002),
+        end_time = 0.18,
+        output_times = (),
+        automatic_jacobian = False,
         initial_values_expression = (
             "0.",
             "0.",
@@ -90,33 +87,18 @@ def wang2010_natural_convection_water(output_dir = 'output/wang2010_natural_conv
             {'subspace': 0, 'value_expression': ("0.", "0."), 'degree': 3, 'location_expression': "near(x[0],  0.) | near(x[0],  1.) | near(x[1], 0.) | near(x[1],  1.)", 'method': "topological"},
             {'subspace': 2, 'value_expression':str(theta_hot), 'degree': 2, 'location_expression': "near(x[0],  0.)", 'method': "topological"},
             {'subspace': 2, 'value_expression':str(theta_cold), 'degree': 2, 'location_expression': "near(x[0],  1.)", 'method': "topological"}],
-        restart = restart,
-        restart_filepath = restart_filepath,
-        output_dir = output_dir)
+        output_dir = 'output/test_regression_natural_convection_water')
         
     verify_regression_water(w, mesh)
 
 
-def run_wang2010_natural_convection_water():
+def test_debug_regression_natural_convection_water():
+
+    regression_natural_convection_water()
     
-    '''
-    wang2010_natural_convection_water('output/wang2010_natural_convection_water_0')
-    '''
-    
-    '''
-    wang2010_natural_convection_water(restart=True,
-        start_time = 0.11125,
-        time_step_bounds = (0.001, 0.001, 0.005),
-        output_dir='output/wang2010_natural_convection_water_1', 
-        restart_filepath='output/test_regression_natural_convection_water/restart_t0.11125.hdf5')
-    '''
-    
-    wang2010_natural_convection_water(restart=True,
-        start_time = 0.25825,
-        time_step_bounds = (0.001, 0.001, 0.002),
-        output_dir='output/wang2010_natural_convection_water_2', 
-        restart_filepath='output/wang2010_natural_convection_water_1/restart_t0.25825.hdf5')
     
 if __name__=='__main__':
 
-    run_wang2010_natural_convection_water()
+    test_debug_regression_natural_convection_water_autoJ()
+    
+    test_debug_regression_natural_convection_water_manualJ()

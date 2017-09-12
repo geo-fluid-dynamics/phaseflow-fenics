@@ -21,7 +21,6 @@ pressure_degree = 1
 
 temperature_degree = 1
 
-
 if __name__=='__main__':
 
     pass
