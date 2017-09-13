@@ -35,7 +35,6 @@ def melt_pcm(Ste = 0.045,
         end_time=1.,
         nlp_absolute_tolerance = 1.,
         nlp_divergence_threshold = 1.e12,
-        nlp_relaxation = 1.,
         nlp_max_iterations = 30,
         restart=False,
         restart_filepath=''):
@@ -64,7 +63,6 @@ def melt_pcm(Ste = 0.045,
         nlp_absolute_tolerance = nlp_absolute_tolerance,
         nlp_max_iterations = nlp_max_iterations,
         nlp_divergence_threshold = nlp_divergence_threshold,
-        nlp_relaxation = nlp_relaxation,
         initial_values_expression = (
             "0.",
             "0.",
@@ -104,7 +102,6 @@ def test_melt_pcm():
         initial_pci_refinement_cycles = 5,
         max_pci_refinement_cycles_per_time = 2,
         nlp_divergence_threshold = 1.e12,
-        nlp_relaxation = 0.45,
         output_dir = 'output/test_melt_pcm')
         
     verify_pci_position_regression(theta_s, w)
