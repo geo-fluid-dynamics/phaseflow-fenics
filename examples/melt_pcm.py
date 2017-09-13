@@ -10,7 +10,6 @@ def melt_pcm(
         start_time=0.,
         end_time=0.05,
         nlp_divergence_threshold = 1.e12,
-        nlp_relaxation = 0.45,
         nlp_max_iterations = 30,
         restart=False,
         restart_filepath=''):
@@ -35,7 +34,6 @@ def melt_pcm(
         max_pci_refinement_cycles_per_time = max_pci_refinement_cycles_per_time,
         nlp_max_iterations = nlp_max_iterations,
         nlp_divergence_threshold = nlp_divergence_threshold,
-        nlp_relaxation = nlp_relaxation,
         initial_values_expression = (
             "0.",
             "0.",
@@ -67,16 +65,15 @@ def run_melt_pcm():
     Newton method. So that this example will run smoothly,
     here we choose to end at t = 0.02, and then do the restart.
     """
-    w, mesh = melt_pcm(output_dir = 'output/melt_pcm_0',
-        end_time=0.02)
+    w, mesh = melt_pcm(output_dir = 'output/melt_pcm_0')
     
+    '''
     w, mesh = melt_pcm(
-        nlp_relaxation = 0.3,
         restart = True,
         restart_filepath = 'output/melt_pcm_0/restart_t0.02.hdf5',
         start_time = 0.02,
         output_dir = 'output/melt_pcm_1')
-
+    '''
     
 if __name__=='__main__':
 
