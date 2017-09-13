@@ -1,5 +1,4 @@
 import fenics
-import dolfin
 import helpers
 import bounded_value
 import output
@@ -22,7 +21,7 @@ class TimeStepSize(bounded_value.BoundedValue):
         
         super(TimeStepSize, self).set(value)
         
-        if abs(self.value - old_value) > dolfin.DOLFIN_EPS:
+        if abs(self.value - old_value) > fenics.DOLFIN_EPS:
         
             helpers.print_once("Set time step size to dt = "+str(value))
 
@@ -45,7 +44,7 @@ def adaptive_time_step(time_step_size, w, w_n, bcs, solve_time_step, debug=False
         
             w.assign(w_n)
         
-        if time_step_size.value <= time_step_size.min + dolfin.DOLFIN_EPS:
+        if time_step_size.value <= time_step_size.min + fenics.DOLFIN_EPS:
             
             break;
         

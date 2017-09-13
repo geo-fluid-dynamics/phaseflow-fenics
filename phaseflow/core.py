@@ -91,7 +91,7 @@ def run(
     nlp_absolute_tolerance = 1.e-4,
     nlp_max_iterations = 12,
     nlp_divergence_threshold = 1.e12,
-    nlp_relaxation = 1.,
+    nlp_relaxation_bounds = (0.3, 1., 1.),
     pressure_degree = default.pressure_degree,
     temperature_degree = default.temperature_degree,
     automatic_jacobian = False,
@@ -134,6 +134,11 @@ def run(
     if type(time_step_bounds) == type(1.):
     
         time_step_bounds = (time_step_bounds, time_step_bounds, time_step_bounds)
+        
+    if type(nlp_relaxation_bounds) == type(1.):
+    
+        nlp_relaxation = (nlp_relaxation_bounds,
+            nlp_relaxation_bounds, nlp_relaxation_bounds)
     
     time_step_size = time.TimeStepSize(
         bounded_value.BoundedValue(time_step_bounds[0],
@@ -278,7 +283,7 @@ def run(
                     nlp_absolute_tolerance = nlp_absolute_tolerance,
                     nlp_max_iterations = nlp_max_iterations,
                     nlp_divergence_threshold = nlp_divergence_threshold,
-                    nlp_relaxation = nlp_relaxation,
+                    nlp_relaxation_bounds = nlp_relaxation_bounds,
                     custom_newton = custom_newton,
                     automatic_jacobian = automatic_jacobian)
                 
