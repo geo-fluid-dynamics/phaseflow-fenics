@@ -55,7 +55,7 @@ def function_spaces(mesh=default.mesh, pressure_degree=default.pressure_degree, 
 
 
 def run(
-    output_dir = 'output/natural_convection',
+    output_dir = 'output/wang2010_natural_convection_air',
     Ra = default.parameters['Ra'],
     Pr = default.parameters['Pr'],
     Ste = default.parameters['Ste'],
@@ -69,10 +69,18 @@ def run(
     regularization = default.regularization,
     mesh=default.mesh,
     initial_values_expression = ("0.", "0.", "0.", "0.5*near(x[0],  0.) -0.5*near(x[0],  1.)"),
-    boundary_conditions = [{'subspace': 0, 'value_expression': ("0.", "0."), 'degree': 3, 'location_expression': "near(x[0],  0.) | near(x[0],  1.) | near(x[1], 0.) | near(x[1],  1.)", 'method': 'topological'}, {'subspace': 2, 'value_expression': "0.", 'degree': 2, 'location_expression': "near(x[0],  0.)", 'method': 'topological'}, {'subspace': 2, 'value_expression': "0.", 'degree': 2, 'location_expression': "near(x[0],  1.)", 'method': 'topological'}],
+    boundary_conditions = [{'subspace': 0,
+            'value_expression': ("0.", "0."), 'degree': 3,
+            'location_expression': "near(x[0],  0.) | near(x[0],  1.) | near(x[1], 0.) | near(x[1],  1.)", 'method': 'topological'},
+        {'subspace': 2,
+            'value_expression': "0.5", 'degree': 2, 
+            'location_expression': "near(x[0],  0.)", 'method': 'topological'},
+         {'subspace': 2,
+            'value_expression': "-0.5", 'degree': 2, 
+            'location_expression': "near(x[0],  1.)", 'method': 'topological'}],
     start_time = 0.,
-    end_time = 1.,
-    time_step_bounds = (1.e-3, 1.e-3, 1.),
+    end_time = 10.,
+    time_step_bounds = (1.e-3, 1.e-3, 0.01),
     output_times = ('all',),
     max_time_steps = 1000,
     max_pci_refinement_cycles = 1000,
@@ -87,7 +95,7 @@ def run(
     pressure_degree = default.pressure_degree,
     temperature_degree = default.temperature_degree,
     automatic_jacobian = False,
-    stop_when_steady = False,
+    stop_when_steady = True,
     steady_relative_tolerance = 1.e-4,
     restart = False,
     restart_filepath = '',
@@ -321,7 +329,7 @@ def run(
             
                 steady = True
                 
-                if output_times[-1] == 'end':
+                if (output_times is not ()) and (output_times[-1] == 'end'):
                 
                     output_this_time = True
             
