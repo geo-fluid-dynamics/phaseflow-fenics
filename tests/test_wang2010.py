@@ -1,3 +1,22 @@
+"""This module tests the natural convection of air.
+
+This verifies against the results published in 
+
+@article{wang2010comprehensive,
+  title={A comprehensive numerical model for melting with natural convection},
+  author={Wang, Shimin and Faghri, Amir and Bergman, Theodore L},
+  journal={International Journal of Heat and Mass Transfer},
+  volume={53},
+  number={9},
+  pages={1986--2000},
+  year={2010},
+  publisher={Elsevier}
+}
+
+phaseflow runs this case as a minimum working example by default,
+so see the default arguments of phaseflow.core.run() for the 
+problem setup.
+"""
 from .context import phaseflow
 
 import fenics
@@ -21,68 +40,34 @@ def verify_against_wang2010(w, mesh):
             ux = wval[0]*data['Pr']/data['Ra']**0.5
         
             assert(abs(ux - true_ux) < 2.e-2)
-        
-        
-def wang2010_natural_convection_air(output_dir='output/test_wang2010_natural_convection_air',
-        start_time=0., end_time=1., restart=False, output_times=('start', 1.e-3, 0.01, 0.1, 'end',),
-        automatic_jacobian=True):
-
-    m = 20
-    
-    theta_hot = 0.5
-    
-    theta_cold = -0.5
-    
-    theta_s = theta_cold - 1.
-    
-    w, mesh = phaseflow.run(
-        Ste = 1.e16,
-        mesh = fenics.UnitSquareMesh(m, m, 'crossed'),
-        time_step_bounds = (1.e-3, 1.e-3, 0.01),
-        start_time = start_time,
-        end_time = end_time,
-        output_times = output_times,
-        stop_when_steady = True,
-        automatic_jacobian = automatic_jacobian,
-        custom_newton = False,
-        regularization = {'a_s': 2., 'theta_s': theta_s, 'R_s': 0.1*abs(theta_s)},
-        initial_values_expression = (
-            "0.",
-            "0.",
-            "0.",
-            str(theta_hot)+"*near(x[0],  0.) + "+str(theta_cold)+"*near(x[0],  1.)"),
-        boundary_conditions = [
-            {'subspace': 0, 'value_expression': ("0.", "0."), 'degree': 3, 'location_expression': "near(x[0],  0.) | near(x[0],  1.) | near(x[1], 0.) | near(x[1],  1.)", 'method': "topological"},
-            {'subspace': 2, 'value_expression': str(theta_hot), 'degree': 2, 'location_expression': "near(x[0],  0.)", 'method': "topological"},
-            {'subspace': 2, 'value_expression': str(theta_cold), 'degree': 2, 'location_expression': "near(x[0],  1.)", 'method': "topological"}],
-        output_dir = output_dir,
-        debug = True,
-        restart = restart,
-        restart_filepath = output_dir+'/restart_t'+str(start_time)+'.h5')
-
-    return w, mesh
-    
+            
     
 def test_debug_wang2010_natural_convection_air_autoJ():
     
-    w, mesh = wang2010_natural_convection_air(automatic_jacobian=True)
+    w, mesh = phaseflow.run(automatic_jacobian=True, output_times=())
         
     verify_against_wang2010(w, mesh)
+
     
-    
+output_dir='output/test_wang2010_natural_convection_air/'
+
 @pytest.mark.dependency()
-def test_wang2010_natural_convection_air_manualJ():
+def test_wang2010_natural_convection_air():
     
-    w, mesh = wang2010_natural_convection_air(end_time = 10., automatic_jacobian=False)
+    w, mesh = phaseflow.run(output_times=('end',),
+        output_dir=output_dir)
         
     verify_against_wang2010(w, mesh)
     
 
-@pytest.mark.dependency(depends=["test_wang2010_natural_convection_air_manualJ"])
-def test_wang2010_restart():
+@pytest.mark.dependency(depends=["test_wang2010_natural_convection_air"])
+def test_wang2010_natural_convection_air_restart():
 
-    w, mesh = wang2010_natural_convection_air(start_time = 0.1, output_times = ('start', 'end'),
-        restart=True, automatic_jacobian=False)
+    w, mesh = phaseflow.run(restart = True,
+        restart_filepath = output_dir+'restart_t0.125.h5',
+        start_time = 0.125,
+        output_times = (),
+        output_dir=output_dir)
         
     verify_against_wang2010(w, mesh)
     
@@ -91,6 +76,6 @@ if __name__=='__main__':
 
     test_debug_wang2010_natural_convection_air_autoJ()
     
-    test_wang2010_natural_convection_air_manualJ()
+    test_wang2010_natural_convection_air()
     
-    test_wang2010_restart()
+    test_wang2010_natural_convection_air_restart()
