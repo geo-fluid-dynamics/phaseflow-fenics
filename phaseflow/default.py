@@ -13,7 +13,8 @@ m_B = lambda theta : theta*parameters['Ra']/(parameters['Pr']*globals.Re**2)
 
 ddtheta_m_B = lambda theta : parameters['Ra']/(parameters['Pr']*globals.Re**2)
 
-regularization = {'a_s': 2., 'theta_s': 0.01, 'R_s': 0.005}
+'''Here we set an arbitrarily low theta_s to disable phase-change.'''
+regularization = {'a_s': 2., 'theta_s': -1.e12, 'R_s': 0.005}
 
 mesh = fenics.UnitSquareMesh(fenics.dolfin.mpi_comm_world(), 20, 20, 'crossed')
 

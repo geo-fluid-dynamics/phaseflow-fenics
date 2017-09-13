@@ -105,6 +105,10 @@ def check(current_time, time_step_size, end_time, output_times, output_count):
                 if not (output_times[output_count] == 'end'):
                 
                     output_count += 1
+                    
+    else:
+    
+        next_output_time = None
             
     return time_step_size, next_time, output_this_time, output_count, next_output_time
    
