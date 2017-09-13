@@ -170,7 +170,7 @@ def make(form_factory,
                         nlp_relaxation.set(nlp_relaxation.value
                             + RELAXATION_INCREMENT)
                         
-                        break
+                    break
                     
                 except NewtonDiverged:
                 
