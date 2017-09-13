@@ -57,7 +57,23 @@ Author: Alexander G. Zimmerman <zimmerman@aices.rwth-aachen.de>
 The FEniCS project provides a [Docker image](https://hub.docker.com/r/fenicsproject/stable/) with a pre-configured Python environment and pre-built fenics. See their ["FEniCS in Docker" manual](https://fenics.readthedocs.io/projects/containers/en/latest/). Our [custom Docker image for Phaseflow](https://hub.docker.com/r/zimmerman/phaseflow-fenics/) only adds a Phaseflow installation including any missing dependencies.
 
 Get the [free community edition of Docker](https://www.docker.com/community-edition).
+    
+## Run Phaseflow in Docker
+Run the container
 
+    docker run -ti zimmerman/phaseflow-fenics:latest
+
+Pull the latest version of the master branch
+
+    cd ~/phaseflow-fenics
+    
+    git pull
+
+Run tests
+
+    python -m pytest -v -s -k "not debug"
+
+## Some Docker details
 Pull the image and run the container with Docker
 
     docker run -ti zimmerman/phaseflow-fenics:latest
@@ -83,33 +99,23 @@ or list all containers (running or not) with
     docker ps -a
 
 To enter a bash terminal inside of the running container
-
-    docker start fenics
     
     docker exec -ti -u fenics phaseflow-fenics /bin/bash -l
     
 Note that the "-u fenics" logs into the machine as the "fenics" user.
-    
-## Run Phaseflow in Docker
 
-Run the container
-
-    docker run -ti zimmerman/phaseflow-fenics:latest
-
-Pull the latest version of the master branch
-
-    cd phaseflow-fenics
-    
-    git pull
-
-Run tests
-
-    python -m pytest -v -s -k "not debug"
-    
-Note that the Docker image has phaseflow installed, so in your own Python scripts you can
+The Docker image has phaseflow installed, so in your own Python scripts you can
 
     import phaseflow
+
+but in this case you should make sure to install the latest version with
+
+    cd ~/phaseflow-fenics
     
+    git pull
+    
+    pip install --user --upgrade .
+
 # For developers:
 ## Project structure
 This project mostly follows the structure suggested by [The Hitchhiker's Guide to Python](http://docs.python-guide.org/en/latest/)
