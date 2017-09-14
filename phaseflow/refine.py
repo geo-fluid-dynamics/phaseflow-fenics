@@ -88,7 +88,23 @@ def mark_cells_containing_theta_s(regularization, mesh, w):
     return contains_theta_s
     
     
+def unmark_cells_exceeding_minimum_diameter(mesh, refine, diameter):
+
+    for cell in fenics.cells(mesh):
+    
+        if not refine[cell]:
+            
+            continue
+            
+        if cell.circumradius() <= diameter:
+        
+            refine[cell] = False
+    
+    return refine
+    
+    
 def refine_pci(regularization, pci_refinement_cycle, mesh, w,
+        minimum_cell_diameter=fenics.DOLFIN_EPS,
         method='contains_theta_s'):
 
     if method == 'touches_mushy_region':
@@ -101,8 +117,11 @@ def refine_pci(regularization, pci_refinement_cycle, mesh, w,
 
     pci_cell_count = sum(refine_cell)
 
+    refine_cell = unmark_cells_exceeding_minimum_diameter(mesh, refine_cell,
+        minimum_cell_diameter)
+    
     assert(pci_cell_count > 0)
-
+    
     helpers.print_once("PCI Refinement cycle #"+str(pci_refinement_cycle)+
         ": Refining "+str(pci_cell_count)+" cells containing the PCI.")
 

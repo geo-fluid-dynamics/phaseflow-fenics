@@ -32,6 +32,7 @@ def melt_pcm(
         regularization = {'a_s': 2., 'theta_s': 0.1, 'R_s': 0.05},
         initial_pci_refinement_cycles = initial_pci_refinement_cycles,
         max_pci_refinement_cycles_per_time = max_pci_refinement_cycles_per_time,
+        minimum_cell_diameter = 0.01,
         nlp_max_iterations = nlp_max_iterations,
         nlp_divergence_threshold = nlp_divergence_threshold,
         initial_values_expression = (

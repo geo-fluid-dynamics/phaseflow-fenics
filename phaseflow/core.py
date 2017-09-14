@@ -86,6 +86,7 @@ def run(
     max_pci_refinement_cycles = 1000,
     max_pci_refinement_cycles_per_time = 0,
     initial_pci_refinement_cycles = 0,
+    minimum_cell_diameter = fenics.DOLFIN_EPS,
     gamma = 1.e-7,
     custom_newton = True,
     nlp_absolute_tolerance = 1.e-4,
@@ -164,6 +165,10 @@ def run(
     
     
     # Open the output file(s)   
+    with open('log.txt', 'w+') as log:
+    
+        log.write('newton_relaxation\n')
+    
     ''' @todo  explore info(f.parameters, verbose=True) 
     to avoid duplicate mesh storage when appropriate 
     per https://fenicsproject.org/qa/3051/parallel-output-of-a-time-series-in-hdf5-format '''
@@ -319,7 +324,9 @@ def run(
 
                     break
                     
-                mesh = refine.refine_pci(regularization, pci_refinement_cycle_this_time, mesh, w) # @todo Use w_n or w?
+                mesh = refine.refine_pci(regularization,
+                    pci_refinement_cycle_this_time, mesh, w,
+                    minimum_cell_diameter)
                 
                 pci_refinement_cycle += 1
                 
