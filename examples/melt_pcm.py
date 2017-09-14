@@ -3,12 +3,13 @@ import phaseflow
         
 def melt_pcm(
         m = 10,
-        dt = 1.e-3,
+        time_step_bounds = (1.e-4, 1.e-3, 1.e-3),
         initial_pci_refinement_cycles = 2,
         max_pci_refinement_cycles_per_time = 6,
         output_dir='output/melt_pcm',
         start_time=0.,
         end_time=0.05,
+        nlp_absolute_tolerance = 1.e-4,
         nlp_divergence_threshold = 1.e12,
         nlp_max_iterations = 30,
         restart=False,
@@ -25,14 +26,15 @@ def melt_pcm(
         mu_s = 1.e4,
         mu_l = 1.,
         mesh = fenics.UnitSquareMesh(m, m),
-        time_step_bounds = dt,
+        time_step_bounds = time_step_bounds,
         start_time = start_time,
         end_time = end_time,
         stop_when_steady = True,
         regularization = {'a_s': 2., 'theta_s': 0.1, 'R_s': 0.05},
         initial_pci_refinement_cycles = initial_pci_refinement_cycles,
         max_pci_refinement_cycles_per_time = max_pci_refinement_cycles_per_time,
-        minimum_cell_diameter = 0.01,
+        minimum_cell_diameter = 0.02,
+        nlp_absolute_tolerance = nlp_absolute_tolerance,
         nlp_max_iterations = nlp_max_iterations,
         nlp_divergence_threshold = nlp_divergence_threshold,
         initial_values_expression = (
@@ -60,7 +62,9 @@ def melt_pcm(
     
 def run_melt_pcm():
     
-    w, mesh = melt_pcm(output_dir = 'output/melt_pcm')
+    w, mesh = melt_pcm(output_dir = 'output/melt_pcm',
+        nlp_absolute_tolerance = 1.,
+        nlp_max_iterations = 20)
     
     
 if __name__=='__main__':
