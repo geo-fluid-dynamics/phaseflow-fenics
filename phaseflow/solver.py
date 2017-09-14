@@ -63,8 +63,8 @@ def make(form_factory,
         nlp_relative_tolerance=1.e-8,
         nlp_max_iterations=12,
         nlp_divergence_threshold=1.e12,
-        nlp_relaxation_bounds=phaseflow.bounded_value.BoundedValue(0.1,
-            1., 1.),
+        nlp_relaxation=Relaxation(phaseflow.bounded_value.BoundedValue(0.1,
+            1., 1.)),
         custom_newton=True,
         automatic_jacobian=True):
     """ Create a time solver function with a consistent interface.
@@ -80,10 +80,6 @@ def make(form_factory,
     since their adaptive solvers do not work in parallel.
     """
     
-    nlp_relaxation = Relaxation(phaseflow.bounded_value.BoundedValue(   
-        nlp_relaxation_bounds[0], nlp_relaxation_bounds[1],
-        nlp_relaxation_bounds[2]))
-
     class CustomNewtonSolver(fenics.NewtonSolver):
         """This derived class allows us to catch divergence."""
         custom_parameters = {'divergence_threshold': nlp_divergence_threshold}
@@ -130,7 +126,7 @@ def make(form_factory,
             
             iteration_count, converged = solver.solve(problem, w.vector())
             
-            return converged
+            return converged, nlp_relaxation
             
         
     else:
@@ -167,7 +163,12 @@ def make(form_factory,
         
                         log.write(str(nlp_relaxation.value)+'\n')
             
-                    converged = solve(problem=problem, w=w)
+                    converged, iterations = solve(problem=problem, w=w)
+                        
+                    if converged and \
+                        (iterations > float(nlp_max_iterations)/1.5):
+            
+                        nlp_relaxation.set(nlp_relaxation.max)
                         
                     break
                     
@@ -190,13 +191,8 @@ def make(form_factory,
             problem = fenics.NonlinearVariationalProblem(F, w, bcs, J)
             
             converged = solve(problem=problem)
-                
-        if converged:
-                    
-            nlp_relaxation.set(nlp_relaxation.value
-                + RELAXATION_INCREMENT)
             
-        return converged
+        return converged, nlp_relaxation
             
         
     return solve_time_step

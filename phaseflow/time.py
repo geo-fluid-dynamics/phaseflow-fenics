@@ -32,7 +32,8 @@ def adaptive_time_step(time_step_size, w, w_n, bcs, solve_time_step, debug=False
     
     while not converged:
     
-        converged = solve_time_step(dt=time_step_size.value, w=w, w_n=w_n, bcs=bcs)
+        converged, nlp_relaxation = solve_time_step(
+            dt=time_step_size.value, w=w, w_n=w_n, bcs=bcs)
         
         if not converged:
         
@@ -52,7 +53,7 @@ def adaptive_time_step(time_step_size, w, w_n, bcs, solve_time_step, debug=False
         
             time_step_size.set(time_step_size.value/2.)
     
-    return converged
+    return converged, nlp_relaxation
    
    
 def check(current_time, time_step_size, end_time, output_times, output_count):

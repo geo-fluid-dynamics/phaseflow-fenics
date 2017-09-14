@@ -145,6 +145,11 @@ def run(
         bounded_value.BoundedValue(time_step_bounds[0],
             time_step_bounds[1], time_step_bounds[2]))
         
+    nlp_relaxation = solver.Relaxation(
+        bounded_value.BoundedValue(  
+            nlp_relaxation_bounds[0], nlp_relaxation_bounds[1],
+            nlp_relaxation_bounds[2]))
+        
     dimensionality = mesh.type().dim()
     
     helpers.print_once("Running "+str(dimensionality)+"D problem")
@@ -283,16 +288,6 @@ def run(
                 form_factory = form.FormFactory(W, {'Ra': Ra, 'Pr': Pr, 'Ste': Ste, 'C': C, 'K': K, 'g': g, 'gamma': gamma, 'mu_l': mu_l, 'mu_s': mu_s}, m_B, ddtheta_m_B, regularization)
 
                 
-                # Make the time step solver
-                solve_time_step = solver.make(form_factory = form_factory,
-                    nlp_absolute_tolerance = nlp_absolute_tolerance,
-                    nlp_max_iterations = nlp_max_iterations,
-                    nlp_divergence_threshold = nlp_divergence_threshold,
-                    nlp_relaxation_bounds = nlp_relaxation_bounds,
-                    custom_newton = custom_newton,
-                    automatic_jacobian = automatic_jacobian)
-                
-                
                 # Organize boundary conditions
                 bcs = []
                 
@@ -308,8 +303,20 @@ def run(
                     output.write_solution(solution_file, w_n, current_time) 
                  
                  
-                #
-                converged = time.adaptive_time_step(time_step_size=time_step_size, w=w, w_n=w_n, bcs=bcs,
+                
+                # Make the time step solver
+                solve_time_step = solver.make(form_factory = form_factory,
+                    nlp_absolute_tolerance = nlp_absolute_tolerance,
+                    nlp_max_iterations = nlp_max_iterations,
+                    nlp_divergence_threshold = nlp_divergence_threshold,
+                    nlp_relaxation = nlp_relaxation,
+                    custom_newton = custom_newton,
+                    automatic_jacobian = automatic_jacobian)
+                
+                
+                # Step time
+                converged, nlp_relaxation = time.adaptive_time_step(
+                    time_step_size=time_step_size, w=w, w_n=w_n, bcs=bcs,
                     solve_time_step=solve_time_step, debug=debug)
                 
                 
@@ -317,6 +324,7 @@ def run(
                 if converged:
                 
                     break
+                
                 
                 # Refine mesh cells containing the PCI
                 if (max_pci_refinement_cycles_per_time == 0) or (pci_refinement_cycle_this_time
