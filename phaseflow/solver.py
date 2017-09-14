@@ -57,7 +57,7 @@ class Relaxation(phaseflow.bounded_value.BoundedValue):
             phaseflow.helpers.print_once("Set Newton relaxation to "
                 +str(value))
     
-        
+    
 def make(form_factory,
         nlp_absolute_tolerance=1.,
         nlp_relative_tolerance=1.e-8,
@@ -163,18 +163,18 @@ def make(form_factory,
             
                 try:
                 
+                    with open('log.txt', 'a+') as log:
+        
+                        log.write(str(nlp_relaxation.value)+'\n')
+            
                     converged = solve(problem=problem, w=w)
-                    
-                    if converged:
-                    
-                        nlp_relaxation.set(nlp_relaxation.value
-                            + RELAXATION_INCREMENT)
                         
                     break
                     
                 except NewtonDiverged:
                 
-                    if (nlp_relaxation.value < nlp_relaxation.min + fenics.DOLFIN_EPS):
+                    if (nlp_relaxation.value < nlp_relaxation.min
+                            + fenics.DOLFIN_EPS):
                     
                         break
                         
@@ -190,6 +190,11 @@ def make(form_factory,
             problem = fenics.NonlinearVariationalProblem(F, w, bcs, J)
             
             converged = solve(problem=problem)
+                
+        if converged:
+                    
+            nlp_relaxation.set(nlp_relaxation.value
+                + RELAXATION_INCREMENT)
             
         return converged
             
