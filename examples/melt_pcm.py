@@ -59,21 +59,8 @@ def melt_pcm(
     
 def run_melt_pcm():
     
-    """As of this writing, the following will diverge
-    after reaching t = 0.02. When doing this for the first time,
-    it was a simple matter of restarting with further relaxing the
-    Newton method. So that this example will run smoothly,
-    here we choose to end at t = 0.02, and then do the restart.
-    """
-    w, mesh = melt_pcm(output_dir = 'output/melt_pcm_0')
+    w, mesh = melt_pcm(output_dir = 'output/melt_pcm')
     
-    '''
-    w, mesh = melt_pcm(
-        restart = True,
-        restart_filepath = 'output/melt_pcm_0/restart_t0.02.hdf5',
-        start_time = 0.02,
-        output_dir = 'output/melt_pcm_1')
-    '''
     
 if __name__=='__main__':
 
