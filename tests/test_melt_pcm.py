@@ -2,20 +2,21 @@ import fenics
 import phaseflow
 import scipy.optimize as opt
         
-def verify_pci_position_regression(theta_s, w):
+def verify_pci_position_regression(theta_f, w):
 
-    ref_data = {'Ra': 1., 'Pr': 1., 'theta_s': 0.1, 'R_s': 0.05, 'Ste': 1., 'mu_s': 1.e4,
-            'nlp_absolute_tolerance': 1., 'time': 0.001, 'pci_y_pos': 0.5, 'pci_x_pos': 0.043}
+    ref_data = {'Ra': 1., 'Pr': 1., 'theta_f': 0.1, 'r': 0.05, 'Ste': 1., 
+        'mu_s': 1.e4,
+        'nlp_absolute_tolerance': 1., 'time': 0.001, 'pci_y_pos': 0.5, 'pci_x_pos': 0.043}
 
-    assert(theta_s == ref_data['theta_s'])
+    assert(theta_f == ref_data['theta_f'])
             
-    def theta_minus_theta_s(x):
+    def theta_minus_theta_f(x):
     
         wval = w(fenics.Point(x, ref_data['pci_y_pos']))
         
-        return wval[3] - theta_s
+        return wval[3] - theta_f
     
-    pci_x_pos = opt.newton(theta_minus_theta_s, 0.01)
+    pci_x_pos = opt.newton(theta_minus_theta_f, 0.01)
     
     assert(abs(pci_x_pos - ref_data['pci_x_pos']) < 1.e-3)
         
@@ -24,8 +25,8 @@ def melt_pcm(Ste = 0.045,
         Ra = 3.27e5,
         Pr = 56.2,
         mu_s = 1.e8,
-        theta_s = 0.01,
-        R_s = 0.005,
+        theta_f = 0.01,
+        r = 0.005,
         m = 10,
         time_step_bounds = (1.e-3, 1.e-3, 1.e-3),
         initial_pci_refinement_cycles = 6,
@@ -57,7 +58,7 @@ def melt_pcm(Ste = 0.045,
         stop_when_steady = True,
         automatic_jacobian = False,
         custom_newton = True,
-        regularization = {'a_s': 2., 'theta_s': theta_s, 'R_s': R_s},
+        regularization = {'T_f': theta_f, 'r': r},
         initial_pci_refinement_cycles = initial_pci_refinement_cycles,
         max_pci_refinement_cycles_per_time = max_pci_refinement_cycles_per_time,
         nlp_absolute_tolerance = nlp_absolute_tolerance,
@@ -88,14 +89,14 @@ def melt_pcm(Ste = 0.045,
     
 def test_melt_pcm():
 
-    theta_s = 0.1
+    theta_f = 0.1
     
     w, mesh = melt_pcm(Ste = 1.,
         Ra = 1.,
         Pr = 1.,
         mu_s = 1.e4,
-        theta_s = theta_s,
-        R_s = theta_s/2.,
+        theta_f = theta_f,
+        r = theta_f/2.,
         m = 1,
         time_step_bounds = (1.e-4, 1.e-4, 1.e-3),
         end_time = 1.e-3,
@@ -104,7 +105,7 @@ def test_melt_pcm():
         nlp_divergence_threshold = 1.e12,
         output_dir = 'output/test_melt_pcm')
         
-    verify_pci_position_regression(theta_s, w)
+    verify_pci_position_regression(theta_f, w)
     
     
 if __name__=='__main__':

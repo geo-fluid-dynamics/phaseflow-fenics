@@ -23,7 +23,7 @@ def verify_against_ghia1982(w, mesh):
 
 def variable_viscosity(m=20, start_time = 0., end_time = 1000., time_step_bounds = (0.1, 0.1, 10.),
     output_times = ('start', 1., 10., 100., 'end'), mu_s = 1.e6,
-    initial_pci_refinement_cycles = 4, theta_s = 0., R_s = 0.05, restart = False):
+    initial_pci_refinement_cycles = 4, theta_f = 0., r = 0.05, restart = False):
 
     lid = 'near(x[1],  1.)'
 
@@ -33,7 +33,7 @@ def variable_viscosity(m=20, start_time = 0., end_time = 1000., time_step_bounds
 
     left_middle = 'near(x[0], 0.) && near(x[1], 0.5)'
     
-    output_dir = 'output/variable_viscosity_m'+str(m)+'_mus'+str(mu_s)+'_thetas'+str(theta_s)+'_Rs'+str(R_s)
+    output_dir = 'output/variable_viscosity_m'+str(m)+'_mus'+str(mu_s)+'_thetaf'+str(theta_f)+'_r'+str(r)
     
     restart_filepath=''
     
@@ -58,7 +58,7 @@ def variable_viscosity(m=20, start_time = 0., end_time = 1000., time_step_bounds
         K = 0.,
         mu_l = 0.01,
         mu_s = mu_s,
-        regularization = {'a_s': 2., 'theta_s': theta_s, 'R_s': R_s},
+        regularization = {'T_f': theta_f, 'r': r},
         nlp_max_iterations = 30,
         nlp_absolute_tolerance = 1.,
         max_pci_refinement_cycles_per_time = 4,
@@ -79,7 +79,7 @@ def test_variable_viscosity():
 
     variable_viscosity(end_time = 20., time_step_bounds = (0.1, 0.1, 3.), 
         output_times = ('start', 'end'),
-        theta_s = -0.01, R_s = 0.01, )
+        theta_f = -0.01, r = 0.01, )
     
     
 if __name__=='__main__':

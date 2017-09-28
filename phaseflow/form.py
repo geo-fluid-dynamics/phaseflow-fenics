@@ -50,13 +50,13 @@ class FormFactory():
     """@todo This approach was used before discovering that FEniCS allows
     one to use dt.assign() to change dt and automatically use the
     updated value during matrix assembly."""
-    def __init__(self, W, parameters = default.parameters, m_B = default.m_B, ddtheta_m_B = default.ddtheta_m_B, regularization = default.regularization):
+    def __init__(self, W, parameters = default.parameters, m_B = default.m_B, ddT_m_B = default.ddT_m_B, regularization = default.regularization):
         
         self.parameters = parameters
         
         self.m_B = m_B
         
-        self.ddtheta_m_B = ddtheta_m_B
+        self.ddT_m_B = ddT_m_B
         
         self.regularization = regularization
         
@@ -107,51 +107,44 @@ class FormFactory():
         m_B = self.m_B
         
         """Buoyancy force, $f = ma$"""
-        f_B = lambda theta : m_B(theta)*g
+        f_B = lambda T : m_B(T)*g
         
         """Parameter shifting the tanh regularization"""
-        theta_s = fenics.Constant(self.regularization['theta_s'])
+        T_f = fenics.Constant(self.regularization['T_f'])
         
         """Parameter scaling the tanh regularization"""
-        R_s = fenics.Constant(self.regularization['R_s'])
+        r = fenics.Constant(self.regularization['r'])
         
-        # @todo Remove a_s; it's a redundant parameter.
-        a_s = fenics.Constant(self.regularization['a_s'])
+        """Latent heat"""
+        L = C/Ste
         
         """Regularize heaviside function with a 
         hyperoblic tangent function."""
-        heaviside_tanh = lambda theta, f_s, f_l: f_l + (f_s - f_l)/2.*(1. + fenics.tanh(a_s*(theta_s - theta)/R_s))
+        P = lambda T: 0.5*(1. - fenics.tanh(2.*(T_f - T)/r))
         
         """Variable viscosity"""
-        mu = lambda theta : heaviside_tanh(theta, f_s=mu_s, f_l=mu_l)
-        
-        """Enthalpy source/sink from latent heat"""
-        S_s = fenics.Constant(0.)
-        
-        S_l = fenics.Constant(1./Ste)
-        
-        S = lambda theta : heaviside_tanh(theta, f_s=S_s, f_l=S_l)
-
+        mu = lambda (T) : mu_s + (mu_l - mu_s)*P(T)
         
         """Set the nonlinear variational form."""
-        u_n, p_n, theta_n = fenics.split(w_n)
+        u_n, p_n, T_n = fenics.split(w_n)
 
         w_w = fenics.TrialFunction(self.W)
         
-        u_w, p_w, theta_w = fenics.split(w_w)
+        u_w, p_w, T_w = fenics.split(w_w)
         
         v, q, phi = fenics.TestFunctions(self.W)
         
-        u_k, p_k, theta_k = fenics.split(w_k)
+        u_k, p_k, T_k = fenics.split(w_k)
 
         F = (
             b(u_k, q) - gamma*p_k*q
             + dot(u_k - u_n, v)/dt
-            + c(u_k, u_k, v) + b(v, p_k) + a(mu(theta_k), u_k, v)
-            + dot(f_B(theta_k), v)
-            + C/dt*(theta_k - theta_n)*phi
-            - dot(C*theta_k*u_k, grad(phi)) + K/Pr*dot(grad(theta_k), grad(phi))
-            + C/dt*(S(theta_k) - S(theta_n))*phi
+            + c(u_k, u_k, v) + b(v, p_k) + a(mu(T_k), u_k, v)
+            + dot(f_B(T_k), v)
+            + C/dt*(T_k - T_n)*phi
+            - dot(C*T_k*u_k, grad(phi)) 
+            + K/Pr*dot(grad(T_k), grad(phi))
+            + 1./dt*L*(P(T_k) - P(T_n))*phi
             )*fenics.dx
 
         if automatic_jacobian:
@@ -160,28 +153,28 @@ class FormFactory():
             
         else:
         
-            ddtheta_m_B = self.ddtheta_m_B
+            ddT_m_B = self.ddT_m_B
             
-            ddtheta_f_B = lambda theta : ddtheta_m_B(theta)*g
+            ddT_f_B = lambda T : ddT_m_B(T)*g
             
-            ddtheta_heaviside_tanh = lambda theta, f_s, f_l: -(a_s*(fenics.tanh((a_s*(theta_s - theta))/R_s)**2 - 1.)*(f_l/2. - f_s/2.))/R_s
+            sech = lambda theta: 1./fenics.cosh(theta)
             
-            dS = lambda theta : ddtheta_heaviside_tanh(theta, f_s=S_s, f_l=S_l)
+            dP = lambda T: sech(2.*(T_f - T)/r)**2/r
         
-            dmu = lambda theta : ddtheta_heaviside_tanh(theta, f_s=mu_s, f_l=mu_l)        
+            dmu = lambda T : (mu_l - mu_s)*dP(T)
 
             """Set the Jacobian (formally the Gateaux derivative)."""
             JF = (
                 b(u_w, q) - gamma*p_w*q 
                 + dot(u_w, v)/dt
                 + c(u_k, u_w, v) + c(u_w, u_k, v) + b(v, p_w)
-                + a(theta_w*dmu(theta_k), u_k, v) + a(mu(theta_k), u_w, v) 
-                + dot(theta_w*ddtheta_f_B(theta_k), v)
-                + C/dt*theta_w*phi
-                - dot(C*theta_k*u_w, grad(phi))
-                - dot(C*theta_w*u_k, grad(phi))
-                + K/Pr*dot(grad(theta_w), grad(phi))
-                + C/dt*theta_w*dS(theta_k)*phi
+                + a(T_w*dmu(T_k), u_k, v) + a(mu(T_k), u_w, v) 
+                + dot(T_w*ddT_f_B(T_k), v)
+                + C/dt*T_w*phi
+                - dot(C*T_k*u_w, grad(phi))
+                - dot(C*T_w*u_k, grad(phi))
+                + K/Pr*dot(grad(T_w), grad(phi))
+                + 1./dt*L*T_w*dP(T_k)*phi
                 )*fenics.dx
 
         return F, JF

@@ -14,9 +14,9 @@ def mark_cells_touching_mushy_region(regularization, mesh, w):
     This includes any cell that has at least one vertex both in the
     hot region and the cold region.
     """
-    hot = (regularization['theta_s'] + regularization['R_s'] - fenics.dolfin.DOLFIN_EPS)
+    hot = (regularization['T_f'] + regularization['r'] - fenics.dolfin.DOLFIN_EPS)
             
-    cold = (regularization['theta_s'] - regularization['R_s'] + fenics.dolfin.DOLFIN_EPS)
+    cold = (regularization['T_f'] - regularization['r'] + fenics.dolfin.DOLFIN_EPS)
 
     touches_mushy_region = fenics.CellFunction("bool", mesh)
 
@@ -32,13 +32,13 @@ def mark_cells_touching_mushy_region(regularization, mesh, w):
         
             w.eval_cell(solution_at_point, numpy.array([vertex.x(0), vertex.x(1), vertex.x(2)]), cell) # Works for 1/2/3D
             
-            theta = solution_at_point[mesh.type().dim() + 1]
+            T = solution_at_point[mesh.type().dim() + 1]
             
-            if theta > hot:
+            if T > hot:
             
                 hot_vertex_count += 1
                 
-            if theta < cold:
+            if T < cold:
             
                 cold_vertex_count += 1
 
@@ -49,17 +49,17 @@ def mark_cells_touching_mushy_region(regularization, mesh, w):
     return touches_mushy_region
     
     
-def mark_cells_containing_theta_s(regularization, mesh, w):
+def mark_cells_containing_T_f(regularization, mesh, w):
     """Mark cells to refine if they contain the central fusion temperature.
     
     This includes any cell that has both at least one vertex hotter
     than the fusion temperature and at least one colder.
     """
-    theta_s = regularization['theta_s']
+    T_f = regularization['T_f']
 
-    contains_theta_s = fenics.CellFunction("bool", mesh)
+    contains_T_f = fenics.CellFunction("bool", mesh)
 
-    contains_theta_s.set_all(False)
+    contains_T_f.set_all(False)
 
     for cell in fenics.cells(mesh):
         
@@ -71,21 +71,21 @@ def mark_cells_containing_theta_s(regularization, mesh, w):
         
             w.eval_cell(solution_at_point, numpy.array([vertex.x(0), vertex.x(1), vertex.x(2)]), cell) # Works for 1/2/3D
             
-            theta = solution_at_point[mesh.type().dim() + 1]
+            T = solution_at_point[mesh.type().dim() + 1]
             
-            if theta > theta_s:
+            if T > T_f:
             
                 hot_vertex_count += 1
                 
-            if theta < theta_s:
+            if T < T_f:
             
                 cold_vertex_count += 1
 
         if (hot_vertex_count > 0 and cold_vertex_count > 0):
         
-            contains_theta_s[cell] = True
+            contains_T_f[cell] = True
                 
-    return contains_theta_s
+    return contains_T_f
     
     
 def unmark_cells_exceeding_minimum_diameter(mesh, refine, diameter):
@@ -105,15 +105,15 @@ def unmark_cells_exceeding_minimum_diameter(mesh, refine, diameter):
     
 def refine_pci(regularization, pci_refinement_cycle, mesh, w,
         minimum_cell_diameter=fenics.DOLFIN_EPS,
-        method='contains_theta_s'):
+        method='contains_T_f'):
 
     if method == 'touches_mushy_region':
 
         refine_cell = mark_cells_touching_mushy_region(regularization, mesh, w)
     
-    elif method == 'contains_theta_s':
+    elif method == 'contains_T_f':
     
-        refine_cell = mark_cells_containing_theta_s(regularization, mesh, w)
+        refine_cell = mark_cells_containing_T_f(regularization, mesh, w)
 
     pci_cell_count = sum(refine_cell)
 

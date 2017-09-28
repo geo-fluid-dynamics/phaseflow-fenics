@@ -1,5 +1,5 @@
-output/
-debug/
+output
+debug
 old*
 *.pyc
 *.pvsm
@@ -8,3 +8,4 @@ build
 dist
 .idea/
 phaseflow.egg-info
+log.txt
