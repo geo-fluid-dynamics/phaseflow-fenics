@@ -65,7 +65,7 @@ def run(
     mu_s = default.parameters['mu_s'],
     g = default.parameters['g'],
     m_B = default.m_B,
-    ddtheta_m_B = default.ddtheta_m_B,
+    ddT_m_B = default.ddT_m_B,
     regularization = default.regularization,
     mesh=default.mesh,
     initial_values_expression = ("0.", "0.", "0.", "0.5*near(x[0],  0.) -0.5*near(x[0],  1.)"),
@@ -280,7 +280,7 @@ def run(
                 time_step_size, end_time, output_times, output_count)
                 
                 # Initialize the functions that we will use to generate our variational form
-                form_factory = form.FormFactory(W, {'Ra': Ra, 'Pr': Pr, 'Ste': Ste, 'C': C, 'K': K, 'g': g, 'gamma': gamma, 'mu_l': mu_l, 'mu_s': mu_s}, m_B, ddtheta_m_B, regularization)
+                form_factory = form.FormFactory(W, {'Ra': Ra, 'Pr': Pr, 'Ste': Ste, 'C': C, 'K': K, 'g': g, 'gamma': gamma, 'mu_l': mu_l, 'mu_s': mu_s}, m_B, ddT_m_B, regularization)
 
                 
                 # Make the time step solver

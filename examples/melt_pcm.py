@@ -29,7 +29,7 @@ def melt_pcm(
         start_time = start_time,
         end_time = end_time,
         stop_when_steady = True,
-        regularization = {'a_s': 2., 'theta_s': 0.1, 'R_s': 0.05},
+        regularization = {'T_f': 0.1, 'r': 0.05},
         initial_pci_refinement_cycles = initial_pci_refinement_cycles,
         max_pci_refinement_cycles_per_time = max_pci_refinement_cycles_per_time,
         minimum_cell_diameter = 0.01,

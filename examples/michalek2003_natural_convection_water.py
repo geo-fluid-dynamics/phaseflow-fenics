@@ -89,7 +89,7 @@ def michalek2003_natural_convection_water(
         Ra = Ra,
         Pr = Pr,
         Ste = 1.e16,
-        regularization = {'a_s': 2., 'theta_s': -1., 'R_s': 0.1},
+        regularization = {'T_f': -1., 'r': 0.1},
         m_B = lambda theta : Ra/(Pr*Re*Re)/(beta*(T_h - T_c))*(rho(theta_f) - rho(theta))/rho(theta_f),
         ddtheta_m_B = lambda theta : -Ra/(Pr*Re*Re)/(beta*(T_h - T_c))*(ddtheta_rho(theta))/rho(theta_f),
         mesh = fenics.UnitSquareMesh(m, m, 'crossed'),

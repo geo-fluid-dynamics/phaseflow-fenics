@@ -19,8 +19,7 @@ def extract_pci_position(w):
 def stefan_problem_solidify(Ste = 0.125,
     theta_h = 0.01,
     theta_c = -1.,
-    theta_s = 0.,
-    a_s = 2.,
+    theta_f = 0.,
     r = 0.01,
     dt = 0.01,
     end_time = 1.,
@@ -46,7 +45,7 @@ def stefan_problem_solidify(Ste = 0.125,
             {'subspace': 0, 'value_expression': [0.], 'degree': 3, 'location_expression': "near(x[0],  0.) | near(x[0],  1.)", 'method': "topological"},
             {'subspace': 2, 'value_expression': theta_c, 'degree': 2, 'location_expression': "near(x[0],  0.)", 'method': "topological"},
             {'subspace': 2, 'value_expression': theta_h, 'degree': 2, 'location_expression': "near(x[0],  1.)", 'method': "topological"}],
-        regularization = {'a_s': a_s, 'theta_s': theta_s, 'R_s': r},
+        regularization = {'T_f': theta_f, 'r': r},
         nlp_absolute_tolerance = nlp_absolute_tolerance,
         end_time = end_time,
         time_step_bounds = dt,
@@ -58,7 +57,7 @@ def stefan_problem_solidify(Ste = 0.125,
 
 def convergence_stefan_problem_1d():
 
-    phaseflow.helpers.mkdir_p('output')
+    phaseflow.helpers.mkdir_p('output/convergence_stefan_problem_solidify/')
     
     with open('output/convergence_stefan_problem_solidify/convergence.txt',
             'a+') as file:

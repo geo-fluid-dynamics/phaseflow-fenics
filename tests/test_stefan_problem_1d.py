@@ -4,7 +4,7 @@ import fenics
 import scipy.optimize as opt
 
 
-def verify_melting_pci_position(Ste, R_s, w):
+def verify_melting_pci_position(Ste, r, w):
 
     data = [
         {'Ste': 1., 'time': 0.01, 'true_pci_pos': 0.075551957640682}, 
@@ -23,14 +23,13 @@ def verify_melting_pci_position(Ste, R_s, w):
     
         if Ste == record['Ste']:
         
-            assert(abs(pci_pos - record['true_pci_pos']) < R_s)
+            assert(abs(pci_pos - record['true_pci_pos']) < r)
         
         
 def stefan_problem(Ste = 1.,
     theta_h = 1.,
     theta_c = -1.,
-    a_s = 2.,
-    R_s = 0.005,
+    r = 0.005,
     dt = 0.001,
     end_time = 0.01,
     nlp_absolute_tolerance = 1.e-3,
@@ -85,7 +84,7 @@ def stefan_problem(Ste = 1.,
             {'subspace': 0, 'value_expression': [0.], 'degree': 3, 'location_expression': "near(x[0],  0.) | near(x[0],  1.)", 'method': "topological"},
             {'subspace': 2, 'value_expression': theta_h, 'degree': 2, 'location_expression': "near(x[0],  0.)", 'method': "topological"},
             {'subspace': 2, 'value_expression': theta_c, 'degree': 2, 'location_expression': "near(x[0],  1.)", 'method': "topological"}],
-        regularization = {'a_s': 2., 'theta_s': 0.01, 'R_s': R_s},
+        regularization = {'T_f': 0.01, 'r': r},
         nlp_absolute_tolerance = nlp_absolute_tolerance,
         end_time = end_time,
         time_step_bounds = dt,
@@ -97,21 +96,21 @@ def stefan_problem(Ste = 1.,
         
 def test_stefan_problem_vary_Ste():
 
-    for p in [{'Ste': 1., 'R_s': 0.005, 'dt': 0.001, 'end_time': 0.01, 'initial_uniform_cell_count': 1, 'nlp_absolute_tolerance': 1.},
-        {'Ste': 0.1, 'R_s': 0.05, 'dt': 0.0001, 'end_time': 0.01, 'initial_uniform_cell_count': 10, 'nlp_absolute_tolerance': 1.e-1}]:
+    for p in [{'Ste': 1., 'r': 0.005, 'dt': 0.001, 'end_time': 0.01, 'initial_uniform_cell_count': 1, 'nlp_absolute_tolerance': 1.},
+        {'Ste': 0.1, 'r': 0.05, 'dt': 0.0001, 'end_time': 0.01, 'initial_uniform_cell_count': 10, 'nlp_absolute_tolerance': 1.e-1}]:
         ''' The Ste = 0.01 case takes too long to include in the standard test suite. Maybe something reasonable
         can be done with different parameters and with a different final time. The following should run,
         but took almost thirty minutes on my laptop:
-        {'Ste': 0.01, 'R_s': 0.1, 'dt': 0.0001, 'end_time': 0.1, 'initial_uniform_cell_count': 100, 'nlp_absolute_tolerance': 1.e-1}]'''
+        {'Ste': 0.01, 'r': 0.1, 'dt': 0.0001, 'end_time': 0.1, 'initial_uniform_cell_count': 100, 'nlp_absolute_tolerance': 1.e-1}]'''
         
-        w = stefan_problem(Ste=p['Ste'], R_s=p['R_s'], dt=p['dt'], end_time = p['end_time'],
+        w = stefan_problem(Ste=p['Ste'], r=p['r'], dt=p['dt'], end_time = p['end_time'],
             initial_uniform_cell_count=p['initial_uniform_cell_count'], nlp_absolute_tolerance=p['nlp_absolute_tolerance'], automatic_jacobian = False)
     
-        verify_melting_pci_position(p['Ste'], p['R_s'], w)
+        verify_melting_pci_position(p['Ste'], p['r'], w)
 
 
 ''' Verify based on analytical model from Worster 2000'''        
-def verify_solidification_pci_position(w, R_s):
+def verify_solidification_pci_position(w, r):
 
     data = [{'Ste': 0.125, 'time': 1., 'true_pci_pos': 0.49}] # From MATLAB script solving Worster2000
         
@@ -125,16 +124,15 @@ def verify_solidification_pci_position(w, R_s):
     
     for record in data:
     
-        assert(abs(pci_pos - record['true_pci_pos']) < R_s)
+        assert(abs(pci_pos - record['true_pci_pos']) < r)
 
 
         
 def stefan_problem_solidify(Ste = 0.125,
     theta_h = 0.01,
     theta_c = -1.,
-    theta_s = 0.,
-    a_s = 2.,
-    R_s = 0.01,
+    theta_f = 0.,
+    r = 0.01,
     dt = 0.01,
     end_time = 1.,
     nlp_absolute_tolerance = 1.e-4,
@@ -190,7 +188,7 @@ def stefan_problem_solidify(Ste = 0.125,
             {'subspace': 0, 'value_expression': [0.], 'degree': 3, 'location_expression': "near(x[0],  0.) | near(x[0],  1.)", 'method': "topological"},
             {'subspace': 2, 'value_expression': theta_c, 'degree': 2, 'location_expression': "near(x[0],  0.)", 'method': "topological"},
             {'subspace': 2, 'value_expression': theta_h, 'degree': 2, 'location_expression': "near(x[0],  1.)", 'method': "topological"}],
-        regularization = {'a_s': a_s, 'theta_s': theta_s, 'R_s': R_s},
+        regularization = {'T_f': theta_f, 'r': r},
         nlp_absolute_tolerance = nlp_absolute_tolerance,
         end_time = end_time,
         time_step_bounds = dt,
@@ -201,11 +199,11 @@ def stefan_problem_solidify(Ste = 0.125,
 
 def test_stefan_problem_solidify():
 
-    R_s = 0.01
+    r = 0.01
     
-    w = stefan_problem_solidify(R_s = R_s)
+    w = stefan_problem_solidify(r = r)
     
-    verify_solidification_pci_position(w, R_s)
+    verify_solidification_pci_position(w, r)
     
   
 if __name__=='__main__':
