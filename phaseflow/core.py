@@ -256,7 +256,7 @@ def run(
                     
                 else:
             
-                    w_n = fenics.project(w_n, W)
+                    w_n = fenics.project(w_n, W, allow_extrapolation=True)
 
                 if pci_refinement_cycle < initial_pci_refinement_cycles:
                 
