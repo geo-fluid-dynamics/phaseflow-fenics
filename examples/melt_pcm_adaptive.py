@@ -6,7 +6,7 @@ def melt_pcm(
         dt = 1.e-3,
         output_dir='output/melt_pcm_adaptive',
         start_time=0.,
-        end_time=0.025,
+        end_time=0.05,
         initial_pci_refinement_cycles = 2,
         nlp_max_iterations = 30,
         initial_mesh_size = 20,
@@ -57,11 +57,5 @@ def melt_pcm(
     
 if __name__=='__main__':
 
-    melt_pcm(end_time = 1.e-3)
-    
-    melt_pcm(restart=True, restart_filepath='output/melt_pcm_adaptive/restart_t0.001.h5',
-        start_time = 1.e-3,
-        end_time = 2.e-3,
-        output_dir = 'output/melt_pcm_adaptive_restart_t0.001/')
-    
+    melt_pcm()
     
