@@ -55,11 +55,13 @@ def melt_pcm(
     return w, mesh
     
     
-def run_melt_pcm():
-    
-    w, mesh = melt_pcm()
-    
-    
 if __name__=='__main__':
 
-    run_melt_pcm()
+    melt_pcm(end_time = 1.e-3)
+    
+    melt_pcm(restart=True, restart_filepath='output/melt_pcm_adaptive/restart_t0.001.h5',
+        start_time = 1.e-3,
+        end_time = 2.e-3,
+        output_dir = 'output/melt_pcm_adaptive_restart_t0.001/')
+    
+    

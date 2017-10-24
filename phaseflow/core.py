@@ -150,52 +150,46 @@ def run(
     
     
     # Set the initial values
-    if (abs(current_time - start_time) < time.TIME_EPS):
-    
-        if restart:
+    if restart:
             
-            mesh = fenics.Mesh()
-            
-            with fenics.HDF5File(mesh.mpi_comm(), restart_filepath, 'r') as h5:
-            
-                h5.read(mesh, 'mesh', True)
-            
-            W, W_ele = function_spaces(mesh, pressure_degree, temperature_degree)
+        mesh = fenics.Mesh()
         
-            w_n = fenics.Function(W)
+        with fenics.HDF5File(mesh.mpi_comm(), restart_filepath, 'r') as h5:
         
-            with fenics.HDF5File(mesh.mpi_comm(), restart_filepath, 'r') as h5:
-            
-                h5.read(w_n, 'w')
-        
-        else:
-
-            w_n = fenics.interpolate(fenics.Expression(initial_values_expression,
-                element=W_ele), W)
-        
-    else:
-
-        w_n = fenics.project(w_n, W)
-        
-        
-    # Refine the initial grid in the region of the phase-change interface
-    for i in range(initial_pci_refinement_cycles):
-    
-        mesh = refine.refine_pci(regularization, i, mesh, w_n)
+            h5.read(mesh, 'mesh', True)
         
         W, W_ele = function_spaces(mesh, pressure_degree, temperature_degree)
+    
+        w_n = fenics.Function(W)
+    
+        with fenics.HDF5File(mesh.mpi_comm(), restart_filepath, 'r') as h5:
         
-        if restart:
-        
-            w_n = fenics.interpolate(w_n, W)
+            h5.read(w_n, 'w')
+    
+    else:
+
+        w_n = fenics.interpolate(fenics.Expression(initial_values_expression,
+            element=W_ele), W)
+
             
-        else:
-        
-            w_n = fenics.interpolate(fenics.Expression(initial_values_expression,
-                    element=W_ele), W)
-        
-        continue
-        
+    # Refine the initial grid in the region of the phase-change interface
+    if not restart:
+    
+        for i in range(initial_pci_refinement_cycles):
+
+            mesh = refine.refine_pci(regularization, i, mesh, w_n)
+            
+            W, W_ele = function_spaces(mesh, pressure_degree, temperature_degree)
+            
+            if restart:
+            
+                w_n = fenics.interpolate(w_n, W)
+                
+            else:
+            
+                w_n = fenics.interpolate(fenics.Expression(initial_values_expression,
+                        element=W_ele), W)
+            
         
     # Organize boundary conditions
     bcs = []
@@ -405,9 +399,9 @@ def run(
             
             with fenics.HDF5File(fenics.mpi_comm_world(), restart_filepath, 'w') as h5:
     
-                h5.write(mesh, 'mesh')
+                h5.write(mesh.leaf_node(), 'mesh')
             
-                h5.write(w_k, 'w')
+                h5.write(w_k.leaf_node(), 'w')
                 
             if fenics.MPI.rank(fenics.mpi_comm_world()) is 0:
             
