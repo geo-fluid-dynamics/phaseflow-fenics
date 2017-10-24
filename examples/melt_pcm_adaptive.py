@@ -6,7 +6,7 @@ def melt_pcm(
         dt = 1.e-3,
         output_dir='output/melt_pcm_adaptive',
         start_time=0.,
-        end_time=2.e-3,
+        end_time=0.025,
         initial_pci_refinement_cycles = 2,
         nlp_max_iterations = 30,
         initial_mesh_size = 20,
