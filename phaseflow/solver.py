@@ -7,6 +7,10 @@ MAX_RELAXATION_ATTEMPTS = 10
 
 RELAXATION_INCREMENT = 0.1
 
+ADAPTIVE_TOLERANCE = 1.e-4
+
+NLP_RELATIVE_TOLERANCE = 1.e-4
+
 class Problem(fenics.NonlinearProblem):
     """This derived class is required for the derived Newton solver class."""
     def __init__(self, a, L, bcs):
@@ -79,10 +83,6 @@ def make(form_factory,
     also since we no longer any of FEniCS's adaptive solvers,
     since their adaptive solvers do not work in parallel.
     """
-    
-    nlp_relaxation = Relaxation(phaseflow.bounded_value.BoundedValue(   
-        nlp_relaxation_bounds[0], nlp_relaxation_bounds[1],
-        nlp_relaxation_bounds[2]))
 
     class CustomNewtonSolver(fenics.NewtonSolver):
         """This derived class allows us to catch divergence."""
@@ -135,17 +135,17 @@ def make(form_factory,
         
     else:
     
-        def solve(problem):
+        def solve(problem, M):
             
-            solver = fenics.NonlinearVariationalSolver(problem)
+            solver = fenics.AdaptiveNonlinearVariationalSolver(problem, M)
     
-            solver.parameters['newton_solver']['maximum_iterations'] = nlp_max_iterations
+            solver.parameters['nonlinear_variational_solver']['newton_solver']['maximum_iterations'] = nlp_max_iterations
             
-            solver.parameters['newton_solver']['relative_tolerance'] = nlp_relative_tolerance
+            solver.parameters['nonlinear_variational_solver']['newton_solver']['relative_tolerance'] = NLP_RELATIVE_TOLERANCE
         
-            solver.parameters['newton_solver']['error_on_nonconvergence'] = False
+            solver.parameters['nonlinear_variational_solver']['newton_solver']['error_on_nonconvergence'] = True
         
-            iteration_count, converged = solver.solve()
+            converged = solver.solve(ADAPTIVE_TOLERANCE)
             
             return converged
             
@@ -153,7 +153,7 @@ def make(form_factory,
     def solve_time_step(dt, w, w_n, bcs):
         """Solve the problem for one time step."""
         
-        F, J = form_factory.make_nonlinear_form(dt=dt, w_k=w, w_n=w_n, automatic_jacobian=automatic_jacobian)
+        F, J, M = form_factory.make_nonlinear_form(dt=dt, w_k=w, w_n=w_n, automatic_jacobian=automatic_jacobian)
         
         if custom_newton:
         
@@ -189,7 +189,9 @@ def make(form_factory,
 
             problem = fenics.NonlinearVariationalProblem(F, w, bcs, J)
             
-            converged = solve(problem=problem)
+            solve(problem=problem, M=M)
+            
+            converged = True
             
         return converged
             

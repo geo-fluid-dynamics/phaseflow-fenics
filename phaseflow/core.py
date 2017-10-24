@@ -80,19 +80,13 @@ def run(
             'location_expression': "near(x[0],  1.)", 'method': 'topological'}],
     start_time = 0.,
     end_time = 10.,
-    time_step_bounds = (1.e-3, 1.e-3, 0.01),
-    output_times = ('all',),
+    time_step_size = 1.e-3,
     max_time_steps = 1000,
-    max_pci_refinement_cycles = 1000,
-    max_pci_refinement_cycles_per_time = 0,
     initial_pci_refinement_cycles = 0,
-    minimum_cell_diameter = fenics.DOLFIN_EPS,
     gamma = 1.e-7,
-    custom_newton = True,
-    nlp_absolute_tolerance = 1.e-4,
+    adaptive_solver_tolerance = 1.e-4,
+    nlp_relative_tolerance = 1.e-4,
     nlp_max_iterations = 12,
-    nlp_divergence_threshold = 1.e12,
-    nlp_relaxation_bounds = (0.3, 1., 1.),
     pressure_degree = default.pressure_degree,
     temperature_degree = default.temperature_degree,
     automatic_jacobian = False,
@@ -131,20 +125,7 @@ def run(
         arguments_file.close()
     
     
-    # Validate inputs    
-    if type(time_step_bounds) == type(1.):
-    
-        time_step_bounds = (time_step_bounds, time_step_bounds, time_step_bounds)
-        
-    if type(nlp_relaxation_bounds) == type(1.):
-    
-        nlp_relaxation = (nlp_relaxation_bounds,
-            nlp_relaxation_bounds, nlp_relaxation_bounds)
-    
-    time_step_size = time.TimeStepSize(
-        bounded_value.BoundedValue(time_step_bounds[0],
-            time_step_bounds[1], time_step_bounds[2]))
-        
+    #
     dimensionality = mesh.type().dim()
     
     helpers.print_once("Running "+str(dimensionality)+"D problem")
@@ -164,10 +145,217 @@ def run(
         current_time = start_time
     
     
-    # Open the output file(s)   
-    with open('log.txt', 'w+') as log:
+    # Define function spaces and solution function 
+    W, W_ele = function_spaces(mesh, pressure_degree, temperature_degree)
     
-        log.write('newton_relaxation\n')
+    
+    # Set the initial values
+    if (abs(current_time - start_time) < time.TIME_EPS):
+    
+        if restart:
+            
+            mesh = fenics.Mesh()
+            
+            with fenics.HDF5File(mesh.mpi_comm(), restart_filepath, 'r') as h5:
+            
+                h5.read(mesh, 'mesh', True)
+            
+            W, W_ele = function_spaces(mesh, pressure_degree, temperature_degree)
+        
+            w_n = fenics.Function(W)
+        
+            with fenics.HDF5File(mesh.mpi_comm(), restart_filepath, 'r') as h5:
+            
+                h5.read(w_n, 'w')
+        
+        else:
+
+            w_n = fenics.interpolate(fenics.Expression(initial_values_expression,
+                element=W_ele), W)
+        
+    else:
+
+        w_n = fenics.project(w_n, W)
+        
+        
+    # Refine the initial grid in the region of the phase-change interface
+    for i in range(initial_pci_refinement_cycles):
+    
+        mesh = refine.refine_pci(regularization, i, mesh, w_n)
+        
+        W, W_ele = function_spaces(mesh, pressure_degree, temperature_degree)
+        
+        if restart:
+        
+            w_n = fenics.interpolate(w_n, W)
+            
+        else:
+        
+            w_n = fenics.interpolate(fenics.Expression(initial_values_expression,
+                    element=W_ele), W)
+        
+        continue
+        
+        
+    # Organize boundary conditions
+    bcs = []
+    
+    for item in boundary_conditions:
+    
+        bcs.append(fenics.DirichletBC(W.sub(item['subspace']), item['value_expression'],
+            item['location_expression'], method=item['method']))
+    
+    
+    # Set the variational form
+    """Set local names for math operators to improve readability."""
+    inner, dot, grad, div, sym = fenics.inner, fenics.dot, fenics.grad, fenics.div, fenics.sym
+
+
+    """Next we write the linear, bilinear, and trilinear forms.
+
+    These follow the common notation for applying the finite element method
+    to the incompressible Navier-Stokes equations, e.g. from danaila2014newton
+    and huerta2003fefluids.
+    """
+
+    """The bilinear form for the stress-strain matrix in Stokes flow."""
+    def a(mu, u, v):
+
+        def D(u):
+        
+            return sym(grad(u))
+        
+        return 2.*mu*inner(D(u), D(v))
+
+
+    """The linear form for the divergence in incompressible flow."""
+    def b(u, q):
+        
+        return -div(u)*q
+        
+
+    """The trilinear form for convection of the velocity field."""
+    def c(w, z, v):
+       
+        return dot(dot(grad(z), w), v)
+    
+    
+    """Time step size."""
+    dt = fenics.Constant(time_step_size)
+    
+    """Rayleigh Number"""
+    Ra = fenics.Constant(Ra), 
+    
+    """Prandtl Number"""
+    Pr = fenics.Constant(Pr)
+    
+    """Stefan Number"""
+    Ste = fenics.Constant(Ste)
+    
+    """Heat capacity"""
+    C = fenics.Constant(C)
+    
+    """Thermal diffusivity"""
+    K = fenics.Constant(K)
+    
+    """Gravity"""
+    g = fenics.Constant(g)
+    
+    """Parameter for penalty formulation
+    of incompressible Navier-Stokes"""
+    gamma = fenics.Constant(gamma)
+    
+    """Liquid viscosity"""
+    mu_l = fenics.Constant(mu_l)
+    
+    """Solid viscosity"""
+    mu_s = fenics.Constant(mu_s)
+    
+    """Buoyancy force, $f = ma$"""
+    f_B = lambda T : m_B(T)*g
+    
+    """Parameter shifting the tanh regularization"""
+    T_f = fenics.Constant(regularization['T_f'])
+    
+    """Parameter scaling the tanh regularization"""
+    r = fenics.Constant(regularization['r'])
+    
+    """Latent heat"""
+    L = C/Ste
+    
+    """Regularize heaviside function with a 
+    hyperoblic tangent function."""
+    P = lambda T: 0.5*(1. - fenics.tanh(2.*(T_f - T)/r))
+    
+    """Variable viscosity"""
+    mu = lambda (T) : mu_s + (mu_l - mu_s)*P(T)
+    
+    """Set the nonlinear variational form."""
+    u_n, p_n, T_n = fenics.split(w_n)
+
+    w_w = fenics.TrialFunction(W)
+    
+    u_w, p_w, T_w = fenics.split(w_w)
+    
+    v, q, phi = fenics.TestFunctions(W)
+    
+    w_k = fenics.Function(W)
+    
+    u_k, p_k, T_k = fenics.split(w_k)
+
+    F = (
+        b(u_k, q) - gamma*p_k*q
+        + dot(u_k - u_n, v)/dt
+        + c(u_k, u_k, v) + b(v, p_k) + a(mu(T_k), u_k, v)
+        + dot(f_B(T_k), v)
+        + C/dt*(T_k - T_n)*phi
+        - dot(C*T_k*u_k, grad(phi)) 
+        + K/Pr*dot(grad(T_k), grad(phi))
+        + 1./dt*L*(P(T_k) - P(T_n))*phi
+        )*fenics.dx
+
+    if automatic_jacobian:
+
+        JF = fenics.derivative(F, w_k, w_w)
+        
+    else:
+        
+        ddT_f_B = lambda T : ddT_m_B(T)*g
+        
+        sech = lambda theta: 1./fenics.cosh(theta)
+        
+        dP = lambda T: sech(2.*(T_f - T)/r)**2/r
+    
+        dmu = lambda T : (mu_l - mu_s)*dP(T)
+
+        """Set the Jacobian (formally the Gateaux derivative)."""
+        JF = (
+            b(u_w, q) - gamma*p_w*q 
+            + dot(u_w, v)/dt
+            + c(u_k, u_w, v) + c(u_w, u_k, v) + b(v, p_w)
+            + a(T_w*dmu(T_k), u_k, v) + a(mu(T_k), u_w, v) 
+            + dot(T_w*ddT_f_B(T_k), v)
+            + C/dt*T_w*phi
+            - dot(C*T_k*u_w, grad(phi))
+            - dot(C*T_w*u_k, grad(phi))
+            + K/Pr*dot(grad(T_w), grad(phi))
+            + 1./dt*L*T_w*dP(T_k)*phi
+            )*fenics.dx
+
+    M = P(T_k)*fenics.dx
+    
+    problem = fenics.NonlinearVariationalProblem(F, w_k, bcs, JF)
+    
+    
+    # Make the solver
+    solver = fenics.AdaptiveNonlinearVariationalSolver(problem, M)
+    
+    solver.parameters['nonlinear_variational_solver']['newton_solver']['maximum_iterations'] = nlp_max_iterations
+    
+    solver.parameters['nonlinear_variational_solver']['newton_solver']['relative_tolerance'] = nlp_relative_tolerance
+
+    solver.parameters['nonlinear_variational_solver']['newton_solver']['error_on_nonconvergence'] = True
+
     
     ''' @todo  explore info(f.parameters, verbose=True) 
     to avoid duplicate mesh storage when appropriate 
@@ -175,194 +363,57 @@ def run(
 
     with fenics.XDMFFile(output_dir + '/solution.xdmf') as solution_file:
 
+        # Write the initial values                      
+        output.write_solution(solution_file, w_n, current_time) 
+    
+    
         # Solve each time step
         progress = fenics.Progress('Time-stepping')
 
         fenics.set_log_level(fenics.PROGRESS)
-            
-        output_count = 0
-        
-        if (output_times is not ()):
-        
-            if output_times[0] == 'start':
-            
-                output_start_time = True
-                
-                output_count += 1
-            
-            if output_times[0] == 'all':
-            
-                output_start_time = True
-                
-            if output_times[0] == 'end':
-            
-                output_start_time = False
-            
-        else:
-        
-            output_start_time = False
-            
+
         if stop_when_steady:
         
             steady = False
         
-        pci_refinement_cycle = 0
-        
         for it in range(max_time_steps):
-        
-            pci_refinement_cycle_this_time = 0
             
-            while (pci_refinement_cycle < (max_pci_refinement_cycles + 1)) and (
-                pci_refinement_cycle_this_time < (max_pci_refinement_cycles_per_time + 1)):
+            if start_time >= end_time - time.TIME_EPS:
             
+                helpers.print_once("Start time is already too close to end time. Only writing initial values.")
+                
+                output.write_solution(solution_file, w_n, current_time)
+                
+                fe_field_interpolant = fenics.interpolate(w_n.leaf_node(), W)
+                
+                return fe_field_interpolant, mesh
             
-                # Define function spaces and solution function 
-                W, W_ele = function_spaces(mesh, pressure_degree, temperature_degree)
-
-                w = fenics.Function(W)
-                
-                
-                # Set the initial values
-                if (abs(current_time - start_time) < time.TIME_EPS):
-                
-                    if restart:
-                
-                        if pci_refinement_cycle == 0:
-                        
-                            mesh = fenics.Mesh()
-                            
-                            with fenics.HDF5File(mesh.mpi_comm(), restart_filepath, 'r') as h5:
-                            
-                                h5.read(mesh, 'mesh', True)
-                            
-                            W, W_ele = function_spaces(mesh, pressure_degree, temperature_degree)
-                        
-                            w_n = fenics.Function(W)
-                        
-                            with fenics.HDF5File(mesh.mpi_comm(), restart_filepath, 'r') as h5:
-                            
-                                h5.read(w_n, 'w')
-                            
-                            w = fenics.Function(W)
-                            
-                        else:
-                        
-                            w_n = fenics.interpolate(w_n, W)
-                    
-                    else:
+            solver.solve(adaptive_solver_tolerance)
             
-                        w_n = fenics.interpolate(fenics.Expression(initial_values_expression,
-                            element=W_ele), W)
-                    
-                else:
+            current_time += time_step_size
             
-                    w_n = fenics.project(w_n, W)
-
-                if pci_refinement_cycle < initial_pci_refinement_cycles:
-                
-                    mesh = refine.refine_pci(regularization, pci_refinement_cycle, mesh, w_n)
-                    
-                    pci_refinement_cycle += 1
-                    
-                    continue
-                    
-                if start_time >= end_time - time.TIME_EPS:
-                
-                    helpers.print_once("Start time is already too close to end time. Only writing initial values.")
-                    
-                    output.write_solution(solution_file, w_n, current_time)
-                    
-                    fe_field_interpolant = fenics.interpolate(w_n.leaf_node(), W)
-                    
-                    return fe_field_interpolant, mesh
-                
-                time_step_size, next_time, output_this_time, output_count, next_output_time = time.check(current_time,
-                time_step_size, end_time, output_times, output_count)
-                
-                # Initialize the functions that we will use to generate our variational form
-                form_factory = form.FormFactory(W, {'Ra': Ra, 'Pr': Pr, 'Ste': Ste, 'C': C, 'K': K, 'g': g, 'gamma': gamma, 'mu_l': mu_l, 'mu_s': mu_s}, m_B, ddT_m_B, regularization)
-
-                
-                # Make the time step solver
-                solve_time_step = solver.make(form_factory = form_factory,
-                    nlp_absolute_tolerance = nlp_absolute_tolerance,
-                    nlp_max_iterations = nlp_max_iterations,
-                    nlp_divergence_threshold = nlp_divergence_threshold,
-                    nlp_relaxation_bounds = nlp_relaxation_bounds,
-                    custom_newton = custom_newton,
-                    automatic_jacobian = automatic_jacobian)
-                
-                
-                # Organize boundary conditions
-                bcs = []
-                
-                for item in boundary_conditions:
-                
-                    bcs.append(fenics.DirichletBC(W.sub(item['subspace']), item['value_expression'],
-                        item['location_expression'], method=item['method']))
-                
-
-                # Write the initial values                    
-                if output_start_time and fenics.near(current_time, start_time):
-                    
-                    output.write_solution(solution_file, w_n, current_time) 
-                 
-                 
-                #
-                converged = time.adaptive_time_step(time_step_size=time_step_size, w=w, w_n=w_n, bcs=bcs,
-                    solve_time_step=solve_time_step, debug=debug)
-                
-                
-                #
-                if converged:
-                
-                    break
-                
-                # Refine mesh cells containing the PCI
-                if (max_pci_refinement_cycles_per_time == 0) or (pci_refinement_cycle_this_time
-                        == max_pci_refinement_cycles_per_time):
-
-                    break
-                    
-                mesh = refine.refine_pci(regularization,
-                    pci_refinement_cycle_this_time, mesh, w,
-                    minimum_cell_diameter)
-                
-                pci_refinement_cycle += 1
-                
-                pci_refinement_cycle_this_time += 1
-                
-            assert(converged)
-            
-            current_time += time_step_size.value
-            
-            if stop_when_steady and time.steady(W, w, w_n, 
+            if stop_when_steady and time.steady(W, w_k, w_n, 
                     steady_relative_tolerance):
             
                 steady = True
-                
-                if (output_times is not ()) and (output_times[-1] == 'end'):
-                
-                    output_this_time = True
             
-            if output_this_time:
+            output.write_solution(solution_file, w_k, current_time)
             
-                output.write_solution(solution_file, w, current_time)
+            
+            # Write checkpoint/restart files
+            restart_filepath = output_dir+'/restart_t'+str(current_time)+'.h5'
+            
+            with fenics.HDF5File(fenics.mpi_comm_world(), restart_filepath, 'w') as h5:
+    
+                h5.write(mesh, 'mesh')
+            
+                h5.write(w_k, 'w')
                 
-                # Write checkpoint/restart files
-                restart_filepath = output_dir+'/restart_t'+str(current_time)+'.h5'
-                
-                with fenics.HDF5File(fenics.mpi_comm_world(), restart_filepath, 'w') as h5:
-        
-                    h5.write(mesh, 'mesh')
-                
-                    h5.write(w, 'w')
+            if fenics.MPI.rank(fenics.mpi_comm_world()) is 0:
+            
+                with h5py.File(restart_filepath, 'r+') as h5:
                     
-                if fenics.MPI.rank(fenics.mpi_comm_world()) is 0:
-                
-                    with h5py.File(restart_filepath, 'r+') as h5:
-                        
-                        h5.create_dataset('t', data=current_time)
+                    h5.create_dataset('t', data=current_time)
                         
             helpers.print_once("Reached time t = " + str(current_time))
                 
@@ -372,7 +423,7 @@ def run(
                 
                 break
 
-            w_n.assign(w)  # The current solution becomes the new initial values
+            w_n.leaf_node().vector()[:] = w_k.leaf_node().vector()  # The current solution becomes the new initial values
             
             progress.update(current_time / end_time)
             
@@ -381,8 +432,6 @@ def run(
                 helpers.print_once("Reached end time, t = "+str(end_time))
             
                 break
-            
-            time_step_size.set(2*time_step_size.value) # @todo: Encapsulate the adaptive time stepping
                 
     # Return the interpolant to sample inside of Python
     w_n.rename('w', "state")
