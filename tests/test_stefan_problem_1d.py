@@ -32,11 +32,8 @@ def stefan_problem(Ste = 1.,
     r = 0.005,
     dt = 0.001,
     end_time = 0.01,
-    nlp_absolute_tolerance = 1.e-3,
     initial_uniform_cell_count = 1,
-    hot_boundary_refinement_cycles = 10,
-    max_pci_refinement_cycles_per_time = 10,
-    automatic_jacobian = False):
+    hot_boundary_refinement_cycles = 10):
 
     
     mesh = fenics.UnitIntervalMesh(initial_uniform_cell_count)
@@ -75,7 +72,6 @@ def stefan_problem(Ste = 1.,
         Ste = Ste,
         g = [0.],
         mesh = mesh,
-        max_pci_refinement_cycles_per_time = max_pci_refinement_cycles_per_time,
         initial_values_expression = (
             "0.",
             "0.",
@@ -85,11 +81,8 @@ def stefan_problem(Ste = 1.,
             {'subspace': 2, 'value_expression': theta_h, 'degree': 2, 'location_expression': "near(x[0],  0.)", 'method': "topological"},
             {'subspace': 2, 'value_expression': theta_c, 'degree': 2, 'location_expression': "near(x[0],  1.)", 'method': "topological"}],
         regularization = {'T_f': 0.01, 'r': r},
-        nlp_absolute_tolerance = nlp_absolute_tolerance,
         end_time = end_time,
-        time_step_bounds = dt,
-        output_times = ('start', 'end'),
-        automatic_jacobian = automatic_jacobian)
+        time_step_size = dt)
         
     return w
         
@@ -104,7 +97,7 @@ def test_stefan_problem_vary_Ste():
         {'Ste': 0.01, 'r': 0.1, 'dt': 0.0001, 'end_time': 0.1, 'initial_uniform_cell_count': 100, 'nlp_absolute_tolerance': 1.e-1}]'''
         
         w = stefan_problem(Ste=p['Ste'], r=p['r'], dt=p['dt'], end_time = p['end_time'],
-            initial_uniform_cell_count=p['initial_uniform_cell_count'], nlp_absolute_tolerance=p['nlp_absolute_tolerance'], automatic_jacobian = False)
+            initial_uniform_cell_count=p['initial_uniform_cell_count'])
     
         verify_melting_pci_position(p['Ste'], p['r'], w)
 
@@ -135,11 +128,8 @@ def stefan_problem_solidify(Ste = 0.125,
     r = 0.01,
     dt = 0.01,
     end_time = 1.,
-    nlp_absolute_tolerance = 1.e-4,
     initial_uniform_cell_count = 100,
-    cool_boundary_refinement_cycles = 0,
-    max_pci_refinement_cycles_per_time = 0,
-    automatic_jacobian = False):
+    cool_boundary_refinement_cycles = 0):
 
     
     mesh = fenics.UnitIntervalMesh(initial_uniform_cell_count)
@@ -173,13 +163,11 @@ def stefan_problem_solidify(Ste = 0.125,
         mesh = fenics.refine(mesh, cell_markers)
 
     w, mesh = phaseflow.run(
-        output_dir = 'output/test_stefan_problem_solidify/dt'+str(dt)+
-            '/tol'+str(nlp_absolute_tolerance)+'/',
+        output_dir = 'output/test_stefan_problem_solidify/',
         Pr = 1.,
         Ste = Ste,
         g = [0.],
         mesh = mesh,
-        max_pci_refinement_cycles_per_time = max_pci_refinement_cycles_per_time,
         initial_values_expression = (
             "0.",
             "0.",
@@ -189,10 +177,8 @@ def stefan_problem_solidify(Ste = 0.125,
             {'subspace': 2, 'value_expression': theta_c, 'degree': 2, 'location_expression': "near(x[0],  0.)", 'method': "topological"},
             {'subspace': 2, 'value_expression': theta_h, 'degree': 2, 'location_expression': "near(x[0],  1.)", 'method': "topological"}],
         regularization = {'T_f': theta_f, 'r': r},
-        nlp_absolute_tolerance = nlp_absolute_tolerance,
         end_time = end_time,
-        time_step_bounds = dt,
-        automatic_jacobian = automatic_jacobian)
+        time_step_size = dt)
         
     return w
   

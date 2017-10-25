@@ -82,14 +82,12 @@ def run(
     end_time = 10.,
     time_step_size = 1.e-3,
     max_time_steps = 1000,
-    initial_pci_refinement_cycles = 0,
     gamma = 1.e-7,
     adaptive_solver_tolerance = 1.e-4,
     nlp_relative_tolerance = 1.e-4,
     nlp_max_iterations = 12,
     pressure_degree = default.pressure_degree,
     temperature_degree = default.temperature_degree,
-    automatic_jacobian = False,
     stop_when_steady = True,
     steady_relative_tolerance = 1.e-4,
     restart = False,
@@ -168,7 +166,7 @@ def run(
     
     else:
 
-        w_n = fenics.Expression(initial_values_expression)
+        w_n = fenics.Expression(initial_values_expression, element=W_ele)
 
         
     # Organize boundary conditions
@@ -288,36 +286,32 @@ def run(
         + 1./dt*L*(P(T_k) - P(T_n))*phi
         )*fenics.dx
 
-    if automatic_jacobian:
-
-        JF = fenics.derivative(F, w_k, w_w)
-        
-    else:
-        
-        ddT_f_B = lambda T : ddT_m_B(T)*g
-        
-        sech = lambda theta: 1./fenics.cosh(theta)
-        
-        dP = lambda T: sech(2.*(T_f - T)/r)**2/r
+    """Set the Jacobian (formally the Gateaux derivative)."""
+    ddT_f_B = lambda T : ddT_m_B(T)*g
     
-        dmu = lambda T : (mu_l - mu_s)*dP(T)
-
-        """Set the Jacobian (formally the Gateaux derivative)."""
-        JF = (
-            b(u_w, q) - gamma*p_w*q 
-            + dot(u_w, v)/dt
-            + c(u_k, u_w, v) + c(u_w, u_k, v) + b(v, p_w)
-            + a(T_w*dmu(T_k), u_k, v) + a(mu(T_k), u_w, v) 
-            + dot(T_w*ddT_f_B(T_k), v)
-            + C/dt*T_w*phi
-            - dot(C*T_k*u_w, grad(phi))
-            - dot(C*T_w*u_k, grad(phi))
-            + K/Pr*dot(grad(T_w), grad(phi))
-            + 1./dt*L*T_w*dP(T_k)*phi
-            )*fenics.dx
-
-    M = P(T_k)*fenics.dx
+    sech = lambda theta: 1./fenics.cosh(theta)
     
+    dP = lambda T: sech(2.*(T_f - T)/r)**2/r
+
+    dmu = lambda T : (mu_l - mu_s)*dP(T)
+
+    JF = (
+        b(u_w, q) - gamma*p_w*q 
+        + dot(u_w, v)/dt
+        + c(u_k, u_w, v) + c(u_w, u_k, v) + b(v, p_w)
+        + a(T_w*dmu(T_k), u_k, v) + a(mu(T_k), u_w, v) 
+        + dot(T_w*ddT_f_B(T_k), v)
+        + C/dt*T_w*phi
+        - dot(C*T_k*u_w, grad(phi))
+        - dot(C*T_w*u_k, grad(phi))
+        + K/Pr*dot(grad(T_w), grad(phi))
+        + 1./dt*L*T_w*dP(T_k)*phi
+        )*fenics.dx
+
+    """ Set goal functional for adaptive mesh refinement"""
+    M = (u_k[0] + T_k + P(T_k))*fenics.dx
+    
+    #
     problem = fenics.NonlinearVariationalProblem(F, w_k, bcs, JF)
     
     
@@ -334,11 +328,12 @@ def run(
     ''' @todo  explore info(f.parameters, verbose=True) 
     to avoid duplicate mesh storage when appropriate 
     per https://fenicsproject.org/qa/3051/parallel-output-of-a-time-series-in-hdf5-format '''
-
+    
     with fenics.XDMFFile(output_dir + '/solution.xdmf') as solution_file:
 
-        # Write the initial values                      
-        output.write_solution(solution_file, w_n, current_time) 
+        # Write the initial values
+        output.write_solution(solution_file,
+            fenics.interpolate(w_n, W), current_time)
     
     
         # Solve each time step
@@ -355,8 +350,6 @@ def run(
             if start_time >= end_time - time.TIME_EPS:
             
                 helpers.print_once("Start time is already too close to end time. Only writing initial values.")
-                
-                output.write_solution(solution_file, w_n, current_time)
                 
                 fe_field_interpolant = fenics.interpolate(w_n.leaf_node(), W)
                 

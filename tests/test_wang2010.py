@@ -40,13 +40,6 @@ def verify_against_wang2010(w, mesh):
             ux = wval[0]*data['Pr']/data['Ra']**0.5
         
             assert(abs(ux - true_ux) < 2.e-2)
-            
-    
-def test_debug_wang2010_natural_convection_air_autoJ():
-    
-    w, mesh = phaseflow.run(automatic_jacobian=True, output_times=())
-        
-    verify_against_wang2010(w, mesh)
 
     
 output_dir='output/test_wang2010_natural_convection_air/'
@@ -54,8 +47,7 @@ output_dir='output/test_wang2010_natural_convection_air/'
 @pytest.mark.dependency()
 def test_wang2010_natural_convection_air():
     
-    w, mesh = phaseflow.run(output_times=('end',),
-        output_dir=output_dir)
+    w, mesh = phaseflow.run(output_dir=output_dir)
         
     verify_against_wang2010(w, mesh)
     
@@ -66,7 +58,6 @@ def test_wang2010_natural_convection_air_restart():
     w, mesh = phaseflow.run(restart = True,
         restart_filepath = output_dir+'restart_t0.125.h5',
         start_time = 0.125,
-        output_times = (),
         output_dir=output_dir)
         
     verify_against_wang2010(w, mesh)
@@ -74,8 +65,6 @@ def test_wang2010_natural_convection_air_restart():
     
 if __name__=='__main__':
 
-    test_debug_wang2010_natural_convection_air_autoJ()
-    
     test_wang2010_natural_convection_air()
     
     test_wang2010_natural_convection_air_restart()

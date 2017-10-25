@@ -2,14 +2,13 @@ import fenics
 import phaseflow
         
 def melt_pcm(
-        m = 20,
         dt = 1.e-3,
         output_dir='output/melt_pcm_adaptive',
         start_time=0.,
         end_time=0.05,
         nlp_max_iterations = 30,
-        initial_mesh_size = 20,
-        initial_hot_wall_refinement_cycles = 2,
+        initial_mesh_size = 1,
+        initial_hot_wall_refinement_cycles = 6,
         restart=False,
         restart_filepath=''):
 
