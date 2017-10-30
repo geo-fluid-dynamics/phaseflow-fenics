@@ -2,17 +2,41 @@ import fenics
 import phaseflow
         
 def melt_pcm(
-        m = 20,
         dt = 1.e-3,
         output_dir='output/melt_pcm_adaptive',
         start_time=0.,
         end_time=0.05,
-        initial_pci_refinement_cycles = 2,
+        initial_hot_wall_refinement_cycles = 6,
         nlp_max_iterations = 30,
-        initial_mesh_size = 20,
+        initial_mesh_size = 1,
         restart=False,
         restart_filepath=''):
 
+        
+    #
+    mesh = fenics.UnitSquareMesh(initial_mesh_size, initial_mesh_size, 'crossed')
+    
+    class HotWall(fenics.SubDomain):
+        
+        def inside(self, x, on_boundary):
+        
+            return on_boundary and fenics.near(x[0], 0.)
+
+            
+    hot_wall = HotWall()
+    
+    for i in range(initial_hot_wall_refinement_cycles):
+        
+        edge_markers = fenics.EdgeFunction("bool", mesh)
+        
+        hot_wall.mark(edge_markers, True)
+
+        fenics.adapt(mesh, edge_markers)
+        
+        mesh = mesh.child()
+    
+    
+    #
     theta_hot = 1.
     
     theta_cold = -0.1
@@ -23,8 +47,7 @@ def melt_pcm(
         Pr = 1.,
         mu_s = 1.e4,
         mu_l = 1.,
-        mesh = fenics.UnitSquareMesh(initial_mesh_size, initial_mesh_size),
-        initial_pci_refinement_cycles = initial_pci_refinement_cycles,
+        mesh = mesh,
         time_step_size = dt,
         start_time = start_time,
         end_time = end_time,
@@ -57,5 +80,5 @@ def melt_pcm(
     
 if __name__=='__main__':
 
-    melt_pcm()
+    melt_pcm(end_time=0.02)
     
