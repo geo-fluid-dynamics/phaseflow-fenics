@@ -7,7 +7,6 @@ import default
 import form
 import solver
 import bounded_value
-import time
 import refine
 import output
 
@@ -32,6 +31,26 @@ def make_mixed_fe(cell, pressure_degree=default.pressure_degree, temperature_deg
     return solution_element
 
 
+def steady(W, w, w_n, steady_relative_tolerance=1.e-4):
+    '''Check if solution has reached an approximately steady state.'''
+    steady = False
+    
+    time_residual = fenics.Function(W)
+    
+    time_residual.assign(w - w_n)
+    
+    unsteadiness = fenics.norm(time_residual, 'L2')/fenics.norm(w_n, 'L2')
+    
+    helpers.print_once(
+        "Unsteadiness (L2 norm of relative time residual), || w_{n+1} || / || w_n || = "+str(unsteadiness))
+
+    if (unsteadiness < steady_relative_tolerance):
+        
+        steady = True
+    
+    return steady
+    
+    
 def run(
     output_dir = 'output/wang2010_natural_convection_air',
     rayleight_number = default.parameters['Ra'],
@@ -60,14 +79,12 @@ def run(
     start_time = 0.,
     end_time = 10.,
     time_step_size = 1.e-3,
-    max_time_steps = 1000,
+    stop_when_steady = False,
     adaptive_solver_tolerance = 1.e-4,
     nlp_relative_tolerance = 1.e-4,
     nlp_max_iterations = 12,
     pressure_degree = default.pressure_degree,
     temperature_degree = default.temperature_degree,
-    stop_when_steady = True,
-    steady_relative_tolerance = 1.e-4,
     restart = False,
     restart_filepath = '',
     debug = False):
@@ -279,7 +296,6 @@ def run(
 
     solver.parameters['nonlinear_variational_solver']['newton_solver']['error_on_nonconvergence'] = True
 
-    
     ''' @todo  explore info(f.parameters, verbose=True) 
     to avoid duplicate mesh storage when appropriate 
     per https://fenicsproject.org/qa/3051/parallel-output-of-a-time-series-in-hdf5-format '''
@@ -288,43 +304,32 @@ def run(
 
         # Write the initial values.
         output.write_solution(solution_file, w_n, current_time) 
+
+        if start_time >= end_time - time.TIME_EPS:
+    
+            helpers.print_once("Start time is already too close to end time. Only writing initial values.")
+            
+            fe_field_interpolant = fenics.interpolate(w_n.leaf_node(), W)
+            
+            return fe_field_interpolant, mesh
     
     
         # Solve each time step.
         progress = fenics.Progress('Time-stepping')
 
         fenics.set_log_level(fenics.PROGRESS)
-
-        if stop_when_steady:
         
-            steady = False
-        
-        for it in range(max_time_steps):
-            
-            if start_time >= end_time - time.TIME_EPS:
-            
-                helpers.print_once("Start time is already too close to end time. Only writing initial values.")
-                
-                output.write_solution(solution_file, w_n, current_time)
-                
-                fe_field_interpolant = fenics.interpolate(w_n.leaf_node(), W)
-                
-                return fe_field_interpolant, mesh
+        while time < end_time - time.TIME_EPS:
             
             solver.solve(adaptive_solver_tolerance)
             
-            current_time += time_step_size
+            time += time_step_size
             
-            if stop_when_steady and time.steady(W, w_k, w_n, 
-                    steady_relative_tolerance):
-            
-                steady = True
-            
-            output.write_solution(solution_file, w_k, current_time)
+            output.write_solution(solution_file, w_k, time)
             
             
             # Write checkpoint/restart files.
-            restart_filepath = output_dir + '/restart_t' + str(current_time) + '.h5'
+            restart_filepath = output_dir + '/restart_t' + str(time) + '.h5'
             
             with fenics.HDF5File(fenics.mpi_comm_world(), restart_filepath, 'w') as h5:
     
@@ -339,17 +344,21 @@ def run(
                     h5.create_dataset('t', data=current_time)
                         
             helpers.print_once("Reached time t = " + str(current_time))
-                
-            if stop_when_steady and steady:
+            
+            
+            # Check for steady state.
+            if stop_when_steady and time.steady(W, w_k, w_n, steady_relative_tolerance):
             
                 helpers.print_once("Reached steady state at time t = " + str(current_time))
                 
                 break
-
                 
-            #
-            w_n.leaf_node().vector()[:] = w_k.leaf_node().vector()  # Set initial values for next time step.
+                
+            # Set initial values for next time step.
+            w_n.leaf_node().vector()[:] = w_k.leaf_node().vector()
             
+            
+            # Report progress.
             progress.update(current_time / end_time)
             
             if current_time >= (end_time - fenics.dolfin.DOLFIN_EPS):
@@ -357,7 +366,8 @@ def run(
                 helpers.print_once("Reached end time, t = " + str(end_time))
             
                 break
-                
+    
+    
     # Return the interpolant to sample inside of Python.
     w_n.rename('w', "state")
         

@@ -111,26 +111,6 @@ def check(current_time, time_step_size, end_time, output_times, output_count):
             
     return time_step_size, next_time, output_this_time, output_count, next_output_time
    
-
-def steady(W, w, w_n, steady_relative_tolerance=1.e-4):
-    '''Check if solution has reached an approximately steady state.'''
-    steady = False
-    
-    time_residual = fenics.Function(W)
-    
-    time_residual.assign(w - w_n)
-    
-    unsteadiness = fenics.norm(time_residual, 'L2')/fenics.norm(w_n, 'L2')
-    
-    helpers.print_once(
-        "Unsteadiness (L2 norm of relative time residual), || w_{n+1} || / || w_n || = "+str(unsteadiness))
-
-    if (unsteadiness < steady_relative_tolerance):
-        
-        steady = True
-    
-    return steady
-
     
 if __name__=='__main__':
 
