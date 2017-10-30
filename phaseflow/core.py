@@ -179,25 +179,17 @@ def run(
     # Set the variational form.
     """Set local names for math operators to improve readability."""
     inner, dot, grad, div, sym = fenics.inner, fenics.dot, fenics.grad, fenics.div, fenics.sym
-
-
-    """Next we write the linear, bilinear, and trilinear forms.
-
-    These follow the common notation for applying the finite element method
-    to the incompressible Navier-Stokes equations, e.g. from danaila2014newton
-    and huerta2003fefluids.
+    
+    """The linear, bilinear, and trilinear forms b, a, and c, follow the common notation 
+    for applying the finite element method to the incompressible Navier-Stokes equations,
+    e.g. from danaila2014newton and huerta2003fefluids.
     """
-    """The linear form for the divergence in incompressible flow."""
-    b = lambda u, q : -div(u)*q
+    b = lambda u, q : -div(u)*q  # Divergence
     
-    """The bilinear form for the stress-strain matrix in Stokes flow."""
-    a = lambda mu, u, v : 2.*mu*inner(D(u), D(v))
+    a = lambda mu, u, v : 2.*mu*inner(D(u), D(v))  # Stokes stress-strain
     
-    """The trilinear form for convection of the velocity field."""
-    c = lambda w, z, v : dot(dot(grad(z), w), v)
+    c = lambda w, z, v : dot(dot(grad(z), w), v)  # Convection of the velocity field
     
-    
-    #
     dt = fenics.Constant(time_step_size)
     
     Ra = fenics.Constant(rayleight_number), 
@@ -218,25 +210,18 @@ def run(
     
     mu_s = fenics.Constant(solid_viscosity)
     
-    """Buoyancy force, $f = ma$"""
-    f_B = lambda T : m_B(T)*g
+    f_B = lambda T : m_B(T)*g  # Buoyancy force, $f = ma$
     
-    """Parameter shifting the tanh regularization"""
-    T_f = fenics.Constant(regularization['T_f'])
+    T_f = fenics.Constant(regularization['T_f'])  # Center of regularized phase-field.
     
-    """Parameter scaling the tanh regularization"""
-    r = fenics.Constant(regularization['r'])
+    r = fenics.Constant(regularization['r'])  # Regularization smoothing parameter.
     
     L = C/Ste  # Latent heat
     
-    """Regularize heaviside function with a 
-    hyperoblic tangent function."""
-    P = lambda T: 0.5*(1. - fenics.tanh(2.*(T_f - T)/r))
+    P = lambda T: 0.5*(1. - fenics.tanh(2.*(T_f - T)/r))  # Regularized phase field.
     
-    """Variable viscosity"""
-    mu = lambda (T) : mu_s + (mu_l - mu_s)*P(T)
+    mu = lambda (T) : mu_s + (mu_l - mu_s)*P(T) # Variable viscosity.
     
-    """Set the nonlinear variational form."""
     u_n, p_n, T_n = fenics.split(w_n)
 
     w_w = fenics.TrialFunction(W)
@@ -267,8 +252,9 @@ def run(
     dP = lambda T: sech(2.*(T_f - T)/r)**2/r
 
     dmu = lambda T : (mu_l - mu_s)*dP(T)
-
-    """Set the Jacobian (formally the Gateaux derivative)."""
+    
+    
+    # Set the Jacobian (formally the Gateaux derivative) in variational form.
     JF = (
         b(u_w, q) - gamma*p_w*q 
         + dot(u_w, v)/dt
@@ -282,8 +268,12 @@ def run(
         + 1./dt*L*T_w*dP(T_k)*phi
         )*fenics.dx
 
+        
+    # Set the functional metric for the error estimator for adaptive mesh refinement.
     M = P(T_k)*fenics.dx
     
+    
+    # Make the problem.
     problem = fenics.NonlinearVariationalProblem(F, w_k, bcs, JF)
     
     
