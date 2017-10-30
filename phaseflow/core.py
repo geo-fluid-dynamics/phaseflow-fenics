@@ -60,7 +60,6 @@ def run(
     end_time = 10.,
     time_step_size = 1.e-3,
     max_time_steps = 1000,
-    initial_pci_refinement_cycles = 0,
     gamma = 1.e-7,
     adaptive_solver_tolerance = 1.e-4,
     nlp_relative_tolerance = 1.e-4,
@@ -150,25 +149,6 @@ def run(
 
         w_n = fenics.interpolate(fenics.Expression(initial_values_expression,
             element=W_ele), W)
-
-            
-    # Refine the initial grid in the region of the phase-change interface
-    if not restart:
-    
-        for i in range(initial_pci_refinement_cycles):
-
-            mesh = refine.refine_pci(regularization, i, mesh, w_n)
-            
-            W, W_ele = function_spaces(mesh, pressure_degree, temperature_degree)
-            
-            if restart:
-            
-                w_n = fenics.interpolate(w_n, W)
-                
-            else:
-            
-                w_n = fenics.interpolate(fenics.Expression(initial_values_expression,
-                        element=W_ele), W)
             
         
     # Organize boundary conditions
