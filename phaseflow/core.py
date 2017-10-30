@@ -85,7 +85,7 @@ def run(
     these arguments properly.
     '''
     
-    # Display inputs
+    # Display inputs.
     helpers.print_once("Running Phaseflow with the following arguments:")
     
     helpers.print_once(helpers.arguments())
@@ -107,7 +107,7 @@ def run(
     helpers.print_once("Running "+str(dimensionality)+"D problem")
     
     
-    # Initialize time
+    # Initialize time.
     if restart:
     
         with h5py.File(restart_filepath, 'r') as h5:
@@ -121,13 +121,13 @@ def run(
         current_time = start_time
     
     
-    # Define function spaces and solution function 
+    # Define function spaces and solution function.
     W_ele = function_spaces(mesh.ufl_cell(), pressure_degree, temperature_degree)
     
     W = fenics.FunctionSpace(mesh, W_ele)
     
     
-    # Set the initial values
+    # Set the initial values.
     if restart:
             
         mesh = fenics.Mesh()
@@ -150,7 +150,7 @@ def run(
             element=W_ele), W)
             
         
-    # Organize boundary conditions
+    # Organize the boundary conditions.
     bcs = []
     
     for item in boundary_conditions:
@@ -159,7 +159,7 @@ def run(
             item['location_expression'], method=item['method']))
     
     
-    # Set the variational form
+    # Set the variational form.
     """Set local names for math operators to improve readability."""
     inner, dot, grad, div, sym = fenics.inner, fenics.dot, fenics.grad, fenics.div, fenics.sym
 
@@ -270,7 +270,7 @@ def run(
     problem = fenics.NonlinearVariationalProblem(F, w_k, bcs, JF)
     
     
-    # Make the solver
+    # Make the solver.
     solver = fenics.AdaptiveNonlinearVariationalSolver(problem, M)
     
     solver.parameters['nonlinear_variational_solver']['newton_solver']['maximum_iterations'] = nlp_max_iterations
@@ -286,11 +286,11 @@ def run(
 
     with fenics.XDMFFile(output_dir + '/solution.xdmf') as solution_file:
 
-        # Write the initial values                      
+        # Write the initial values.
         output.write_solution(solution_file, w_n, current_time) 
     
     
-        # Solve each time step
+        # Solve each time step.
         progress = fenics.Progress('Time-stepping')
 
         fenics.set_log_level(fenics.PROGRESS)
@@ -323,7 +323,7 @@ def run(
             output.write_solution(solution_file, w_k, current_time)
             
             
-            # Write checkpoint/restart files
+            # Write checkpoint/restart files.
             restart_filepath = output_dir+'/restart_t'+str(current_time)+'.h5'
             
             with fenics.HDF5File(fenics.mpi_comm_world(), restart_filepath, 'w') as h5:
@@ -356,7 +356,7 @@ def run(
             
                 break
                 
-    # Return the interpolant to sample inside of Python
+    # Return the interpolant to sample inside of Python.
     w_n.rename('w', "state")
         
     fe_field_interpolant = fenics.interpolate(w_n.leaf_node(), W)
