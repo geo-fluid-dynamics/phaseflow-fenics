@@ -324,7 +324,7 @@ def run(
             
             
             # Write checkpoint/restart files.
-            restart_filepath = output_dir+'/restart_t'+str(current_time)+'.h5'
+            restart_filepath = output_dir + '/restart_t' + str(current_time) + '.h5'
             
             with fenics.HDF5File(fenics.mpi_comm_world(), restart_filepath, 'w') as h5:
     
@@ -346,13 +346,15 @@ def run(
                 
                 break
 
+                
+            #
             w_n.leaf_node().vector()[:] = w_k.leaf_node().vector()  # Set initial values for next time step.
             
             progress.update(current_time / end_time)
             
             if current_time >= (end_time - fenics.dolfin.DOLFIN_EPS):
             
-                helpers.print_once("Reached end time, t = "+str(end_time))
+                helpers.print_once("Reached end time, t = " + str(end_time))
             
                 break
                 
