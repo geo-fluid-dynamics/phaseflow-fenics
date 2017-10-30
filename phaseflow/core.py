@@ -10,10 +10,7 @@ import bounded_value
 import refine
 import output
 
-
-'''@todo First add variable viscosity, later latent heat source term.
-Conceptually this will be like having a PCM with zero latent heat.
-The melting front should move quickly.'''
+TIME_EPS = 1.e-8
 
 def make_mixed_fe(cell, pressure_degree=default.pressure_degree, temperature_degree=default.temperature_degree):
     """ Define the mixed finite element.
@@ -31,7 +28,7 @@ def make_mixed_fe(cell, pressure_degree=default.pressure_degree, temperature_deg
     return solution_element
 
 
-def steady(W, w, w_n, steady_relative_tolerance=1.e-4):
+def steady(W, w, w_n, steady_relative_tolerance):
     '''Check if solution has reached an approximately steady state.'''
     steady = False
     
@@ -80,6 +77,7 @@ def run(
     end_time = 10.,
     time_step_size = 1.e-3,
     stop_when_steady = False,
+    steady_relative_tolerance=1.e-4,
     adaptive_solver_tolerance = 1.e-4,
     nlp_relative_tolerance = 1.e-4,
     nlp_max_iterations = 12,
@@ -90,8 +88,7 @@ def run(
     debug = False):
     """Run Phaseflow.
     
-    Rather than using an input file, Phaseflow is configured entirely through
-    the arguments in this run() function.
+    Phaseflow is configured entirely through the arguments in this run() function.
     
     See the tests and examples for demonstrations of how to use this.
     """
@@ -102,7 +99,8 @@ def run(
     these arguments properly.
     '''
     
-    # Display inputs.
+    
+    # Report inputs.
     helpers.print_once("Running Phaseflow with the following arguments:")
     
     helpers.print_once(helpers.arguments())
@@ -118,7 +116,7 @@ def run(
         arguments_file.close()
     
     
-    #
+    # Check if 1D/2D/3D.
     dimensionality = mesh.type().dim()
     
     helpers.print_once("Running "+str(dimensionality)+"D problem")
@@ -129,16 +127,16 @@ def run(
     
         with h5py.File(restart_filepath, 'r') as h5:
             
-            current_time = h5['t'].value
+            time = h5['t'].value
             
-            assert(abs(current_time - start_time) < time.TIME_EPS)
+            assert(abs(time - start_time) < TIME_EPS)
     
     else:
     
-        current_time = start_time
+        time = start_time
     
     
-    # Define function spaces and solution function.
+    # Define the mixed finite element and the solution function space.
     W_ele = function_spaces(mesh.ufl_cell(), pressure_degree, temperature_degree)
     
     W = fenics.FunctionSpace(mesh, W_ele)
@@ -292,8 +290,9 @@ def run(
 
     with fenics.XDMFFile(output_dir + '/solution.xdmf') as solution_file:
 
+    
         # Write the initial values.
-        output.write_solution(solution_file, w_n, current_time) 
+        output.write_solution(solution_file, w_n, time) 
 
         if start_time >= end_time - time.TIME_EPS:
     
@@ -315,6 +314,8 @@ def run(
             
             time += time_step_size
             
+            helpers.print_once("Reached time t = " + str(time))
+            
             output.write_solution(solution_file, w_k, time)
             
             
@@ -331,15 +332,13 @@ def run(
             
                 with h5py.File(restart_filepath, 'r+') as h5:
                     
-                    h5.create_dataset('t', data=current_time)
-                        
-            helpers.print_once("Reached time t = " + str(current_time))
+                    h5.create_dataset('t', data=time)
             
             
             # Check for steady state.
             if stop_when_steady and time.steady(W, w_k, w_n, steady_relative_tolerance):
             
-                helpers.print_once("Reached steady state at time t = " + str(current_time))
+                helpers.print_once("Reached steady state at time t = " + str(time))
                 
                 break
                 
@@ -349,9 +348,9 @@ def run(
             
             
             # Report progress.
-            progress.update(current_time / end_time)
+            progress.update(time / end_time)
             
-            if current_time >= (end_time - fenics.dolfin.DOLFIN_EPS):
+            if time >= (end_time - fenics.dolfin.DOLFIN_EPS):
             
                 helpers.print_once("Reached end time, t = " + str(end_time))
             
