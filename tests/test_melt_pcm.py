@@ -25,14 +25,17 @@ def melt_pcm(Ste = 0.045,
         Ra = 3.27e5,
         Pr = 56.2,
         mu_s = 1.e8,
-        T_f = 0.01,
+        theta_f = 0.01,
         r = 0.005,
-        initial_mesh_size = 1,
-        time_step_size = 1.e-3,
-        initial_hot_wall_refinement_cycles = 6,
+        m = 10,
+        time_step_bounds = (1.e-3, 1.e-3, 1.e-3),
+        initial_pci_refinement_cycles = 6,
+        max_pci_refinement_cycles_per_time = 6,
         output_dir='output/melt_pcm',
         start_time=0.,
         end_time=1.,
+        nlp_absolute_tolerance = 1.,
+        nlp_divergence_threshold = 1.e12,
         nlp_max_iterations = 30,
         restart=False,
         restart_filepath=''):
@@ -40,46 +43,27 @@ def melt_pcm(Ste = 0.045,
     theta_hot = 1.
     
     theta_cold = -0.1
-    
-    mesh = fenics.UnitSquareMesh(initial_mesh_size, initial_mesh_size)
-    
-    
-    # Refine the initial mesh near the hot wall
-    class HotWall(fenics.SubDomain):
-        
-        def inside(self, x, on_boundary):
-        
-            return on_boundary and fenics.near(x[0], 0.)
 
-            
-    hot_wall = HotWall()
-    
-    for i in range(initial_hot_wall_refinement_cycles):
-        
-        edge_markers = fenics.EdgeFunction("bool", mesh)
-        
-        hot_wall.mark(edge_markers, True)
-
-        fenics.adapt(mesh, edge_markers)
-        
-        mesh = mesh.child()
-
-        
-    #
     w, mesh = phaseflow.run(
         Ste = Ste,
         Ra = Ra,
         Pr = Pr,
         mu_s = mu_s,
         mu_l = 1.,
-        mesh = mesh,
-        time_step_size = time_step_bounds,
+        mesh = fenics.UnitSquareMesh(m, m),
+        time_step_bounds = time_step_bounds,
         start_time = start_time,
         end_time = end_time,
         output_times = ('all',),
         stop_when_steady = True,
-        regularization = {'T_f': T_f, 'r': r},
+        automatic_jacobian = False,
+        custom_newton = True,
+        regularization = {'T_f': theta_f, 'r': r},
+        initial_pci_refinement_cycles = initial_pci_refinement_cycles,
+        max_pci_refinement_cycles_per_time = max_pci_refinement_cycles_per_time,
+        nlp_absolute_tolerance = nlp_absolute_tolerance,
         nlp_max_iterations = nlp_max_iterations,
+        nlp_divergence_threshold = nlp_divergence_threshold,
         initial_values_expression = (
             "0.",
             "0.",
@@ -105,22 +89,25 @@ def melt_pcm(Ste = 0.045,
     
 def test_melt_pcm():
 
-    T_f = 0.1
+    theta_f = 0.1
     
     w, mesh = melt_pcm(Ste = 1.,
         Ra = 1.,
         Pr = 1.,
         mu_s = 1.e4,
-        T_f = T_f,
-        r = T_f/2.,
-        time_step_size = 1.e-3,
+        theta_f = theta_f,
+        r = theta_f/2.,
+        m = 1,
+        time_step_bounds = (1.e-4, 1.e-4, 1.e-3),
         end_time = 1.e-3,
-        initial_hot_wall_refinement_cycles = 6,
+        initial_pci_refinement_cycles = 5,
+        max_pci_refinement_cycles_per_time = 2,
+        nlp_divergence_threshold = 1.e12,
         output_dir = 'output/test_melt_pcm')
         
-    verify_pci_position_regression(T_f, w)
+    verify_pci_position_regression(theta_f, w)
     
     
 if __name__=='__main__':
 
-    test_melt_pcm()
+    test_run_melt_pcm()

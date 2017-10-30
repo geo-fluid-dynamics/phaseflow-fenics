@@ -8,11 +8,11 @@ def verify_regression_water(w, mesh):
     from Michalek2003 in this case would take longer 
     than we should spend on a this part of the test suite. 
     So instead we subsitute this cheaper regression test.'''
-    verified_solution = {'y': 0.5, 'x': [0.00, 0.10, 0.20, 0.30, 0.40, 0.70, 0.90, 1.00], 'T': [1.000, 0.551, 0.202, 0.166, 0.211, 0.209, 0.238, 0.000]}
+    verified_solution = {'y': 0.5, 'x': [0.00, 0.10, 0.20, 0.30, 0.40, 0.70, 0.90, 1.00], 'theta': [1.000, 0.551, 0.202, 0.166, 0.211, 0.209, 0.238, 0.000]}
     
     bbt = mesh.bounding_box_tree()
     
-    for i, true_T in enumerate(verified_solution['T']):
+    for i, true_theta in enumerate(verified_solution['theta']):
     
         p = fenics.Point(fenics.Point(verified_solution['x'][i], verified_solution['y']))
         
@@ -20,12 +20,12 @@ def verify_regression_water(w, mesh):
             
             wval = w(p)
             
-            T = wval[3]
+            theta = wval[3]
             
-            assert(abs(T - true_T) < 1.e-2)
+            assert(abs(theta - true_theta) < 1.e-2)
 
             
-def test_debug_regression_natural_convection_water():
+def regression_natural_convection_water(automatic_jacobian=False):
     m = 10
 
     Ra = 2.518084e6
@@ -72,10 +72,12 @@ def test_debug_regression_natural_convection_water():
         Ste = 1.e16,
         regularization = {'T_f': -1., 'r': 0.1},
         m_B = lambda theta : Ra/(Pr*Re*Re)/(beta*(T_h - T_c))*(rho(theta_f) - rho(theta))/rho(theta_f),
-        ddT_m_B = lambda theta : -Ra/(Pr*Re*Re)/(beta*(T_h - T_c))*(ddtheta_rho(theta))/rho(theta_f),
+        ddtheta_m_B = lambda theta : -Ra/(Pr*Re*Re)/(beta*(T_h - T_c))*(ddtheta_rho(theta))/rho(theta_f),
         mesh = fenics.UnitSquareMesh(m, m, 'crossed'),
-        time_step_size = 0.001,
+        time_step_bounds = (0.001, 0.002, 0.002),
         end_time = 0.18,
+        output_times = (),
+        automatic_jacobian = False,
         initial_values_expression = (
             "0.",
             "0.",
@@ -89,7 +91,14 @@ def test_debug_regression_natural_convection_water():
         
     verify_regression_water(w, mesh)
 
+
+def test_debug_regression_natural_convection_water():
+
+    regression_natural_convection_water()
+    
     
 if __name__=='__main__':
 
-    test_debug_regression_natural_convection_water()
+    test_debug_regression_natural_convection_water_autoJ()
+    
+    test_debug_regression_natural_convection_water_manualJ()
