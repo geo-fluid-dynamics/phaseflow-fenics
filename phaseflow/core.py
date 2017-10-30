@@ -16,42 +16,20 @@ import output
 Conceptually this will be like having a PCM with zero latent heat.
 The melting front should move quickly.'''
 
-def function_spaces(mesh=default.mesh, pressure_degree=default.pressure_degree, temperature_degree=default.temperature_degree):
-    """ Define function spaces for the variational form."""
-    
+def make_mixed_fe(cell, pressure_degree=default.pressure_degree, temperature_degree=default.temperature_degree):
+    """ Define the mixed finite element.
+    MixedFunctionSpace used to be available but is now deprecated. 
+    To create the mixed space, I'm using the approach from https://fenicsproject.org/qa/11983/mixedfunctionspace-in-2016-2-0
+    """
     velocity_degree = pressure_degree + 1
     
-    velocity_space = fenics.VectorFunctionSpace(mesh, 'P', velocity_degree)
-
-    pressure_space = fenics.FunctionSpace(mesh, 'P', pressure_degree) # @todo mixing up test function space
-
-    temperature_space = fenics.FunctionSpace(mesh, 'P', temperature_degree)
-
-    ''' MixedFunctionSpace used to be available but is now deprecated. 
-    The way that fenics separates function spaces and elements is confusing.
-    To create the mixed space, I'm using the approach from https://fenicsproject.org/qa/11983/mixedfunctionspace-in-2016-2-0
-    '''
-    velocity_element = fenics.VectorElement('P', mesh.ufl_cell(), velocity_degree)
-
-    '''
-    @todo How can we use the space
-        $Q = \left{q \in L^2(\Omega) | \int{q = 0}\right}$ ?
-
-    All Navier-Stokes FEniCS examples I've found simply use P2P1. danaila2014newton says that
-    they are using the "classical Hilbert spaces" for velocity and pressure, but then they write down the space Q with less restrictions than H^1_0.
-    
-    My understanding is that the space Q relates to the divergence-free
-    requirement.
-    '''
     pressure_element = fenics.FiniteElement('P', mesh.ufl_cell(), pressure_degree)
 
     temperature_element = fenics.FiniteElement('P', mesh.ufl_cell(), temperature_degree)
 
     solution_element = fenics.MixedElement([velocity_element, pressure_element, temperature_element])
-
-    solution_function_space = fenics.FunctionSpace(mesh, solution_element)  
     
-    return solution_function_space, solution_element
+    return solution_element
 
 
 def run(
@@ -146,7 +124,9 @@ def run(
     
     
     # Define function spaces and solution function 
-    W, W_ele = function_spaces(mesh, pressure_degree, temperature_degree)
+    W_ele = function_spaces(mesh.ufl_cell(), pressure_degree, temperature_degree)
+    
+    W = fenics.FunctionSpace(mesh, W_ele)
     
     
     # Set the initial values
