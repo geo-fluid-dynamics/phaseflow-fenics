@@ -346,7 +346,7 @@ def run(
                 
                 break
 
-            w_n.leaf_node().vector()[:] = w_k.leaf_node().vector()  # The current solution becomes the new initial values
+            w_n.leaf_node().vector()[:] = w_k.leaf_node().vector()  # Set initial values for next time step.
             
             progress.update(current_time / end_time)
             
