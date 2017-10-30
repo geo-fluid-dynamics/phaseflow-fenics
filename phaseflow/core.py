@@ -34,16 +34,17 @@ def make_mixed_fe(cell, pressure_degree=default.pressure_degree, temperature_deg
 
 def run(
     output_dir = 'output/wang2010_natural_convection_air',
-    Ra = default.parameters['Ra'],
-    Pr = default.parameters['Pr'],
-    Ste = default.parameters['Ste'],
-    C = default.parameters['C'],
-    K = default.parameters['K'],
-    mu_l = default.parameters['mu_l'],
-    mu_s = default.parameters['mu_s'],
-    g = default.parameters['g'],
+    rayleight_number = default.parameters['Ra'],
+    prandtl_number = default.parameters['Pr'],
+    stefan_number = default.parameters['Ste'],
+    heat_capacity = default.parameters['C'],
+    thermal_conductivity = default.parameters['K'],
+    liquid_viscosity = default.parameters['mu_l'],
+    solid_viscosity = default.parameters['mu_s'],
+    gravity = default.parameters['g'],
     m_B = default.m_B,
     ddT_m_B = default.ddT_m_B,
+    penalty_parameter = 1.e-7,
     regularization = default.regularization,
     mesh=default.mesh,
     initial_values_expression = ("0.", "0.", "0.", "0.5*near(x[0],  0.) -0.5*near(x[0],  1.)"),
@@ -60,7 +61,6 @@ def run(
     end_time = 10.,
     time_step_size = 1.e-3,
     max_time_steps = 1000,
-    gamma = 1.e-7,
     adaptive_solver_tolerance = 1.e-4,
     nlp_relative_tolerance = 1.e-4,
     nlp_max_iterations = 12,
@@ -171,59 +171,36 @@ def run(
     to the incompressible Navier-Stokes equations, e.g. from danaila2014newton
     and huerta2003fefluids.
     """
-
-    """The bilinear form for the stress-strain matrix in Stokes flow."""
-    def a(mu, u, v):
-
-        def D(u):
-        
-            return sym(grad(u))
-        
-        return 2.*mu*inner(D(u), D(v))
-
-
     """The linear form for the divergence in incompressible flow."""
-    def b(u, q):
-        
-        return -div(u)*q
-        
-
+    b = lambda u, q : -div(u)*q
+    
+    """The bilinear form for the stress-strain matrix in Stokes flow."""
+    a = lambda mu, u, v : 2.*mu*inner(D(u), D(v))
+    
     """The trilinear form for convection of the velocity field."""
-    def c(w, z, v):
-       
-        return dot(dot(grad(z), w), v)
+    c = lambda w, z, v : dot(dot(grad(z), w), v)
     
     
-    """Time step size."""
+    #
     dt = fenics.Constant(time_step_size)
     
-    """Rayleigh Number"""
-    Ra = fenics.Constant(Ra), 
+    Ra = fenics.Constant(rayleight_number), 
     
-    """Prandtl Number"""
-    Pr = fenics.Constant(Pr)
+    Pr = fenics.Constant(prandtl_number)
     
-    """Stefan Number"""
-    Ste = fenics.Constant(Ste)
+    Ste = fenics.Constant(stefan_number)
     
-    """Heat capacity"""
-    C = fenics.Constant(C)
+    C = fenics.Constant(heat_capacity)
     
-    """Thermal diffusivity"""
-    K = fenics.Constant(K)
+    K = fenics.Constant(thermal_conductivity)
+
+    g = fenics.Constant(gravity)
     
-    """Gravity"""
-    g = fenics.Constant(g)
+    gamma = fenics.Constant(penalty_parameter)
     
-    """Parameter for penalty formulation
-    of incompressible Navier-Stokes"""
-    gamma = fenics.Constant(gamma)
+    mu_l = fenics.Constant(liquid_viscosity)
     
-    """Liquid viscosity"""
-    mu_l = fenics.Constant(mu_l)
-    
-    """Solid viscosity"""
-    mu_s = fenics.Constant(mu_s)
+    mu_s = fenics.Constant(solid_viscosity)
     
     """Buoyancy force, $f = ma$"""
     f_B = lambda T : m_B(T)*g
@@ -234,8 +211,7 @@ def run(
     """Parameter scaling the tanh regularization"""
     r = fenics.Constant(regularization['r'])
     
-    """Latent heat"""
-    L = C/Ste
+    L = C/Ste  # Latent heat
     
     """Regularize heaviside function with a 
     hyperoblic tangent function."""
