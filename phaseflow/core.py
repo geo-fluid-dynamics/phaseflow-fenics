@@ -66,7 +66,6 @@ def run(
     nlp_max_iterations = 12,
     pressure_degree = default.pressure_degree,
     temperature_degree = default.temperature_degree,
-    automatic_jacobian = False,
     stop_when_steady = True,
     steady_relative_tolerance = 1.e-4,
     restart = False,
@@ -244,33 +243,27 @@ def run(
         + 1./dt*L*(P(T_k) - P(T_n))*phi
         )*fenics.dx
 
-    if automatic_jacobian:
-
-        JF = fenics.derivative(F, w_k, w_w)
-        
-    else:
-        
-        ddT_f_B = lambda T : ddT_m_B(T)*g
-        
-        sech = lambda theta: 1./fenics.cosh(theta)
-        
-        dP = lambda T: sech(2.*(T_f - T)/r)**2/r
+    ddT_f_B = lambda T : ddT_m_B(T)*g
     
-        dmu = lambda T : (mu_l - mu_s)*dP(T)
+    sech = lambda theta: 1./fenics.cosh(theta)
+    
+    dP = lambda T: sech(2.*(T_f - T)/r)**2/r
 
-        """Set the Jacobian (formally the Gateaux derivative)."""
-        JF = (
-            b(u_w, q) - gamma*p_w*q 
-            + dot(u_w, v)/dt
-            + c(u_k, u_w, v) + c(u_w, u_k, v) + b(v, p_w)
-            + a(T_w*dmu(T_k), u_k, v) + a(mu(T_k), u_w, v) 
-            + dot(T_w*ddT_f_B(T_k), v)
-            + C/dt*T_w*phi
-            - dot(C*T_k*u_w, grad(phi))
-            - dot(C*T_w*u_k, grad(phi))
-            + K/Pr*dot(grad(T_w), grad(phi))
-            + 1./dt*L*T_w*dP(T_k)*phi
-            )*fenics.dx
+    dmu = lambda T : (mu_l - mu_s)*dP(T)
+
+    """Set the Jacobian (formally the Gateaux derivative)."""
+    JF = (
+        b(u_w, q) - gamma*p_w*q 
+        + dot(u_w, v)/dt
+        + c(u_k, u_w, v) + c(u_w, u_k, v) + b(v, p_w)
+        + a(T_w*dmu(T_k), u_k, v) + a(mu(T_k), u_w, v) 
+        + dot(T_w*ddT_f_B(T_k), v)
+        + C/dt*T_w*phi
+        - dot(C*T_k*u_w, grad(phi))
+        - dot(C*T_w*u_k, grad(phi))
+        + K/Pr*dot(grad(T_w), grad(phi))
+        + 1./dt*L*T_w*dP(T_k)*phi
+        )*fenics.dx
 
     M = P(T_k)*fenics.dx
     
