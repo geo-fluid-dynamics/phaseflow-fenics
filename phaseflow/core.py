@@ -1,6 +1,7 @@
 """This module contains the core functionalty of Phaseflow."""
 import fenics
 import h5py
+import numpy
 import helpers
 import globals
 import default
@@ -274,9 +275,13 @@ def run(
 
         
     # Set the functional metric for the error estimator for adaptive mesh refinement.
-    M = P(T_k)*fenics.dx
+    M = (T_k + P(T_k))*fenics.dx
     
+    for i in range(dimensionality):
     
+        M += u_k[i]*fenics.dx
+    
+
     # Make the problem.
     problem = fenics.NonlinearVariationalProblem(F, w_k, bcs, JF)
     
