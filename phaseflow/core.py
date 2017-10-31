@@ -84,7 +84,7 @@ def run(
     adaptive_solver_tolerance = 1.e-4,
     nlp_absolute_tolerance = 1.e-8,
     nlp_relative_tolerance = 1.e-4,
-    nlp_max_iterations = 30,
+    nlp_max_iterations = 50,
     pressure_degree = default.pressure_degree,
     temperature_degree = default.temperature_degree,
     restart = False,
