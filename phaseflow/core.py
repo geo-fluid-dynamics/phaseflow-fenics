@@ -207,23 +207,23 @@ def run(
 
     g = fenics.Constant(gravity)
     
-    gamma = fenics.Constant(penalty_parameter)
-    
-    mu_l = fenics.Constant(liquid_viscosity)
-    
-    mu_s = fenics.Constant(solid_viscosity)
-    
     f_B = lambda T : m_B(T)*g  # Buoyancy force, $f = ma$
+    
+    gamma = fenics.Constant(penalty_parameter)
     
     T_f = fenics.Constant(regularization['T_f'])  # Center of regularized phase-field.
     
     r = fenics.Constant(regularization['r'])  # Regularization smoothing parameter.
     
-    L = C/Ste  # Latent heat
-    
     P = lambda T: 0.5*(1. - fenics.tanh(2.*(T_f - T)/r))  # Regularized phase field.
     
+    mu_l = fenics.Constant(liquid_viscosity)
+    
+    mu_s = fenics.Constant(solid_viscosity)
+    
     mu = lambda (T) : mu_s + (mu_l - mu_s)*P(T) # Variable viscosity.
+    
+    L = C/Ste  # Latent heat
     
     u_n, p_n, T_n = fenics.split(w_n)
 
@@ -285,7 +285,11 @@ def run(
     
     
     # Make the solver.
-    """ Make a solver with a consistent interface, whether adaptive or not. """
+    """ Make a solver with a consistent interface, whether adaptive or not. 
+    For the purposes of this project, it would be better to just always use the adaptive solver; but
+    unfortunately the adaptive solver encounters nan's whenever evaluating the error for problems not 
+    involving phase-change. So far my attempts at writing a MWE to reproduce the  issue have failed.
+    """
     if adaptive:
     
         fenics_solver = fenics.AdaptiveNonlinearVariationalSolver(problem, M)
