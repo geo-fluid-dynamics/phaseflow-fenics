@@ -12,20 +12,23 @@ import output
 
 TIME_EPS = 1.e-8
 
-def make_mixed_fe(cell, pressure_degree=default.pressure_degree, temperature_degree=default.temperature_degree):
+def make_mixed_fe(cell, pressure_degree=default.pressure_degree,
+        temperature_degree=default.temperature_degree):
     """ Define the mixed finite element.
     MixedFunctionSpace used to be available but is now deprecated. 
     To create the mixed space, I'm using the approach from https://fenicsproject.org/qa/11983/mixedfunctionspace-in-2016-2-0
     """
     velocity_degree = pressure_degree + 1
     
-    pressure_element = fenics.FiniteElement('P', mesh.ufl_cell(), pressure_degree)
-
-    temperature_element = fenics.FiniteElement('P', mesh.ufl_cell(), temperature_degree)
-
-    solution_element = fenics.MixedElement([velocity_element, pressure_element, temperature_element])
+    velocity_element = fenics.VectorElement('P', cell, velocity_degree)
     
-    return solution_element
+    pressure_element = fenics.FiniteElement('P', cell, pressure_degree)
+
+    temperature_element = fenics.FiniteElement('P', cell, temperature_degree)
+
+    mixed_element = fenics.MixedElement([velocity_element, pressure_element, temperature_element])
+    
+    return mixed_element
 
 
 def steady(W, w, w_n, steady_relative_tolerance):
@@ -50,7 +53,7 @@ def steady(W, w, w_n, steady_relative_tolerance):
     
 def run(
     output_dir = 'output/wang2010_natural_convection_air',
-    rayleight_number = default.parameters['Ra'],
+    rayleigh_number = default.parameters['Ra'],
     prandtl_number = default.parameters['Pr'],
     stefan_number = default.parameters['Ste'],
     heat_capacity = default.parameters['C'],
@@ -137,7 +140,7 @@ def run(
     
     
     # Define the mixed finite element and the solution function space.
-    W_ele = function_spaces(mesh.ufl_cell(), pressure_degree, temperature_degree)
+    W_ele = make_mixed_fe(mesh.ufl_cell())
     
     W = fenics.FunctionSpace(mesh, W_ele)
     
@@ -184,13 +187,15 @@ def run(
     """
     b = lambda u, q : -div(u)*q  # Divergence
     
+    D = lambda u : sym(grad(u))  # Symmetric part of velocity gradient
+    
     a = lambda mu, u, v : 2.*mu*inner(D(u), D(v))  # Stokes stress-strain
     
     c = lambda w, z, v : dot(dot(grad(z), w), v)  # Convection of the velocity field
     
     dt = fenics.Constant(time_step_size)
     
-    Ra = fenics.Constant(rayleight_number), 
+    Ra = fenics.Constant(rayleigh_number), 
     
     Pr = fenics.Constant(prandtl_number)
     
@@ -294,7 +299,7 @@ def run(
         # Write the initial values.
         output.write_solution(solution_file, w_n, time) 
 
-        if start_time >= end_time - time.TIME_EPS:
+        if start_time >= end_time - TIME_EPS:
     
             helpers.print_once("Start time is already too close to end time. Only writing initial values.")
             
@@ -308,7 +313,7 @@ def run(
 
         fenics.set_log_level(fenics.PROGRESS)
         
-        while time < end_time - time.TIME_EPS:
+        while time < end_time - TIME_EPS:
             
             solver.solve(adaptive_solver_tolerance)
             
@@ -336,7 +341,7 @@ def run(
             
             
             # Check for steady state.
-            if stop_when_steady and time.steady(W, w_k, w_n, steady_relative_tolerance):
+            if stop_when_steady and steady(W, w_k, w_n, steady_relative_tolerance):
             
                 helpers.print_once("Reached steady state at time t = " + str(time))
                 

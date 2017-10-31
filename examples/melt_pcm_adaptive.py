@@ -42,11 +42,11 @@ def melt_pcm(
     theta_cold = -0.1
 
     w, mesh = phaseflow.run(
-        Ste = 1.,
-        Ra = 1.,
-        Pr = 1.,
-        mu_s = 1.e4,
-        mu_l = 1.,
+        stefan_number = 1.,
+        rayleigh_number = 1.,
+        prandtl_number = 1.,
+        solid_viscosity = 1.e4,
+        liquid_viscosity = 1.,
         mesh = mesh,
         time_step_size = dt,
         start_time = start_time,
