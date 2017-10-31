@@ -105,7 +105,6 @@ def test_stefan_problem_Ste1():
     verify_melting_pci_position(Ste, r, w)
 
     
-"""
 def test_stefan_problem_Ste0p1():
     
     Ste = 0.1
@@ -115,7 +114,6 @@ def test_stefan_problem_Ste0p1():
     w = stefan_problem(Ste=Ste, r=r, dt=1.e-4, end_time = 0.01, initial_uniform_cell_count=10)
     
     verify_melting_pci_position(Ste, r, w)
-"""
     
     
 """ The Ste = 0.01 case takes too long to include in the standard test suite. Maybe something reasonable
