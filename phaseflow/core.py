@@ -86,8 +86,7 @@ def run(output_dir = 'output/wang2010_natural_convection_air',
         pressure_degree = default.pressure_degree,
         temperature_degree = default.temperature_degree,
         restart = False,
-        restart_filepath = '',
-        debug = False):
+        restart_filepath = ''):
     """Run Phaseflow.
     
     Phaseflow is configured entirely through the arguments in this run() function.
