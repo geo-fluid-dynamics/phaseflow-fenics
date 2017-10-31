@@ -21,7 +21,7 @@ def verify_against_ghia1982(w, mesh):
             assert(abs(ux - true_ux) < 2.e-2)
 
 
-def ghia1982_steady_lid_driven_cavity(automatic_jacobian=True):
+def test_ghia1982_steady_lid_driven_cavity():
 
     lid = 'near(x[1],  1.)'
 
@@ -32,46 +32,13 @@ def ghia1982_steady_lid_driven_cavity(automatic_jacobian=True):
     m = 20
 
     w, mesh = phaseflow.run(
-        automatic_jacobian = automatic_jacobian,
         mesh = fenics.UnitSquareMesh(fenics.dolfin.mpi_comm_world(), m, m, 'crossed'),
         end_time = 1.e12,
-        time_step_bounds = 1.e12,
-        nlp_absolute_tolerance = 1.e-4,
-        mu_l = 0.01,
-        g = (0., 0.),
-        Ste = 1.e16,
-        output_dir='output/test_ghia1982_steady_lid_driven_cavity',
-        initial_values_expression = (lid, "0.", "0.", "1."),
-        boundary_conditions = [
-            {'subspace': 0, 'value_expression': ("1.", "0."), 'degree': 3, 'location_expression': lid, 'method': 'topological'},
-            {'subspace': 0, 'value_expression': ("0.", "0."), 'degree': 3, 'location_expression': fixed_walls, 'method': 'topological'},
-            {'subspace': 1, 'value_expression': "0.", 'degree': 2, 'location_expression': bottom_left_corner, 'method': 'pointwise'},
-            {'subspace': 2, 'value_expression': "1.", 'degree': 2, 'location_expression': bottom_left_corner, 'method': 'pointwise'}])
-
-    verify_against_ghia1982(w, mesh)
-    
-    
-def unsteady_lid_driven_cavity(automatic_jacobian=True):
-
-    lid = 'near(x[1],  1.)'
-
-    fixed_walls = 'near(x[0],  0.) | near(x[0],  1.) | near(x[1],  0.)'
-
-    bottom_left_corner = 'near(x[0], 0.) && near(x[1], 0.)'
-
-    m = 20
-
-    w, mesh = phaseflow.run(
-        automatic_jacobian = automatic_jacobian,
-        mesh = fenics.UnitSquareMesh(fenics.dolfin.mpi_comm_world(), m, m, 'crossed'),
-        end_time = 100.,
-        time_step_bounds = (0.1, 0.1, 100.),
-        nlp_absolute_tolerance = 1.e-4,
-        stop_when_steady = True,
-        steady_relative_tolerance = 1.e-5,
-        mu_l = 0.01,
-        g = (0., 0.),
-        Ste = 1.e16,
+        time_step_size = 1.e12,
+        nlp_relative_tolerance = 1.e-4,
+        liquid_viscosity = 0.01,
+        gravity = (0., 0.),
+        stefan_number = 1.e16,
         output_dir='output/test_ghia1982_steady_lid_driven_cavity',
         initial_values_expression = (lid, "0.", "0.", "1."),
         boundary_conditions = [
@@ -82,26 +49,8 @@ def unsteady_lid_driven_cavity(automatic_jacobian=True):
 
     verify_against_ghia1982(w, mesh)
 
-
-def test_debug_ghia1982_steady_lid_driven_cavity_autoJ():
-
-    ghia1982_steady_lid_driven_cavity(automatic_jacobian=True)
-    
-
-def test_ghia1982_steady_lid_driven_cavity_manualJ():
-
-    ghia1982_steady_lid_driven_cavity(automatic_jacobian=False)
-    
-
-def test_debug_unsteady_lid_driven_cavity_manualJ():
-
-    unsteady_lid_driven_cavity(automatic_jacobian=False)
-    
     
 if __name__=='__main__':
 
-    test_debug_ghia1982_steady_lid_driven_cavity_autoJ()
+    test_ghia1982_steady_lid_driven_cavity()
 
-    test_ghia1982_steady_lid_driven_cavity_manualJ()
-
-    test_debug_unsteady_lid_driven_cavity_manualJ()
