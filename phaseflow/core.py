@@ -30,7 +30,7 @@ def make_mixed_fe(cell, pressure_degree=default.pressure_degree,
 
 
 def steady(W, w, w_n, steady_relative_tolerance):
-    '''Check if solution has reached an approximately steady state.'''
+    """Check if solution has reached an approximately steady state."""
     steady = False
     
     time_residual = fenics.Function(W)
@@ -322,11 +322,9 @@ def run(
         solver.parameters['newton_solver']['absolute_tolerance'] = nlp_absolute_tolerance
         
         solver.parameters['newton_solver']['relative_tolerance'] = nlp_relative_tolerance
-            
-    ''' @todo  explore info(f.parameters, verbose=True) 
-    to avoid duplicate mesh storage when appropriate 
-    per https://fenicsproject.org/qa/3051/parallel-output-of-a-time-series-in-hdf5-format '''
 
+        
+    # Open a context manager for the output file.
     with fenics.XDMFFile(output_dir + '/solution.xdmf') as solution_file:
 
     
