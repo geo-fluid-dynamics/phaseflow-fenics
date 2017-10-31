@@ -6,9 +6,6 @@ import helpers
 import globals
 import default
 import form
-import solver
-import bounded_value
-import refine
 import output
 
 TIME_EPS = 1.e-8
@@ -311,6 +308,8 @@ def run(
             def solve(self):
             
                 self.fenics_solver.solve(adaptive_solver_tolerance)
+                
+                solver.fenics_solver.summary()
                 
         solver = Solver()
 
