@@ -267,12 +267,8 @@ def run(output_dir = 'output/wang2010_natural_convection_air',
 
         
     # Set the functional metric for the error estimator for adaptive mesh refinement.
-    M = (T_k + P(T_k))*fenics.dx
-    
-    for i in range(dimensionality):
-    
-        M += u_k[i]*fenics.dx
-    
+    M = P(T_k)*fenics.dx
+
 
     # Make the problem.
     problem = fenics.NonlinearVariationalProblem(F, w_k, bcs, JF)
