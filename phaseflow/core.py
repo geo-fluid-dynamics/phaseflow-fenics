@@ -94,12 +94,6 @@ def run(output_dir = 'output/wang2010_natural_convection_air',
     See the tests and examples for demonstrations of how to use this.
     """
     
-    '''@todo Describe the arguments in the docstring.
-    Phaseflow has been in rapid development and these have been changing.
-    Now that things are stabilizing somewhat, it's about time to document
-    these arguments properly.
-    '''
-    
     
     # Report inputs.
     helpers.print_once("Running Phaseflow with the following arguments:")
