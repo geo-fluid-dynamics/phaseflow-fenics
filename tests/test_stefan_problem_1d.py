@@ -3,13 +3,16 @@ from .context import phaseflow
 import fenics
 import scipy.optimize as opt
 
-
-def verify_melting_pci_position(Ste, r, w):
+""" Melting data From Kai's MATLAB script"""
+melting_data = [
+    {'Ste': 1., 'time': 0.01, 'true_pci_pos': 0.075551957640682}, 
+    {'Ste': 0.1, 'time': 0.01, 'true_pci_pos': 0.037826726426565},
+    {'Ste': 0.01, 'time': 0.1, 'true_pci_pos': 0.042772111844781}] 
     
-    data = [
-        {'Ste': 1., 'time': 0.01, 'true_pci_pos': 0.075551957640682}, 
-        {'Ste': 0.1, 'time': 0.01, 'true_pci_pos': 0.037826726426565},
-        {'Ste': 0.01, 'time': 0.1, 'true_pci_pos': 0.042772111844781}] # From Kai's MATLAB script
+"""Solidification datat from MATLAB script solving Worster2000"""
+solidification_data = [{'Ste': 0.125, 'time': 1., 'true_pci_pos': 0.49}] 
+
+def verify_pci_position(true_pci_position, r, w):
     
     def theta(x):
         
@@ -17,15 +20,11 @@ def verify_melting_pci_position(Ste, r, w):
         
         return wval[2]
     
-    pci_pos = opt.newton(theta, 0.075)
+    pci_pos = opt.newton(theta, 0.1)
     
-    for record in data:
-        
-        if Ste == record['Ste']:
-            
-            assert(abs(pci_pos - record['true_pci_pos']) < r)
-            
-            
+    assert(abs(pci_pos - true_pci_position) < r)
+    
+
 def refine_near_left_boundary(mesh, cycles):
     """ Refine mesh near the left boundary.
     The usual approach of using SubDomain and EdgeFunction isn't appearing to work
@@ -102,7 +101,8 @@ def test_stefan_problem_Ste1():
     
     w = stefan_problem(Ste=Ste, r=r, dt=0.001, end_time = 0.01, initial_uniform_cell_count=1)
     
-    verify_melting_pci_position(Ste, r, w)
+    """ Verify against solution from Kai's MATLAB script. """
+    verify_pci_position(true_pci_position=0.0755, r=r, w=w)
 
     
 def test_stefan_problem_Ste0p01():
@@ -113,27 +113,11 @@ def test_stefan_problem_Ste0p01():
     
     w = stefan_problem(Ste=Ste, r=r, dt=1.e-4, end_time = 0.1, initial_uniform_cell_count=100)
     
-    verify_melting_pci_position(Ste, r, w)
+    """ Verify against solution from Kai's MATLAB script. """
+    verify_pci_position(true_pci_position=0.04277, r=r, w=w)
 
 
-def verify_solidification_pci_position(w, r):
-    """ Verify based on analytical model from Worster 2000 """
-    data = [{'Ste': 0.125, 'time': 1., 'true_pci_pos': 0.49}] # From MATLAB script solving Worster2000
-    
-    def theta(x):
-        
-        wval = w(fenics.Point(x))
-        
-        return wval[2]
-        
-    pci_pos = opt.newton(theta, 0.1)
-    
-    for record in data:
-        
-        assert(abs(pci_pos - record['true_pci_pos']) < r)
-        
-        
-def stefan_problem_solidify(Ste = 0.125,
+def test_stefan_problem_solidify(Ste = 0.125,
         theta_h = 0.01,
         theta_c = -1.,
         theta_f = 0.,
@@ -169,17 +153,9 @@ def stefan_problem_solidify(Ste = 0.125,
         end_time = end_time,
         time_step_size = dt)
     
-    return w
-    
-    
-def test_stefan_problem_solidify():
-    
-    r = 0.01
-    
-    w = stefan_problem_solidify(r = r)
-    
-    verify_solidification_pci_position(w, r)
-    
+    """ Verify against solution from MATLAB script solving Worster2000. """
+    verify_pci_position(true_pci_position=0.49, r=r, w=w)
+
     
 if __name__=='__main__':
     
