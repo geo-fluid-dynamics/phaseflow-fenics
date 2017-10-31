@@ -4,7 +4,11 @@ import fenics
 
 def verify_against_ghia1982(w, mesh):
 
-    data = {'Re': 100, 'x': 0.5, 'y': [1.0000, 0.9766, 0.9688, 0.9609, 0.9531, 0.8516, 0.7344, 0.6172, 0.5000, 0.4531, 0.2813, 0.1719, 0.1016, 0.0703, 0.0625, 0.0547, 0.0000], 'ux': [1.0000, 0.8412, 0.7887, 0.7372, 0.6872, 0.2315, 0.0033, -0.1364, -0.2058, -0.2109, -0.1566, -0.1015, -0.0643, -0.0478, -0.0419, -0.0372, 0.0000]}
+    data = {'Re': 100, 'x': 0.5,
+        'y': [1.0000, 0.9766, 0.9688, 0.9609, 0.9531, 0.8516, 0.7344, 0.6172, 0.5000, 0.4531, 0.2813, 
+              0.1719, 0.1016, 0.0703, 0.0625, 0.0547, 0.0000],
+        'ux': [1.0000, 0.8412, 0.7887, 0.7372, 0.6872, 0.2315, 0.0033, -0.1364, -0.2058, -0.2109, -0.1566, 
+               -0.1015, -0.0643, -0.0478, -0.0419, -0.0372, 0.0000]}
     
     bbt = mesh.bounding_box_tree()
     
@@ -21,9 +25,7 @@ def verify_against_ghia1982(w, mesh):
             assert(abs(ux - true_ux) < 2.e-2)
             
 
-def variable_viscosity(m=20, start_time = 0., end_time = 1000., time_step_bounds = (0.1, 0.1, 10.),
-    output_times = ('start', 1., 10., 100., 'end'), mu_s = 1.e6,
-    initial_pci_refinement_cycles = 4, theta_f = 0., r = 0.05, restart = False):
+def test_variable_viscosity():
 
     lid = 'near(x[1],  1.)'
 
@@ -33,54 +35,59 @@ def variable_viscosity(m=20, start_time = 0., end_time = 1000., time_step_bounds
 
     left_middle = 'near(x[0], 0.) && near(x[1], 0.5)'
     
-    output_dir = 'output/variable_viscosity_m'+str(m)+'_mus'+str(mu_s)+'_thetaf'+str(theta_f)+'_r'+str(r)
+    output_dir = 'output/test_variable_viscosity'
     
-    restart_filepath=''
+    mesh = fenics.RectangleMesh(fenics.Point(0., ymin), fenics.Point(1., 1.), 20, 25, 'crossed')
     
-    if restart:
     
-        restart_filepath = output_dir+'/restart_t'+str(start_time)+'.hdf5'
+    # Refine the initial PCI.
+    initial_pci_refinement_cycles = 4
+    
+    class PCI(fenics.SubDomain):
         
-        output_dir = output_dir+'_restart'+str(start_time)
+        def inside(self, x, on_boundary):
         
+            return fenics.near(x[1], 0.)
+
+            
+    pci = PCI()
+    
+    for i in range(initial_pci_refinement_cycles):
+        
+        edge_markers = fenics.EdgeFunction("bool", mesh)
+        
+        pci.mark(edge_markers, True)
+
+        fenics.adapt(mesh, edge_markers)
+        
+        mesh = mesh.child()
+    
+    
+    # Run the simulation.
     w, mesh = phaseflow.run(
-        debug = True,
-        restart = restart,
-        restart_filepath = restart_filepath,
-        automatic_jacobian = False,
-        mesh = fenics.RectangleMesh(fenics.Point(0., ymin), fenics.Point(1., 1.), m, m, 'crossed'),
-        start_time = start_time,
-        end_time = end_time,
-        time_step_bounds = time_step_bounds,
-        output_times = output_times,
+        mesh = mesh,
+        end_time = 20.,
+        time_step_size = 1.,
         stop_when_steady = True,
         steady_relative_tolerance = 1.e-4,
-        K = 0.,
-        mu_l = 0.01,
-        mu_s = mu_s,
-        regularization = {'T_f': theta_f, 'r': r},
-        nlp_max_iterations = 30,
-        nlp_absolute_tolerance = 1.,
-        max_pci_refinement_cycles_per_time = 4,
-        initial_pci_refinement_cycles = initial_pci_refinement_cycles,
-        g = (0., 0.),
-        Ste = 1.e16,
+        thermal_conductivity = 0.,
+        liquid_viscosity = 0.01,
+        solid_viscosity = 1.e6,
+        regularization = {'T_f': -0.01, 'r': 0.01},
+        gravity = (0., 0.),
+        stefan_number = 1.e16,
+        adaptive = True,
         output_dir = output_dir,
         initial_values_expression = (lid, "0.", "0.", "1. - 2.*(x[1] <= 0.)"),
         boundary_conditions = [
             {'subspace': 0, 'value_expression': ("1.", "0."), 'degree': 3, 'location_expression': lid, 'method': 'topological'},
             {'subspace': 0, 'value_expression': ("0.", "0."), 'degree': 3, 'location_expression': fixed_walls, 'method': 'topological'},
             {'subspace': 1, 'value_expression': "0.", 'degree': 2, 'location_expression': left_middle, 'method': 'pointwise'}])
-            
+    
+    
+    # Verify against the known solution.
     verify_against_ghia1982(w, mesh)
 
-            
-def test_variable_viscosity():
-
-    variable_viscosity(end_time = 20., time_step_bounds = (0.1, 0.1, 3.), 
-        output_times = ('start', 'end'),
-        theta_f = -0.01, r = 0.01, )
-    
     
 if __name__=='__main__':
 
