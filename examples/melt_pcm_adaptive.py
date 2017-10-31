@@ -53,6 +53,7 @@ def melt_pcm(
         end_time = end_time,
         stop_when_steady = True,
         regularization = {'T_f': 0.1, 'r': 0.05},
+        adaptive = True,
         nlp_max_iterations = nlp_max_iterations,
         nlp_relative_tolerance = 1.e-4,
         initial_values_expression = (

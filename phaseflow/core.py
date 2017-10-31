@@ -82,6 +82,7 @@ def run(
     time_step_size = 1.e-3,
     stop_when_steady = False,
     steady_relative_tolerance=1.e-4,
+    adaptive = False,
     adaptive_solver_tolerance = 1.e-4,
     nlp_absolute_tolerance = 1.e-8,
     nlp_relative_tolerance = 1.e-4,
@@ -287,16 +288,42 @@ def run(
     
     
     # Make the solver.
-    solver = fenics.AdaptiveNonlinearVariationalSolver(problem, M)
+    """ Make a solver with a consistent interface, whether adaptive or not. """
+    if adaptive:
     
-    solver.parameters['nonlinear_variational_solver']['newton_solver']['maximum_iterations'] = nlp_max_iterations
-    
-    solver.parameters['nonlinear_variational_solver']['newton_solver']['absolute_tolerance'] = nlp_absolute_tolerance
-    
-    solver.parameters['nonlinear_variational_solver']['newton_solver']['relative_tolerance'] = nlp_relative_tolerance
+        fenics_solver = fenics.AdaptiveNonlinearVariationalSolver(problem, M)
+        
+        fenics_solver.parameters['nonlinear_variational_solver']['newton_solver']['maximum_iterations']\
+            = nlp_max_iterations
+        
+        fenics_solver.parameters['nonlinear_variational_solver']['newton_solver']['absolute_tolerance']\
+            = nlp_absolute_tolerance
+        
+        fenics_solver.parameters['nonlinear_variational_solver']['newton_solver']['relative_tolerance']\
+            = nlp_relative_tolerance
+            
+        class Solver():
+        
+            def __init__(self):
+            
+                self.fenics_solver = fenics_solver
+                
+            def solve(self):
+            
+                self.fenics_solver.solve(adaptive_solver_tolerance)
+                
+        solver = Solver()
 
-    solver.parameters['nonlinear_variational_solver']['newton_solver']['error_on_nonconvergence'] = True
-
+    else:
+    
+        solver = fenics.NonlinearVariationalSolver(problem)
+        
+        solver.parameters['newton_solver']['maximum_iterations'] = nlp_max_iterations
+        
+        solver.parameters['newton_solver']['absolute_tolerance'] = nlp_absolute_tolerance
+        
+        solver.parameters['newton_solver']['relative_tolerance'] = nlp_relative_tolerance
+            
     ''' @todo  explore info(f.parameters, verbose=True) 
     to avoid duplicate mesh storage when appropriate 
     per https://fenicsproject.org/qa/3051/parallel-output-of-a-time-series-in-hdf5-format '''
@@ -323,7 +350,7 @@ def run(
         
         while time < end_time - TIME_EPS:
             
-            solver.solve(adaptive_solver_tolerance)
+            solver.solve()
             
             time += time_step_size
             
