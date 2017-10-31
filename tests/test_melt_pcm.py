@@ -95,7 +95,7 @@ def test_melt_toy_pcm():
     
     w = melt_toy_pcm()
     
-    verify_pci_position_regression(T_f, w)
+    verify_pci_position_regression(w)
     
     
 if __name__=='__main__':
