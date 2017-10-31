@@ -9,3 +9,5 @@ dist
 .idea/
 phaseflow.egg-info
 log.txt
+.coverage
+
