@@ -3,12 +3,22 @@ from .context import phaseflow
 import fenics
 
 
-def verify_regression_water(w, mesh):
-    ''' Comparing directly to the steady state benchmark data 
-    from Michalek2003 in this case would take longer 
-    than we should spend on a this part of the test suite. 
-    So instead we subsitute this cheaper regression test.'''
-    verified_solution = {'y': 0.5, 'x': [0.00, 0.10, 0.20, 0.30, 0.40, 0.70, 0.90, 1.00], 'theta': [1.000, 0.551, 0.202, 0.166, 0.211, 0.209, 0.238, 0.000]}
+def verify_michalek2003_natural_convection_water(w, mesh):
+    """Verify directly against steady-state data from michalek2003 published in 
+
+        @article{michalek2003simulations,
+          title={Simulations of the water freezing process--numerical benchmarks},
+          author={MICHA{\L}EK, TOMASZ and KOWALEWSKI, TOMASZ A},
+          journal={Task Quarterly},
+          volume={7},
+          number={3},
+          pages={389--408},
+          year={2003}
+        }
+    """
+    verified_solution = {'y': 0.5,
+        'x': [0.00, 0.05, 0.12, 0.23, 0.40, 0.59, 0.80, 0.88, 1.00],
+        'theta': [1.00, 0.66, 0.56, 0.58, 0.59, 0.62, 0.20, 0.22, 0.00]}
     
     bbt = mesh.bounding_box_tree()
     
@@ -22,10 +32,11 @@ def verify_regression_water(w, mesh):
             
             theta = wval[3]
             
-            assert(abs(theta - true_theta) < 1.e-2)
+            assert(abs(theta - true_theta) < 2.e-2)
 
             
-def regression_natural_convection_water(automatic_jacobian=False):
+def test_natural_convection_water__nightly():
+    
     m = 10
 
     Ra = 2.518084e6
@@ -67,17 +78,16 @@ def regression_natural_convection_water(automatic_jacobian=False):
     beta = 6.91e-5 # [K^-1]
 
     w, mesh = phaseflow.run(
-        Ra = Ra,
-        Pr = Pr,
-        Ste = 1.e16,
+        rayleigh_number = Ra,
+        prandtl_number = Pr,
+        stefan_number = 1.e16,
         regularization = {'T_f': -1., 'r': 0.1},
+        nlp_relative_tolerance = 1.e-8,
+        adaptive = True,
         m_B = lambda theta : Ra/(Pr*Re*Re)/(beta*(T_h - T_c))*(rho(theta_f) - rho(theta))/rho(theta_f),
-        ddtheta_m_B = lambda theta : -Ra/(Pr*Re*Re)/(beta*(T_h - T_c))*(ddtheta_rho(theta))/rho(theta_f),
+        ddT_m_B = lambda theta : -Ra/(Pr*Re*Re)/(beta*(T_h - T_c))*(ddtheta_rho(theta))/rho(theta_f),
         mesh = fenics.UnitSquareMesh(m, m, 'crossed'),
-        time_step_bounds = (0.001, 0.002, 0.002),
-        end_time = 0.18,
-        output_times = (),
-        automatic_jacobian = False,
+        stop_when_steady = True,
         initial_values_expression = (
             "0.",
             "0.",
@@ -87,18 +97,15 @@ def regression_natural_convection_water(automatic_jacobian=False):
             {'subspace': 0, 'value_expression': ("0.", "0."), 'degree': 3, 'location_expression': "near(x[0],  0.) | near(x[0],  1.) | near(x[1], 0.) | near(x[1],  1.)", 'method': "topological"},
             {'subspace': 2, 'value_expression':str(theta_hot), 'degree': 2, 'location_expression': "near(x[0],  0.)", 'method': "topological"},
             {'subspace': 2, 'value_expression':str(theta_cold), 'degree': 2, 'location_expression': "near(x[0],  1.)", 'method': "topological"}],
-        output_dir = 'output/test_regression_natural_convection_water')
-        
-    verify_regression_water(w, mesh)
-
-
-def test_debug_regression_natural_convection_water():
-
-    regression_natural_convection_water()
+        time_step_size = 0.01,
+        start_time = 0.,
+        end_time = 2.,
+        output_dir = 'output/test_natural_convection_water')
     
+    verify_michalek2003_natural_convection_water(w, mesh)
+
     
 if __name__=='__main__':
 
-    test_debug_regression_natural_convection_water_autoJ()
+    test_natural_convection_water__nightly()
     
-    test_debug_regression_natural_convection_water_manualJ()

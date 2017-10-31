@@ -146,7 +146,9 @@ def run(output_dir = 'output/wang2010_natural_convection_air',
         
             h5.read(mesh, 'mesh', True)
         
-        W, W_ele = function_spaces(mesh, pressure_degree, temperature_degree)
+        W_ele = make_mixed_fe(mesh.ufl_cell())
+    
+        W = fenics.FunctionSpace(mesh, W_ele)
     
         w_n = fenics.Function(W)
     
