@@ -79,6 +79,7 @@ def run(output_dir = 'output/wang2010_natural_convection_air',
         stop_when_steady = False,
         steady_relative_tolerance=1.e-4,
         adaptive = False,
+        adaptive_metric = 'all',
         adaptive_solver_tolerance = 1.e-4,
         nlp_absolute_tolerance = 1.e-8,
         nlp_relative_tolerance = 1.e-4,
@@ -267,9 +268,28 @@ def run(output_dir = 'output/wang2010_natural_convection_air',
 
         
     # Set the functional metric for the error estimator for adaptive mesh refinement.
+    """I haven't found a good way to make this flexible yet.
+    Ideally the user would be able to write the metric, but this would require giving the user
+    access to much data that phaseflow is currently hiding.
+    """
     M = P(T_k)*fenics.dx
-
-
+    
+    if adaptive_metric == 'phase_only':
+    
+        pass
+        
+    elif adaptive_metric == 'all':
+        
+        M += T_k*fenics.dx
+        
+        for i in range(dimensionality):
+        
+            M += u_k[i]*fenics.dx
+            
+    else:
+        
+        assert(False)
+        
     # Make the problem.
     problem = fenics.NonlinearVariationalProblem(F, w_k, bcs, JF)
     
