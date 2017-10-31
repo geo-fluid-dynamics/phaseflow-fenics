@@ -47,7 +47,7 @@ output_dir='output/test_wang2010_natural_convection_air/'
 @pytest.mark.dependency()
 def test_wang2010_natural_convection_air():
     
-    w, mesh = phaseflow.run(output_dir=output_dir)
+    w, mesh = phaseflow.run(output_dir=output_dir, stop_when_steady=True)
         
     verify_against_wang2010(w, mesh)
     
