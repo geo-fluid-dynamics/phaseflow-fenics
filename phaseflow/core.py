@@ -82,8 +82,9 @@ def run(
     stop_when_steady = False,
     steady_relative_tolerance=1.e-4,
     adaptive_solver_tolerance = 1.e-4,
+    nlp_absolute_tolerance = 1.e-8,
     nlp_relative_tolerance = 1.e-4,
-    nlp_max_iterations = 12,
+    nlp_max_iterations = 30,
     pressure_degree = default.pressure_degree,
     temperature_degree = default.temperature_degree,
     restart = False,
@@ -284,6 +285,8 @@ def run(
     solver = fenics.AdaptiveNonlinearVariationalSolver(problem, M)
     
     solver.parameters['nonlinear_variational_solver']['newton_solver']['maximum_iterations'] = nlp_max_iterations
+    
+    solver.parameters['nonlinear_variational_solver']['newton_solver']['absolute_tolerance'] = nlp_absolute_tolerance
     
     solver.parameters['nonlinear_variational_solver']['newton_solver']['relative_tolerance'] = nlp_relative_tolerance
 
