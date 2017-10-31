@@ -11,9 +11,9 @@ def test_1d_output():
     
     w = phaseflow.run(
         output_dir = 'output/test_1D_output/',
-        Pr = 1.,
-        Ste = 1.,
-        g = [0.],
+        prandtl_number = 1.,
+        stefan_number = 1.,
+        gravity = [0.],
         mesh = fenics.UnitIntervalMesh(1000),
         initial_values_expression = (
             "0.",
@@ -25,8 +25,7 @@ def test_1d_output():
             {'subspace': 2, 'value_expression': theta_c, 'degree': 2, 'location_expression': "near(x[0],  1.)", 'method': "topological"}],
         regularization = {'T_f': 0.01, 'r': 0.005},
         end_time = 0.001,
-        time_step_bounds = 0.001,
-        automatic_jacobian=False)
+        time_step_size = 0.001)
 
         
 def test_1d_velocity():
@@ -40,7 +39,7 @@ def test_1d_velocity():
     bc = fenics.DirichletBC(V, [10.0], 'x[0] < 0.5')
 
     print(bc.get_boundary_values())
-        
+    
 
 if __name__=='__main__':
     
