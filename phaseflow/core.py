@@ -3,14 +3,29 @@ import fenics
 import h5py
 import numpy
 import helpers
-import globals
-import default
 
 TIME_EPS = 1.e-8
 
 pressure_degree = 1
 
 temperature_degree = 1
+
+""" The equations are scaled with unit Reynolds Number
+per Equation 8 from danaila2014newton, i.e.
+
+    v_ref = nu_liquid/H => t_ref = nu_liquid/H^2 => Re = 1.
+"""
+reynolds_number = 1.
+
+default_parameters = {'Ra': 1.e6, 'Pr': 0.71, 'Ste': 0.045,
+    'C': 1, 'K': 1., 'g': (0., -1.), 'mu_l': 1., 'mu_s': 1.e8}
+
+default_m_B = lambda T : T*default_parameters['Ra']/(default_parameters['Pr']*reynolds_number**2)
+
+default_ddT_m_B = lambda T : default_parameters['Ra']/(default_parameters['Pr']*reynolds_number**2)
+
+'''Here we set an arbitrarily low theta_s to disable phase-change.'''
+default_regularization = {'T_f': -1.e12, 'r': 0.005}
 
 def make_mixed_fe(cell):
     """ Define the mixed finite element.
@@ -69,18 +84,18 @@ def steady(W, w, w_n, steady_relative_tolerance):
     
     
 def run(output_dir = 'output/wang2010_natural_convection_air',
-        rayleigh_number = default.parameters['Ra'],
-        prandtl_number = default.parameters['Pr'],
-        stefan_number = default.parameters['Ste'],
-        heat_capacity = default.parameters['C'],
-        thermal_conductivity = default.parameters['K'],
-        liquid_viscosity = default.parameters['mu_l'],
-        solid_viscosity = default.parameters['mu_s'],
-        gravity = default.parameters['g'],
-        m_B = default.m_B,
-        ddT_m_B = default.ddT_m_B,
+        rayleigh_number = default_parameters['Ra'],
+        prandtl_number = default_parameters['Pr'],
+        stefan_number = default_parameters['Ste'],
+        heat_capacity = default_parameters['C'],
+        thermal_conductivity = default_parameters['K'],
+        liquid_viscosity = default_parameters['mu_l'],
+        solid_viscosity = default_parameters['mu_s'],
+        gravity = default_parameters['g'],
+        m_B = default_m_B,
+        ddT_m_B = default_ddT_m_B,
         penalty_parameter = 1.e-7,
-        regularization = default.regularization,
+        regularization = default_regularization,
         mesh = fenics.UnitSquareMesh(fenics.dolfin.mpi_comm_world(), 20, 20, 'crossed'),
         initial_values_expression = ("0.", "0.", "0.", "0.5*near(x[0],  0.) -0.5*near(x[0],  1.)"),
         boundary_conditions = [{'subspace': 0,
