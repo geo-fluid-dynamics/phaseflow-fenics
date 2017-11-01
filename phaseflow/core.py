@@ -8,8 +8,11 @@ import default
 
 TIME_EPS = 1.e-8
 
-def make_mixed_fe(cell, pressure_degree=default.pressure_degree,
-        temperature_degree=default.temperature_degree):
+pressure_degree = 1
+
+temperature_degree = 1
+
+def make_mixed_fe(cell):
     """ Define the mixed finite element.
     MixedFunctionSpace used to be available but is now deprecated. 
     To create the mixed space, I'm using the approach from https://fenicsproject.org/qa/11983/mixedfunctionspace-in-2016-2-0
@@ -100,8 +103,6 @@ def run(output_dir = 'output/wang2010_natural_convection_air',
         nlp_absolute_tolerance = 1.e-8,
         nlp_relative_tolerance = 1.e-8,
         nlp_max_iterations = 50,
-        pressure_degree = default.pressure_degree,
-        temperature_degree = default.temperature_degree,
         restart = False,
         restart_filepath = ''):
     """Run Phaseflow.
