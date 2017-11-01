@@ -3,15 +3,23 @@ import fenics
 import h5py
 import numpy
 import helpers
-import globals
-import default
-import form
-import output
 
 TIME_EPS = 1.e-8
 
-def make_mixed_fe(cell, pressure_degree=default.pressure_degree,
-        temperature_degree=default.temperature_degree):
+pressure_degree = 1
+
+temperature_degree = 1
+
+""" The equations are scaled with unit Reynolds Number
+per Equation 8 from danaila2014newton, i.e.
+
+    v_ref = nu_liquid/H => t_ref = nu_liquid/H^2 => Re = 1.
+    
+""" 
+reynolds_number = 1.
+
+
+def make_mixed_fe(cell=fenics.UnitSquareMesh(1, 1).ufl_cell()):
     """ Define the mixed finite element.
     MixedFunctionSpace used to be available but is now deprecated. 
     To create the mixed space, I'm using the approach from https://fenicsproject.org/qa/11983/mixedfunctionspace-in-2016-2-0
@@ -21,27 +29,44 @@ def make_mixed_fe(cell, pressure_degree=default.pressure_degree,
     velocity_element = fenics.VectorElement('P', cell, velocity_degree)
     
     pressure_element = fenics.FiniteElement('P', cell, pressure_degree)
-
+    
     temperature_element = fenics.FiniteElement('P', cell, temperature_degree)
-
+    
     mixed_element = fenics.MixedElement([velocity_element, pressure_element, temperature_element])
     
     return mixed_element
 
-
-def steady(W, w, w_n, steady_relative_tolerance):
+    
+def write_solution(solution_file, w, time):
+    """Write the solution to disk."""
+    helpers.print_once("Writing solution to HDF5+XDMF")
+    
+    velocity, pressure, temperature = w.leaf_node().split()
+    
+    velocity.rename("u", "velocity")
+    
+    pressure.rename("p", "pressure")
+    
+    temperature.rename("theta", "temperature")
+    
+    for i, var in enumerate([velocity, pressure, temperature]):
+    
+        solution_file.write(var, time)
+    
+    
+def steady(W, w_k, w_n, steady_relative_tolerance):
     """Check if solution has reached an approximately steady state."""
     steady = False
     
     time_residual = fenics.Function(W)
     
-    time_residual.assign(w - w_n)
+    time_residual.assign(w_k - w_n)
     
     unsteadiness = fenics.norm(time_residual, 'L2')/fenics.norm(w_n, 'L2')
     
     helpers.print_once(
         "Unsteadiness (L2 norm of relative time residual), || w_{n+1} || / || w_n || = "+str(unsteadiness))
-
+    
     if (unsteadiness < steady_relative_tolerance):
         
         steady = True
@@ -50,19 +75,19 @@ def steady(W, w, w_n, steady_relative_tolerance):
     
     
 def run(output_dir = 'output/wang2010_natural_convection_air',
-        rayleigh_number = default.parameters['Ra'],
-        prandtl_number = default.parameters['Pr'],
-        stefan_number = default.parameters['Ste'],
-        heat_capacity = default.parameters['C'],
-        thermal_conductivity = default.parameters['K'],
-        liquid_viscosity = default.parameters['mu_l'],
-        solid_viscosity = default.parameters['mu_s'],
-        gravity = default.parameters['g'],
-        m_B = default.m_B,
-        ddT_m_B = default.ddT_m_B,
+        rayleigh_number = 1.e6,
+        prandtl_number = 0.71,
+        stefan_number = 0.045,
+        heat_capacity = 1.,
+        thermal_conductivity = 1.,
+        liquid_viscosity = 1.,
+        solid_viscosity = 1.e8,
+        gravity = (0., -1.),
+        m_B = lambda T, Ra, Pr, Re : T*Ra/(Pr*Re**2),
+        ddT_m_B = lambda T, Ra, Pr, Re : Ra/(Pr*Re**2),
         penalty_parameter = 1.e-7,
-        regularization = default.regularization,
-        mesh=default.mesh,
+        regularization = {'T_f': -1.e12, 'r': 0.005},
+        mesh=fenics.UnitSquareMesh(fenics.dolfin.mpi_comm_world(), 20, 20, 'crossed'),
         initial_values_expression = ("0.", "0.", "0.", "0.5*near(x[0],  0.) -0.5*near(x[0],  1.)"),
         boundary_conditions = [{'subspace': 0,
                 'value_expression': ("0.", "0."), 'degree': 3,
@@ -84,8 +109,6 @@ def run(output_dir = 'output/wang2010_natural_convection_air',
         nlp_absolute_tolerance = 1.e-8,
         nlp_relative_tolerance = 1.e-8,
         nlp_max_iterations = 50,
-        pressure_degree = default.pressure_degree,
-        temperature_degree = default.temperature_degree,
         restart = False,
         restart_filepath = ''):
     """Run Phaseflow.
@@ -108,7 +131,7 @@ def run(output_dir = 'output/wang2010_natural_convection_air',
         arguments_file = open(output_dir + '/arguments.txt', 'w')
         
         arguments_file.write(str(helpers.arguments()))
-
+        
         arguments_file.close()
     
     
@@ -120,15 +143,15 @@ def run(output_dir = 'output/wang2010_natural_convection_air',
     
     # Initialize time.
     if restart:
-    
+        
         with h5py.File(restart_filepath, 'r') as h5:
             
             time = h5['t'].value
             
             assert(abs(time - start_time) < TIME_EPS)
-    
+        
     else:
-    
+        
         time = start_time
     
     
@@ -140,25 +163,25 @@ def run(output_dir = 'output/wang2010_natural_convection_air',
     
     # Set the initial values.
     if restart:
-            
+        
         mesh = fenics.Mesh()
         
         with fenics.HDF5File(mesh.mpi_comm(), restart_filepath, 'r') as h5:
-        
+            
             h5.read(mesh, 'mesh', True)
         
         W_ele = make_mixed_fe(mesh.ufl_cell())
-    
-        W = fenics.FunctionSpace(mesh, W_ele)
-    
-        w_n = fenics.Function(W)
-    
-        with fenics.HDF5File(mesh.mpi_comm(), restart_filepath, 'r') as h5:
         
+        W = fenics.FunctionSpace(mesh, W_ele)
+        
+        w_n = fenics.Function(W)
+        
+        with fenics.HDF5File(mesh.mpi_comm(), restart_filepath, 'r') as h5:
+            
             h5.read(w_n, 'w')
-    
+            
     else:
-
+        
         w_n = fenics.interpolate(fenics.Expression(initial_values_expression,
             element=W_ele), W)
             
@@ -190,7 +213,9 @@ def run(output_dir = 'output/wang2010_natural_convection_air',
     
     dt = fenics.Constant(time_step_size)
     
-    Ra = fenics.Constant(rayleigh_number), 
+    Re = fenics.Constant(reynolds_number)
+    
+    Ra = fenics.Constant(rayleigh_number)
     
     Pr = fenics.Constant(prandtl_number)
     
@@ -199,10 +224,10 @@ def run(output_dir = 'output/wang2010_natural_convection_air',
     C = fenics.Constant(heat_capacity)
     
     K = fenics.Constant(thermal_conductivity)
-
+    
     g = fenics.Constant(gravity)
     
-    f_B = lambda T : m_B(T)*g  # Buoyancy force, $f = ma$
+    f_B = lambda T : m_B(T, Ra, Pr, Re)*g  # Buoyancy force, $f = ma$
     
     gamma = fenics.Constant(penalty_parameter)
     
@@ -221,7 +246,7 @@ def run(output_dir = 'output/wang2010_natural_convection_air',
     L = C/Ste  # Latent heat
     
     u_n, p_n, T_n = fenics.split(w_n)
-
+    
     w_w = fenics.TrialFunction(W)
     
     u_w, p_w, T_w = fenics.split(w_w)
@@ -231,7 +256,7 @@ def run(output_dir = 'output/wang2010_natural_convection_air',
     w_k = fenics.Function(W)
     
     u_k, p_k, T_k = fenics.split(w_k)
-
+    
     F = (
         b(u_k, q) - gamma*p_k*q
         + dot(u_k - u_n, v)/dt
@@ -242,13 +267,13 @@ def run(output_dir = 'output/wang2010_natural_convection_air',
         + K/Pr*dot(grad(T_k), grad(phi))
         + 1./dt*L*(P(T_k) - P(T_n))*phi
         )*fenics.dx
-
-    ddT_f_B = lambda T : ddT_m_B(T)*g
+    
+    ddT_f_B = lambda T : ddT_m_B(T, Ra, Pr, Re)*g
     
     sech = lambda theta: 1./fenics.cosh(theta)
     
     dP = lambda T: sech(2.*(T_f - T)/r)**2/r
-
+    
     dmu = lambda T : (mu_l - mu_s)*dP(T)
     
     
@@ -265,8 +290,8 @@ def run(output_dir = 'output/wang2010_natural_convection_air',
         + K/Pr*dot(grad(T_w), grad(phi))
         + 1./dt*L*T_w*dP(T_k)*phi
         )*fenics.dx
-
-        
+    
+    
     # Set the functional metric for the error estimator for adaptive mesh refinement.
     """I haven't found a good way to make this flexible yet.
     Ideally the user would be able to write the metric, but this would require giving the user
@@ -275,7 +300,7 @@ def run(output_dir = 'output/wang2010_natural_convection_air',
     M = P(T_k)*fenics.dx
     
     if adaptive_metric == 'phase_only':
-    
+        
         pass
         
     elif adaptive_metric == 'all':
@@ -283,13 +308,14 @@ def run(output_dir = 'output/wang2010_natural_convection_air',
         M += T_k*fenics.dx
         
         for i in range(dimensionality):
-        
+            
             M += u_k[i]*fenics.dx
             
     else:
         
         assert(False)
-        
+    
+    
     # Make the problem.
     problem = fenics.NonlinearVariationalProblem(F, w_k, bcs, JF)
     
@@ -309,7 +335,7 @@ def run(output_dir = 'output/wang2010_natural_convection_air',
     
     adaptive_solver.parameters['nonlinear_variational_solver']['newton_solver']['relative_tolerance']\
         = nlp_relative_tolerance
-
+    
     static_solver = fenics.NonlinearVariationalSolver(problem)
     
     static_solver.parameters['newton_solver']['maximum_iterations'] = nlp_max_iterations
@@ -321,51 +347,51 @@ def run(output_dir = 'output/wang2010_natural_convection_air',
     
     # Open a context manager for the output file.
     with fenics.XDMFFile(output_dir + '/solution.xdmf') as solution_file:
-
-    
+        
+        
         # Write the initial values.
-        output.write_solution(solution_file, w_n, time) 
-
+        write_solution(solution_file, w_n, time) 
+        
         if start_time >= end_time - TIME_EPS:
-    
+            
             helpers.print_once("Start time is already too close to end time. Only writing initial values.")
             
             return w_n, mesh
-    
-    
+        
+        
         # Solve each time step.
         progress = fenics.Progress('Time-stepping')
-
+        
         fenics.set_log_level(fenics.PROGRESS)
         
         while time < end_time - TIME_EPS:
             
             if adaptive:
-            
+                
                 adaptive_solver.solve(adaptive_solver_tolerance)
                 
             else:
-            
+                
                 static_solver.solve()
             
             time += time_step_size
             
             helpers.print_once("Reached time t = " + str(time))
             
-            output.write_solution(solution_file, w_k, time)
+            write_solution(solution_file, w_k, time)
             
             
             # Write checkpoint/restart files.
             restart_filepath = output_dir + '/restart_t' + str(time) + '.h5'
             
             with fenics.HDF5File(fenics.mpi_comm_world(), restart_filepath, 'w') as h5:
-    
+                
                 h5.write(mesh.leaf_node(), 'mesh')
-            
+                
                 h5.write(w_k.leaf_node(), 'w')
                 
             if fenics.MPI.rank(fenics.mpi_comm_world()) is 0:
-            
+                
                 with h5py.File(restart_filepath, 'r+') as h5:
                     
                     h5.create_dataset('t', data=time)
@@ -373,12 +399,12 @@ def run(output_dir = 'output/wang2010_natural_convection_air',
             
             # Check for steady state.
             if stop_when_steady and steady(W, w_k, w_n, steady_relative_tolerance):
-            
+                
                 helpers.print_once("Reached steady state at time t = " + str(time))
                 
                 break
-                
-                
+            
+            
             # Set initial values for next time step.
             w_n.leaf_node().vector()[:] = w_k.leaf_node().vector()
             
@@ -387,9 +413,9 @@ def run(output_dir = 'output/wang2010_natural_convection_air',
             progress.update(time / end_time)
             
             if time >= (end_time - fenics.dolfin.DOLFIN_EPS):
-            
+                
                 helpers.print_once("Reached end time, t = " + str(end_time))
-            
+                
                 break
     
     
@@ -400,5 +426,5 @@ def run(output_dir = 'output/wang2010_natural_convection_air',
     
     
 if __name__=='__main__':
-
+    
     run()
