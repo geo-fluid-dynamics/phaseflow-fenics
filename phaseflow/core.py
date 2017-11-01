@@ -5,8 +5,6 @@ import numpy
 import helpers
 import globals
 import default
-import form
-import output
 
 TIME_EPS = 1.e-8
 
@@ -28,6 +26,24 @@ def make_mixed_fe(cell, pressure_degree=default.pressure_degree,
     
     return mixed_element
 
+    
+def write_solution(solution_file, w_k, time):
+    """Write the solution to disk."""
+
+    helpers.print_once("Writing solution to HDF5+XDMF")
+    
+    velocity, pressure, temperature = w_k.leaf_node().split()
+    
+    velocity.rename("u", "velocity")
+    
+    pressure.rename("p", "pressure")
+    
+    temperature.rename("T", "temperature")
+    
+    for i, var in enumerate([velocity, pressure, temperature]):
+    
+        solution_file.write(var, time)
+        
 
 def steady(W, w, w_n, steady_relative_tolerance):
     """Check if solution has reached an approximately steady state."""
@@ -324,7 +340,7 @@ def run(output_dir = 'output/wang2010_natural_convection_air',
 
     
         # Write the initial values.
-        output.write_solution(solution_file, w_n, time) 
+        write_solution(solution_file, w_n, time) 
 
         if start_time >= end_time - TIME_EPS:
     
@@ -352,7 +368,7 @@ def run(output_dir = 'output/wang2010_natural_convection_air',
             
             helpers.print_once("Reached time t = " + str(time))
             
-            output.write_solution(solution_file, w_k, time)
+            write_solution(solution_file, w_k, time)
             
             
             # Write checkpoint/restart files.
