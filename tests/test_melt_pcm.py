@@ -2,10 +2,13 @@ import fenics
 import phaseflow
 import scipy.optimize as opt
 
+T_f = 0.1
 
-def melt_toy_pcm(output_dir = 'output/test_melt_toy_pcm',
+def melt_toy_pcm(output_dir = 'output/test_melt_toy_pcm/',
         restart = False, restart_filepath = '', start_time = 0.):
     
+    
+    # Make the mesh.
     initial_mesh_size = 1
     
     mesh = fenics.UnitSquareMesh(initial_mesh_size, initial_mesh_size, 'crossed')
@@ -32,12 +35,10 @@ def melt_toy_pcm(output_dir = 'output/test_melt_toy_pcm',
         mesh = mesh.child()
     
     
-    #
+    # Run phaseflow.
     T_hot = 1.
     
     T_cold = -0.1
-
-    T_f = 0.1
     
     w, mesh = phaseflow.run(
         stefan_number = 1.,
@@ -74,33 +75,39 @@ def melt_toy_pcm(output_dir = 'output/test_melt_toy_pcm',
         restart = restart,
         restart_filepath = restart_filepath)
     
+    return w
+    
+    
+def test_melt_toy_pcm__regression():
+
+    w = melt_toy_pcm()
+    
+    """
+    w = melt_toy_pcm(restart = True, restart_filepath = 'output/test_melt_toy_pcm/restart_t0.02.h5',
+        start_time = 0.02,
+        output_dir = 'output/test_melt_toy_pcm/restart_t0.02/')
+    """
+    
+    
+    # Verify against a reference solution.
     pci_y_position_to_check =  0.930
     
     reference_pci_x_position = 0.204
-
+    
     def T_minus_T_f(x):
     
         wval = w.leaf_node()(fenics.Point(x, pci_y_position_to_check))
         
         return wval[3] - T_f
-    
+
+        
     pci_x_position = opt.newton(T_minus_T_f, 0.01)
     
     assert(abs(pci_x_position - reference_pci_x_position) < 1.e-2)
     
     
-def test_melt_toy_pcm():
-
-    melt_toy_pcm()
-    
-    """
-    melt_toy_pcm(restart = True, restart_filepath = 'output/test_melt_toy_pcm/restart_t0.02.h5',
-        start_time = 0.02,
-        output_dir = 'output/test_melt_toy_pcm/restart_t0.02/')
-    """
-
 if __name__=='__main__':
 
-    test_melt_toy_pcm()
+    test_melt_toy_pcm__regression()
     
     
