@@ -330,9 +330,7 @@ def run(output_dir = 'output/wang2010_natural_convection_air',
     
             helpers.print_once("Start time is already too close to end time. Only writing initial values.")
             
-            fe_field_interpolant = fenics.interpolate(w_n.leaf_node(), W)
-            
-            return fe_field_interpolant, mesh
+            return w_n, mesh
     
     
         # Solve each time step.
@@ -398,11 +396,9 @@ def run(output_dir = 'output/wang2010_natural_convection_air',
     
     
     # Return the interpolant to sample inside of Python.
-    w_n.rename('w', "state")
-        
-    fe_field_interpolant = fenics.interpolate(w_n.leaf_node(), W)
+    w_k.rename('w', "state")
     
-    return fe_field_interpolant, mesh
+    return w_k, mesh
     
     
 if __name__=='__main__':
