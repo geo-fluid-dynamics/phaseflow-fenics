@@ -3,7 +3,8 @@ import phaseflow
 import scipy.optimize as opt
 
 
-def test_melt_toy_pcm():
+def melt_toy_pcm(output_dir = 'output/test_melt_toy_pcm',
+        restart = False, restart_filepath = '', start_time = 0.):
     
     initial_mesh_size = 1
     
@@ -46,6 +47,7 @@ def test_melt_toy_pcm():
         liquid_viscosity = 1.,
         mesh = mesh,
         time_step_size = 1.e-3,
+        start_time = start_time,
         end_time = 0.02,
         stop_when_steady = True,
         regularization = {'T_f': T_f, 'r': 0.05},
@@ -68,11 +70,13 @@ def test_melt_toy_pcm():
             {'subspace': 2, 'value_expression': str(T_cold), 'degree': 2,
                 'location_expression': "near(x[0],  1.)",
                 'method': "topological"}],
-        output_dir = 'output/test_melt_toy_pcm')
+        output_dir = output_dir,
+        restart = restart,
+        restart_filepath = restart_filepath)
     
-    pci_y_position_to_check =  0.9297
+    pci_y_position_to_check =  0.930
     
-    reference_pci_x_position = 0.2041
+    reference_pci_x_position = 0.204
 
     def T_minus_T_f(x):
     
@@ -82,10 +86,21 @@ def test_melt_toy_pcm():
     
     pci_x_position = opt.newton(T_minus_T_f, 0.01)
     
-    assert(abs(pci_x_position - reference_pci_x_position) < 1.e-3)
+    assert(abs(pci_x_position - reference_pci_x_position) < 1.e-2)
     
     
+def test_melt_toy_pcm():
+
+    melt_toy_pcm()
+    
+    """
+    melt_toy_pcm(restart = True, restart_filepath = 'output/test_melt_toy_pcm/restart_t0.02.h5',
+        start_time = 0.02,
+        output_dir = 'output/test_melt_toy_pcm/restart_t0.02/')
+    """
+
 if __name__=='__main__':
 
     test_melt_toy_pcm()
+    
     
