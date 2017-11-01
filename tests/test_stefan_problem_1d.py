@@ -16,7 +16,7 @@ def verify_pci_position(true_pci_position, r, w):
     
     def theta(x):
         
-        wval = w(fenics.Point(x))
+        wval = w.leaf_node()(fenics.Point(x))
         
         return wval[2]
     
