@@ -2,15 +2,13 @@ import fenics
 import phaseflow
         
 def melt_pcm(
-        m = 10,
+        m = 20,
         dt = 1.e-3,
-        initial_pci_refinement_cycles = 2,
-        max_pci_refinement_cycles_per_time = 6,
-        output_dir='output/melt_pcm',
+        output_dir='output/melt_pcm_uniform',
         start_time=0.,
         end_time=0.05,
         nlp_divergence_threshold = 1.e12,
-        nlp_max_iterations = 30,
+        nlp_max_iterations = 100,
         restart=False,
         restart_filepath=''):
 
@@ -30,9 +28,7 @@ def melt_pcm(
         end_time = end_time,
         stop_when_steady = True,
         regularization = {'T_f': 0.1, 'r': 0.05},
-        initial_pci_refinement_cycles = initial_pci_refinement_cycles,
-        max_pci_refinement_cycles_per_time = max_pci_refinement_cycles_per_time,
-        minimum_cell_diameter = 0.01,
+        custom_newton = True,
         nlp_max_iterations = nlp_max_iterations,
         nlp_divergence_threshold = nlp_divergence_threshold,
         initial_values_expression = (
@@ -58,11 +54,13 @@ def melt_pcm(
     return w, mesh
     
     
-def run_melt_pcm():
+def run_melt_pcm(m=20, output_dir='output/melt_pcm_uniform'):
     
-    w, mesh = melt_pcm(output_dir = 'output/melt_pcm')
+    w, mesh = melt_pcm(m = m, output_dir = output_dir)
     
     
 if __name__=='__main__':
 
-    run_melt_pcm()
+    for m in [40, 80]:
+    
+        run_melt_pcm(m=m, output_dir = 'output/melt_pcm_uniform'+str(m)+'/')
