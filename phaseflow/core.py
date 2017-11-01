@@ -343,8 +343,6 @@ def run(output_dir = 'output/wang2010_natural_convection_air',
             if adaptive:
             
                 adaptive_solver.solve(adaptive_solver_tolerance)
-        
-                adaptive_solver.summary()
                 
             else:
             
