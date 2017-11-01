@@ -2,28 +2,8 @@ import fenics
 import phaseflow
 import scipy.optimize as opt
 
-T_f = 0.1
 
-def verify_pci_position_regression(w):
-
-    ref_data = {'Ra': 1., 'Pr': 1., 'T_f': 0.1, 'r': 0.05, 'Ste': 1., 
-        'mu_s': 1.e4,
-        'nlp_absolute_tolerance': 1., 'time': 0.001, 'pci_y_pos': 0.9297, 'pci_x_pos': 0.2041}
-
-    assert(T_f == ref_data['T_f'])
-       
-    def T_minus_T_f(x):
-    
-        wval = w.leaf_node()(fenics.Point(x, ref_data['pci_y_pos']))
-        
-        return wval[3] - T_f
-    
-    pci_x_pos = opt.newton(T_minus_T_f, 0.01)
-    
-    assert(abs(pci_x_pos - ref_data['pci_x_pos']) < 1.e-3)
-        
-        
-def melt_toy_pcm():
+def test_melt_toy_pcm():
     
     initial_mesh_size = 1
     
@@ -56,6 +36,8 @@ def melt_toy_pcm():
     
     T_cold = -0.1
 
+    T_f = 0.1
+    
     w, mesh = phaseflow.run(
         stefan_number = 1.,
         rayleigh_number = 1.,
@@ -88,14 +70,19 @@ def melt_toy_pcm():
                 'method': "topological"}],
         output_dir = 'output/test_melt_toy_pcm')
     
-    return w
+    pci_y_position_to_check =  0.9297
     
+    reference_pci_x_position = 0.2041
+
+    def T_minus_T_f(x):
     
-def test_melt_toy_pcm():
+        wval = w.leaf_node()(fenics.Point(x, pci_y_position_to_check))
+        
+        return wval[3] - T_f
     
-    w = melt_toy_pcm()
+    pci_x_position = opt.newton(T_minus_T_f, 0.01)
     
-    verify_pci_position_regression(w)
+    assert(abs(pci_x_position - reference_pci_x_position) < 1.e-3)
     
     
 if __name__=='__main__':
