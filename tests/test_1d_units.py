@@ -5,9 +5,9 @@ import fenics
         
 def test_1d_output():
 
-    theta_h = 1.
+    T_h = 1.
     
-    theta_c = -1.
+    T_c = -1.
     
     w = phaseflow.run(
         output_dir = 'output/test_1D_output/',
@@ -18,12 +18,13 @@ def test_1d_output():
         initial_values_expression = (
             "0.",
             "0.",
-            "("+str(theta_h)+" - "+str(theta_c)+")*near(x[0],  0.) "+str(theta_c)),
+            "("+str(T_h)+" - "+str(T_c)+")*near(x[0],  0.) "+str(T_c)),
         boundary_conditions = [
             {'subspace': 0, 'value_expression': [0.], 'degree': 3, 'location_expression': "near(x[0],  0.) | near(x[0],  1.)", 'method': "topological"},
-            {'subspace': 2, 'value_expression': theta_h, 'degree': 2, 'location_expression': "near(x[0],  0.)", 'method': "topological"},
-            {'subspace': 2, 'value_expression': theta_c, 'degree': 2, 'location_expression': "near(x[0],  1.)", 'method': "topological"}],
-        regularization = {'T_f': 0.01, 'r': 0.005},
+            {'subspace': 2, 'value_expression': T_h, 'degree': 2, 'location_expression': "near(x[0],  0.)", 'method': "topological"},
+            {'subspace': 2, 'value_expression': T_c, 'degree': 2, 'location_expression': "near(x[0],  1.)", 'method': "topological"}],
+        temperature_of_fusion = 0.01,
+        regularization_smoothing_factor = 0.005,
         end_time = 0.001,
         time_step_size = 0.001)
 
