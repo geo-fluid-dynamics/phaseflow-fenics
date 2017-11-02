@@ -20,10 +20,6 @@ reynolds_number = 1.
 default_parameters = {'Ra': 1.e6, 'Pr': 0.71, 'Ste': 0.045,
     'C': 1, 'K': 1., 'g': (0., -1.), 'mu_l': 1., 'mu_s': 1.e8}
 
-default_m_B = lambda T : T*default_parameters['Ra']/(default_parameters['Pr']*reynolds_number**2)
-
-default_ddT_m_B = lambda T : default_parameters['Ra']/(default_parameters['Pr']*reynolds_number**2)
-
 def make_mixed_fe(cell):
     """ Define the mixed finite element.
     MixedFunctionSpace used to be available but is now deprecated. 
@@ -89,8 +85,8 @@ def run(output_dir = 'output/wang2010_natural_convection_air',
         liquid_viscosity = default_parameters['mu_l'],
         solid_viscosity = default_parameters['mu_s'],
         gravity = default_parameters['g'],
-        m_B = default_m_B,
-        ddT_m_B = default_ddT_m_B,
+        m_B = lambda T : T*default_parameters['Ra']/(default_parameters['Pr']*reynolds_number**2),
+        ddT_m_B = lambda T : default_parameters['Ra']/(default_parameters['Pr']*reynolds_number**2),
         penalty_parameter = 1.e-7,
         temperature_of_fusion = -1.e12,
         regularization_smoothing_factor = 0.005,
