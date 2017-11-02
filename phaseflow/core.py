@@ -18,7 +18,7 @@ per Equation 8 from danaila2014newton, i.e.
 reynolds_number = 1.
 
 default_parameters = {'Ra': 1.e6, 'Pr': 0.71, 'Ste': 0.045,
-    'C': 1, 'K': 1., 'g': (0., -1.), 'mu_l': 1., 'mu_s': 1.e8}
+    'C': 1., 'K': 1., 'g': (0., -1.), 'mu_l': 1., 'mu_s': 1.e8}
 
 def make_mixed_fe(cell):
     """ Define the mixed finite element.
