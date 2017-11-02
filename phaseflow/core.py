@@ -85,8 +85,8 @@ def run(output_dir = 'output/wang2010_natural_convection_air',
         liquid_viscosity = default_parameters['mu_l'],
         solid_viscosity = default_parameters['mu_s'],
         gravity = default_parameters['g'],
-        m_B = lambda T : T*default_parameters['Ra']/(default_parameters['Pr']*reynolds_number**2),
-        ddT_m_B = lambda T : default_parameters['Ra']/(default_parameters['Pr']*reynolds_number**2),
+        m_B = None,
+        ddT_m_B = None,
         penalty_parameter = 1.e-7,
         temperature_of_fusion = -1.e12,
         regularization_smoothing_factor = 0.005,
@@ -122,7 +122,16 @@ def run(output_dir = 'output/wang2010_natural_convection_air',
     """
     
     
-    # Report inputs.
+    # Validate arguments.
+    if m_B is None:
+        
+        m_B = lambda T : T*default_parameters['Ra']/(default_parameters['Pr']*reynolds_number**2)
+        
+    if ddT_m_B is None:
+        
+        ddT_m_B = lambda T : default_parameters['Ra']/(default_parameters['Pr']*reynolds_number**2)
+    
+    # Report arguments.
     helpers.print_once("Running Phaseflow with the following arguments:")
     
     helpers.print_once(helpers.arguments())
