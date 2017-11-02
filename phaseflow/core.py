@@ -72,15 +72,10 @@ def steady(W, w, w_n, steady_relative_tolerance):
     
     return steady
   
-
-""" Default values that will be used for default function definitions
-must be specified in this scope.
-"""
-default = {'rayleigh_number': 1.e6, 'prandtl_number': 0.71}
-    
+  
 def run(output_dir = 'output/wang2010_natural_convection_air',
-        rayleigh_number = default['rayleigh_number'],
-        prandtl_number = default['prandtl_number'],
+        rayleigh_number = 1.e6,
+        prandtl_number = 0.71,
         stefan_number = 0.045,
         heat_capacity = 1.,
         thermal_conductivity = 1.,
@@ -124,19 +119,19 @@ def run(output_dir = 'output/wang2010_natural_convection_air',
     """
     
 
-    # Set remaining default values where necessary.
+    # Handle default function definitions.
     if m_B is None:
         
-        def m_B(T):
+        def m_B(T, Ra, Pr, Re):
         
-            return T*default['rayleigh_number']/(default['prandtl_number']*reynolds_number**2)
+            return T*Ra/(Pr*Re**2)
     
     
     if ddT_m_B is None:
         
-        def ddT_m_B(T):
+        def ddT_m_B(T, Ra, Pr, Re):
 
-            return default['rayleigh_number']/(default['prandtl_number']*reynolds_number**2)
+            return Ra/(Pr*Re**2)
     
     
     # Report arguments.
@@ -244,6 +239,8 @@ def run(output_dir = 'output/wang2010_natural_convection_air',
     
     dt = fenics.Constant(time_step_size)
     
+    Re = fenics.Constant(reynolds_number)
+    
     Ra = fenics.Constant(rayleigh_number)
     
     Pr = fenics.Constant(prandtl_number)
@@ -256,9 +253,13 @@ def run(output_dir = 'output/wang2010_natural_convection_air',
 
     g = fenics.Constant(gravity)
     
+    DEBUG_RAYLEIGH_NUMBER = 1.e6
+    
+    DEBUG_PRANDTL_NUMBER = 0.71
+    
     def f_B(T):
     
-        return m_B(T)*g  # Buoyancy force, $f = ma$
+        return m_B(T=T, Ra=DEBUG_RAYLEIGH_NUMBER, Pr=DEBUG_PRANDTL_NUMBER, Re=Re)*g  # Buoyancy force, $f = ma$
     
     
     gamma = fenics.Constant(penalty_parameter)
@@ -308,7 +309,7 @@ def run(output_dir = 'output/wang2010_natural_convection_air',
 
     def ddT_f_B(T):
         
-        return ddT_m_B(T)*g
+        return ddT_m_B(T=T, Ra=DEBUG_RAYLEIGH_NUMBER, Pr=DEBUG_PRANDTL_NUMBER, Re=Re)*g
     
     
     def sech(theta):
