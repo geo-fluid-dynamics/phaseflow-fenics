@@ -42,8 +42,8 @@ def melt_toy_pcm(output_dir = 'output/test_melt_toy_pcm/',
     
     w, mesh = phaseflow.run(
         stefan_number = 1.,
-        rayleigh_number = 1.,
-        prandtl_number = 1.,
+        rayleigh_number = 1.e6,
+        prandtl_number = 0.71,
         solid_viscosity = 1.e4,
         liquid_viscosity = 1.,
         mesh = mesh,
@@ -51,7 +51,8 @@ def melt_toy_pcm(output_dir = 'output/test_melt_toy_pcm/',
         start_time = start_time,
         end_time = 0.02,
         stop_when_steady = True,
-        regularization = {'T_f': T_f, 'r': 0.05},
+        temperature_of_fusion = T_f,
+        regularization_smoothing_factor = 0.05,
         adaptive = True,
         adaptive_metric = 'phase_only',
         adaptive_solver_tolerance = 1.e-4,
@@ -90,9 +91,9 @@ def test_melt_toy_pcm__regression():
     
     
     # Verify against a reference solution.
-    pci_y_position_to_check =  0.930
+    pci_y_position_to_check =  0.875
     
-    reference_pci_x_position = 0.204
+    reference_pci_x_position = 0.226
     
     def T_minus_T_f(x):
     

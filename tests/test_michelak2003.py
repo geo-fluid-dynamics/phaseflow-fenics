@@ -69,23 +69,35 @@ def test_natural_convection_water__nightly():
         
         return rho_m*(1. - w*abs((T_h - T_c)*theta + T_ref - T_m)**q)
         
+        
     def ddtheta_rho(theta):
         
-        return -q*rho_m*w*abs(T_m - T_ref + theta*(T_c - T_h))**(q - 1.)*fenics.sign(T_m - T_ref + theta*(T_c - T_h))*(T_c - T_h)
+        return -q*rho_m*w*abs(T_m - T_ref + theta*(T_c - T_h))**(q - 1.)* \
+            fenics.sign(T_m - T_ref + theta*(T_c - T_h))*(T_c - T_h)
 
-    Re = phaseflow.globals.Re
-    
+            
     beta = 6.91e-5 # [K^-1]
+    
+    def m_B(T, Ra, Pr, Re):
+        
+            return Ra/(Pr*Re*Re)/(beta*(T_h - T_c))*(rho(theta_f) - rho(T))/rho(theta_f)
+            
+            
+    def ddT_m_B(T, Ra, Pr, Re):
+    
+        return -Ra/(Pr*Re*Re)/(beta*(T_h - T_c))*(ddtheta_rho(T))/rho(theta_f)
+        
 
     w, mesh = phaseflow.run(
         rayleigh_number = Ra,
         prandtl_number = Pr,
         stefan_number = 1.e16,
-        regularization = {'T_f': -1., 'r': 0.1},
+        temperature_of_fusion = -1.,
+        regularization_smoothing_factor = 0.1,
         nlp_relative_tolerance = 1.e-8,
         adaptive = True,
-        m_B = lambda theta : Ra/(Pr*Re*Re)/(beta*(T_h - T_c))*(rho(theta_f) - rho(theta))/rho(theta_f),
-        ddT_m_B = lambda theta : -Ra/(Pr*Re*Re)/(beta*(T_h - T_c))*(ddtheta_rho(theta))/rho(theta_f),
+        m_B = m_B,
+        ddT_m_B = ddT_m_B,
         mesh = fenics.UnitSquareMesh(m, m, 'crossed'),
         stop_when_steady = True,
         initial_values_expression = (
