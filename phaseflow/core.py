@@ -17,9 +17,6 @@ per Equation 8 from danaila2014newton, i.e.
 """
 reynolds_number = 1.
 
-default_parameters = {'Ra': 1.e6, 'Pr': 0.71, 'Ste': 0.045,
-    'C': 1., 'K': 1., 'g': (0., -1.), 'mu_l': 1., 'mu_s': 1.e8}
-
 def make_mixed_fe(cell):
     """ Define the mixed finite element.
     MixedFunctionSpace used to be available but is now deprecated. 
@@ -74,17 +71,21 @@ def steady(W, w, w_n, steady_relative_tolerance):
         steady = True
     
     return steady
-    
+  
+
+default = {'rayleigh_number': 1.e6, 'prandtl_number': 0.71, 'stefan_number': 0.045,
+    'heat_capacity': 1., 'thermal_conductivity': 1., 'gravity': (0., -1.),
+    'liquid_viscosity': 1., 'solid_viscosity': 1.e8}
     
 def run(output_dir = 'output/wang2010_natural_convection_air',
-        rayleigh_number = default_parameters['Ra'],
-        prandtl_number = default_parameters['Pr'],
-        stefan_number = default_parameters['Ste'],
-        heat_capacity = default_parameters['C'],
-        thermal_conductivity = default_parameters['K'],
-        liquid_viscosity = default_parameters['mu_l'],
-        solid_viscosity = default_parameters['mu_s'],
-        gravity = default_parameters['g'],
+        rayleigh_number = default['rayleigh_number'],
+        prandtl_number = default['prandtl_number'],
+        stefan_number = default['stefan_number'],
+        heat_capacity = default['heat_capacity'],
+        thermal_conductivity = default['thermal_conductivity'],
+        liquid_viscosity = default['liquid_viscosity'],
+        solid_viscosity = default['solid_viscosity'],
+        gravity = default['gravity'],
         m_B = None,
         ddT_m_B = None,
         penalty_parameter = 1.e-7,
@@ -121,20 +122,20 @@ def run(output_dir = 'output/wang2010_natural_convection_air',
     See the tests and examples for demonstrations of how to use this.
     """
     
-    
-    # Validate arguments.
+
+    # Set remaining default values where necessary.
     if m_B is None:
         
         def m_B(T):
         
-            return T*default_parameters['Ra']/(default_parameters['Pr']*reynolds_number**2)
+            return T*default['rayleigh_number']/(default['prandtl_number']*reynolds_number**2)
     
     
     if ddT_m_B is None:
         
         def ddT_m_B(T):
 
-            return default_parameters['Ra']/(default_parameters['Pr']*reynolds_number**2)
+            return default['rayleigh_number']/(default['prandtl_number']*reynolds_number**2)
     
     
     # Report arguments.
@@ -221,13 +222,24 @@ def run(output_dir = 'output/wang2010_natural_convection_air',
     for applying the finite element method to the incompressible Navier-Stokes equations,
     e.g. from danaila2014newton and huerta2003fefluids.
     """
-    b = lambda u, q : -div(u)*q  # Divergence
+    def b(u, q):
+        return -div(u)*q  # Divergence
     
-    D = lambda u : sym(grad(u))  # Symmetric part of velocity gradient
     
-    a = lambda mu, u, v : 2.*mu*inner(D(u), D(v))  # Stokes stress-strain
+    def D(u):
     
-    c = lambda w, z, v : dot(dot(grad(z), w), v)  # Convection of the velocity field
+        return sym(grad(u))  # Symmetric part of velocity gradient
+    
+    
+    def a(mu, u, v):
+        
+        return 2.*mu*inner(D(u), D(v))  # Stokes stress-strain
+    
+    
+    def c(w, z, v):
+        
+        return dot(dot(grad(z), w), v)  # Convection of the velocity field
+    
     
     dt = fenics.Constant(time_step_size)
     
@@ -243,7 +255,10 @@ def run(output_dir = 'output/wang2010_natural_convection_air',
 
     g = fenics.Constant(gravity)
     
-    f_B = lambda T : m_B(T)*g  # Buoyancy force, $f = ma$
+    def f_B(T):
+    
+        return m_B(T)*g  # Buoyancy force, $f = ma$
+    
     
     gamma = fenics.Constant(penalty_parameter)
     
@@ -251,13 +266,19 @@ def run(output_dir = 'output/wang2010_natural_convection_air',
     
     r = fenics.Constant(regularization_smoothing_factor)
     
-    P = lambda T: 0.5*(1. - fenics.tanh(2.*(T_f - T)/r))  # Regularized phase field.
+    def P(T):
+    
+        return 0.5*(1. - fenics.tanh(2.*(T_f - T)/r))  # Regularized phase field.
+    
     
     mu_l = fenics.Constant(liquid_viscosity)
     
     mu_s = fenics.Constant(solid_viscosity)
     
-    mu = lambda (T) : mu_s + (mu_l - mu_s)*P(T) # Variable viscosity.
+    def mu(T):
+    
+        return mu_s + (mu_l - mu_s)*P(T) # Variable viscosity.
+    
     
     L = C/Ste  # Latent heat
     
@@ -284,13 +305,24 @@ def run(output_dir = 'output/wang2010_natural_convection_air',
         + 1./dt*L*(P(T_k) - P(T_n))*phi
         )*fenics.dx
 
-    ddT_f_B = lambda T : ddT_m_B(T)*g
+    def ddT_f_B(T):
+        
+        return ddT_m_B(T)*g
     
-    sech = lambda theta: 1./fenics.cosh(theta)
     
-    dP = lambda T: sech(2.*(T_f - T)/r)**2/r
+    def sech(theta):
+    
+        return 1./fenics.cosh(theta)
+    
+    
+    def dP(T):
+    
+        return sech(2.*(T_f - T)/r)**2/r
 
-    dmu = lambda T : (mu_l - mu_s)*dP(T)
+        
+    def dmu(T):
+    
+        return (mu_l - mu_s)*dP(T)
     
     
     # Set the Jacobian (formally the Gateaux derivative) in variational form.
