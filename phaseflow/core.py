@@ -125,11 +125,17 @@ def run(output_dir = 'output/wang2010_natural_convection_air',
     # Validate arguments.
     if m_B is None:
         
-        m_B = lambda T : T*default_parameters['Ra']/(default_parameters['Pr']*reynolds_number**2)
+        def m_B(T):
         
+            return T*default_parameters['Ra']/(default_parameters['Pr']*reynolds_number**2)
+    
+    
     if ddT_m_B is None:
         
-        ddT_m_B = lambda T : default_parameters['Ra']/(default_parameters['Pr']*reynolds_number**2)
+        def ddT_m_B(T):
+
+            return default_parameters['Ra']/(default_parameters['Pr']*reynolds_number**2)
+    
     
     # Report arguments.
     helpers.print_once("Running Phaseflow with the following arguments:")
