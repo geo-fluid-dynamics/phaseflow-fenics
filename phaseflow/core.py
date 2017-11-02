@@ -253,13 +253,9 @@ def run(output_dir = 'output/wang2010_natural_convection_air',
 
     g = fenics.Constant(gravity)
     
-    DEBUG_RAYLEIGH_NUMBER = 1.e6
-    
-    DEBUG_PRANDTL_NUMBER = 0.71
-    
     def f_B(T):
     
-        return m_B(T=T, Ra=DEBUG_RAYLEIGH_NUMBER, Pr=DEBUG_PRANDTL_NUMBER, Re=Re)*g  # Buoyancy force, $f = ma$
+        return m_B(T=T, Ra=Ra, Pr=Pr, Re=Re)*g  # Buoyancy force, $f = ma$
     
     
     gamma = fenics.Constant(penalty_parameter)
@@ -309,7 +305,7 @@ def run(output_dir = 'output/wang2010_natural_convection_air',
 
     def ddT_f_B(T):
         
-        return ddT_m_B(T=T, Ra=DEBUG_RAYLEIGH_NUMBER, Pr=DEBUG_PRANDTL_NUMBER, Re=Re)*g
+        return ddT_m_B(T=T, Ra=Ra, Pr=Pr, Re=Re)*g
     
     
     def sech(theta):
