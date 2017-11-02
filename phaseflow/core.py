@@ -216,7 +216,7 @@ def run(output_dir = 'output/wang2010_natural_convection_air',
     
     dt = fenics.Constant(time_step_size)
     
-    Ra = fenics.Constant(rayleigh_number), 
+    Ra = fenics.Constant(rayleigh_number)
     
     Pr = fenics.Constant(prandtl_number)
     
