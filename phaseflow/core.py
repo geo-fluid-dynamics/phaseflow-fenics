@@ -73,19 +73,20 @@ def steady(W, w, w_n, steady_relative_tolerance):
     return steady
   
 
-default = {'rayleigh_number': 1.e6, 'prandtl_number': 0.71, 'stefan_number': 0.045,
-    'heat_capacity': 1., 'thermal_conductivity': 1., 'gravity': (0., -1.),
-    'liquid_viscosity': 1., 'solid_viscosity': 1.e8}
+""" Default values that will be used for default function definitions
+must be specified in this scope.
+"""
+default = {'rayleigh_number': 1.e6, 'prandtl_number': 0.71}
     
 def run(output_dir = 'output/wang2010_natural_convection_air',
         rayleigh_number = default['rayleigh_number'],
         prandtl_number = default['prandtl_number'],
-        stefan_number = default['stefan_number'],
-        heat_capacity = default['heat_capacity'],
-        thermal_conductivity = default['thermal_conductivity'],
-        liquid_viscosity = default['liquid_viscosity'],
-        solid_viscosity = default['solid_viscosity'],
-        gravity = default['gravity'],
+        stefan_number = 0.045,
+        heat_capacity = 1.,
+        thermal_conductivity = 1.,
+        liquid_viscosity = 1.,
+        solid_viscosity = 1.e-8,
+        gravity = (0., -1.),
         m_B = None,
         ddT_m_B = None,
         penalty_parameter = 1.e-7,
