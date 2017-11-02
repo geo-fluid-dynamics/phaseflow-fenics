@@ -24,9 +24,6 @@ default_m_B = lambda T : T*default_parameters['Ra']/(default_parameters['Pr']*re
 
 default_ddT_m_B = lambda T : default_parameters['Ra']/(default_parameters['Pr']*reynolds_number**2)
 
-'''Here we set an arbitrarily low theta_s to disable phase-change.'''
-default_regularization = {'T_f': -1.e12, 'r': 0.005}
-
 def make_mixed_fe(cell):
     """ Define the mixed finite element.
     MixedFunctionSpace used to be available but is now deprecated. 
@@ -95,7 +92,8 @@ def run(output_dir = 'output/wang2010_natural_convection_air',
         m_B = default_m_B,
         ddT_m_B = default_ddT_m_B,
         penalty_parameter = 1.e-7,
-        regularization = default_regularization,
+        temperature_of_fusion = -1.e12,
+        regularization_smoothing_factor = 0.005,
         mesh = fenics.UnitSquareMesh(fenics.dolfin.mpi_comm_world(), 20, 20, 'crossed'),
         initial_values_expression = ("0.", "0.", "0.", "0.5*near(x[0],  0.) -0.5*near(x[0],  1.)"),
         boundary_conditions = [{'subspace': 0,
@@ -238,9 +236,9 @@ def run(output_dir = 'output/wang2010_natural_convection_air',
     
     gamma = fenics.Constant(penalty_parameter)
     
-    T_f = fenics.Constant(regularization['T_f'])  # Center of regularized phase-field.
+    T_f = fenics.Constant(temperature_of_fusion)
     
-    r = fenics.Constant(regularization['r'])  # Regularization smoothing parameter.
+    r = fenics.Constant(regularization_smoothing_factor)
     
     P = lambda T: 0.5*(1. - fenics.tanh(2.*(T_f - T)/r))  # Regularized phase field.
     
