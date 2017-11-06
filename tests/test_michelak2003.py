@@ -35,9 +35,11 @@ def verify_michalek2003_natural_convection_water(w, mesh):
             assert(abs(theta - true_theta) < 2.e-2)
 
             
-def test_natural_convection_water__nightly():
+def natural_convection_water(restart = False, restart_filepath = '',
+        output_dir = 'output/test_natural_convection_water/',
+        start_time = 0., end_time = 10., time_step_size = 0.001):
     
-    m = 10
+    m = 40
 
     Ra = 2.518084e6
     
@@ -95,11 +97,12 @@ def test_natural_convection_water__nightly():
         temperature_of_fusion = -1.,
         regularization_smoothing_factor = 0.1,
         nlp_relative_tolerance = 1.e-8,
-        adaptive = True,
+        adaptive = False,
         m_B = m_B,
         ddT_m_B = ddT_m_B,
         mesh = fenics.UnitSquareMesh(m, m, 'crossed'),
         stop_when_steady = True,
+        steady_relative_tolerance = 1.e-5,
         initial_values_expression = (
             "0.",
             "0.",
@@ -109,11 +112,23 @@ def test_natural_convection_water__nightly():
             {'subspace': 0, 'value_expression': ("0.", "0."), 'degree': 3, 'location_expression': "near(x[0],  0.) | near(x[0],  1.) | near(x[1], 0.) | near(x[1],  1.)", 'method': "topological"},
             {'subspace': 2, 'value_expression':str(theta_hot), 'degree': 2, 'location_expression': "near(x[0],  0.)", 'method': "topological"},
             {'subspace': 2, 'value_expression':str(theta_cold), 'degree': 2, 'location_expression': "near(x[0],  1.)", 'method': "topological"}],
-        time_step_size = 0.01,
-        start_time = 0.,
-        end_time = 2.,
+        time_step_size = time_step_size,
+        start_time = start_time,
+        end_time = end_time,
         output_dir = 'output/test_natural_convection_water')
     
+    return w, mesh
+
+    
+def test_natural_convection_water__nightly():
+
+    w, mesh = natural_convection_water(end_time = 0.01)
+    
+    w, mesh = natural_convection_water(restart=True,
+        restart_filepath='output/test_natural_convection_water/restart_t0.01.h5',
+        start_time = 0.01, time_step_size = 0.002,
+        output_dir = 'output/test_natural_convection_water/restart_t0.01/')
+        
     verify_michalek2003_natural_convection_water(w, mesh)
 
     
