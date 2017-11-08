@@ -42,7 +42,7 @@ def verify_against_wang2010(w, mesh):
             assert(abs(ux - true_ux) < 2.e-2)
             
     
-output_dir='output/test_wang2010_natural_convection_air/'
+output_dir = "output/test_wang2010_natural_convection_air/"
 
 @pytest.mark.dependency()
 def test_wang2010_natural_convection_air():

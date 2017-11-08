@@ -1,4 +1,4 @@
-"""This module contains a variety of useful classes and functions."""
+""" This module contains a variety of useful classes and functions."""
 import inspect
 import errno    
 import os
@@ -6,9 +6,10 @@ import fenics
 
 
 def arguments():
-    """Returns tuple containing dictionary of calling function's
+    """ Returns tuple containing dictionary of calling function's
     named arguments and a list of calling function's unnamed
-    positional arguments."""
+    positional arguments.
+    """
     posname, kwname, args = inspect.getargvalues(inspect.stack()[1][0])[-3:]
     
     posargs = args.pop(posname, [])
@@ -25,10 +26,11 @@ def print_once(string):
         print(string)
     
     
-''' Make a directory if it doesn't exist.
-Code from https://stackoverflow.com/questions/600268/mkdir-p-functionality-in-python '''
-def mkdir_p(path):
 
+def mkdir_p(path):
+    """ Make a directory if it doesn't exist.
+    Code from https://stackoverflow.com/questions/600268/mkdir-p-functionality-in-python 
+    """
     try:
     
         os.makedirs(path)
@@ -44,7 +46,7 @@ def mkdir_p(path):
             raise
 
             
-if __name__=='__main__':
+if __name__=="__main__":
 
     pass
     
