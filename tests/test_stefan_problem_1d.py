@@ -119,7 +119,7 @@ def test_stefan_problem_Ste0p01__nightly():
     verify_pci_position(true_pci_position=0.04277, r=r, w=w)
 
 
-def test_stefan_problem_solidify(Ste = 0.125,
+def test_stefan_problem_solidify__nightly(Ste = 0.125,
         theta_h = 0.01,
         theta_c = -1.,
         theta_f = 0.,
@@ -167,5 +167,5 @@ if __name__=='__main__':
     
     test_stefan_problem_Ste0p01__nightly()
     
-    test_stefan_problem_solidify()
+    test_stefan_problem_solidify__nightly()
     

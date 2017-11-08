@@ -25,7 +25,7 @@ def verify_against_ghia1982(w, mesh):
             assert(abs(ux - true_ux) < 2.e-2)
             
 
-def test_variable_viscosity():
+def test_variable_viscosity__nightly():
 
     lid = 'near(x[1],  1.)'
 
@@ -92,5 +92,5 @@ def test_variable_viscosity():
     
 if __name__=='__main__':
 
-    test_variable_viscosity()
+    test_variable_viscosity__nightly()
     
