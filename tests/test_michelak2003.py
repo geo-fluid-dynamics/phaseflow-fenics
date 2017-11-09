@@ -1,3 +1,4 @@
+from builtins import str
 from .context import phaseflow
 
 import fenics
@@ -115,7 +116,7 @@ def natural_convection_water(restart = False, restart_filepath = '',
         time_step_size = time_step_size,
         start_time = start_time,
         end_time = end_time,
-        output_dir = 'output/test_natural_convection_water')
+        output_dir = "output/test_natural_convection_water")
     
     return w, mesh
 

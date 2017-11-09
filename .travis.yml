@@ -1,7 +1,7 @@
 language: python
 
 python:
-  - "2.7"
+  - "3.5"
   
 services:
   - docker
@@ -19,4 +19,4 @@ before_install:
 group: deprecated-2017Q2
 
 script:
-- docker run --rm -P -v `pwd`:/home/fenics/shared -w /home/fenics/shared zimmerman/phaseflow-fenics:latest "pip install --user --upgrade . && python -m pytest -v -k '(not nightly)'" 
+- docker run --rm -P -v `pwd`:/home/fenics/shared -w /home/fenics/shared zimmerman/phaseflow-fenics:latest "pip3 install --user --upgrade . && python3 -m pytest -v -k '(not nightly)'" 

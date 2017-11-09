@@ -1,3 +1,5 @@
+from builtins import str
+from builtins import range
 from .context import phaseflow
 import fenics
 
@@ -25,17 +27,17 @@ def verify_against_ghia1982(w, mesh):
             assert(abs(ux - true_ux) < 2.e-2)
             
 
-def test_variable_viscosity():
+def test_variable_viscosity__nightly():
 
-    lid = 'near(x[1],  1.)'
+    lid = "near(x[1],  1.)"
 
     ymin = -0.25
     
-    fixed_walls = 'near(x[0],  0.) | near(x[0],  1.) | near(x[1],  '+str(ymin)+')'
+    fixed_walls = "near(x[0],  0.) | near(x[0],  1.) | near(x[1],  '+str(ymin)+')"
 
-    left_middle = 'near(x[0], 0.) && near(x[1], 0.5)'
+    left_middle = "near(x[0], 0.) && near(x[1], 0.5)"
     
-    output_dir = 'output/test_variable_viscosity'
+    output_dir = "output/test_variable_viscosity"
     
     mesh = fenics.RectangleMesh(fenics.Point(0., ymin), fenics.Point(1., 1.), 20, 25, 'crossed')
     
@@ -92,5 +94,5 @@ def test_variable_viscosity():
     
 if __name__=='__main__':
 
-    test_variable_viscosity()
+    test_variable_viscosity__nightly()
     

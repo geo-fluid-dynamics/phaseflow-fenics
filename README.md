@@ -71,7 +71,7 @@ Pull the latest version of the master branch
 
 Run tests
 
-    python -m pytest -v -s -k "not debug"
+    python3 -m pytest -v -s -k "not debug"
 
 ## Some Docker details
 Pull the image and run the container with Docker
@@ -114,7 +114,7 @@ but in this case you should make sure to install the latest version with
     
     git pull
     
-    pip install --user --upgrade .
+    pip3 install --user --upgrade .
 
 # For developers:
 ## Project structure

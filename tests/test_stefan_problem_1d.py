@@ -1,3 +1,5 @@
+from builtins import str
+from builtins import range
 from .context import phaseflow
 
 import fenics
@@ -71,7 +73,7 @@ def stefan_problem(Ste = 1.,
     mesh = refine_near_left_boundary(mesh, hot_boundary_refinement_cycles)
     
     w, mesh = phaseflow.run(
-        output_dir = 'output/test_stefan_problem_Ste'+str(Ste).replace('.', 'p')+'/',
+        output_dir = "output/test_stefan_problem_Ste" + str(Ste).replace(".", "p") + "/",
         prandtl_number = 1.,
         stefan_number = Ste,
         gravity = [0.],
@@ -119,7 +121,7 @@ def test_stefan_problem_Ste0p01__nightly():
     verify_pci_position(true_pci_position=0.04277, r=r, w=w)
 
 
-def test_stefan_problem_solidify(Ste = 0.125,
+def test_stefan_problem_solidify__nightly(Ste = 0.125,
         theta_h = 0.01,
         theta_c = -1.,
         theta_f = 0.,
@@ -135,8 +137,8 @@ def test_stefan_problem_solidify(Ste = 0.125,
     mesh = refine_near_left_boundary(mesh, cool_boundary_refinement_cycles)
     
     w, mesh = phaseflow.run(
-        output_dir = 'output/test_stefan_problem_solidify/dt'+str(dt)+
-            '/tol'+str(nlp_absolute_tolerance)+'/',
+        output_dir = "output/test_stefan_problem_solidify/dt" + str(dt) + 
+            "/tol" + str(nlp_absolute_tolerance) + "/",
         prandtl_number = 1.,
         stefan_number = Ste,
         gravity = [0.],
@@ -167,5 +169,5 @@ if __name__=='__main__':
     
     test_stefan_problem_Ste0p01__nightly()
     
-    test_stefan_problem_solidify()
+    test_stefan_problem_solidify__nightly()
     

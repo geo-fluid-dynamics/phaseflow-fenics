@@ -23,11 +23,11 @@ def verify_against_ghia1982(w, mesh):
 
 def test_ghia1982_steady_lid_driven_cavity():
 
-    lid = 'near(x[1],  1.)'
+    lid = "near(x[1],  1.)"
 
-    fixed_walls = 'near(x[0],  0.) | near(x[0],  1.) | near(x[1],  0.)'
+    fixed_walls = "near(x[0],  0.) | near(x[0],  1.) | near(x[1],  0.)"
 
-    bottom_left_corner = 'near(x[0], 0.) && near(x[1], 0.)'
+    bottom_left_corner = "near(x[0], 0.) && near(x[1], 0.)"
 
     m = 20
 
