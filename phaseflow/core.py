@@ -17,6 +17,8 @@ per Equation 8 from danaila2014newton, i.e.
 """
 reynolds_number = 1.
 
+MAX_TIME_STEPS = 1000000000000
+
 def make_mixed_fe(cell):
     """ Define the mixed finite element.
     MixedFunctionSpace used to be available but is now deprecated. 
@@ -406,10 +408,14 @@ def run(output_dir = "output/wang2010_natural_convection_air",
     
         # Solve each time step.
         progress = fenics.Progress("Time-stepping")
-
+        
         fenics.set_log_level(fenics.PROGRESS)
         
-        while time < end_time - TIME_EPS:
+        for it in range(1, MAX_TIME_STEPS):
+            
+            if(time > end_time - TIME_EPS):
+                
+                break
             
             if adaptive:
             
@@ -419,7 +425,7 @@ def run(output_dir = "output/wang2010_natural_convection_air",
             
                 static_solver.solve()
             
-            time += time_step_size
+            time = start_time + it*time_step_size
             
             phaseflow.helpers.print_once("Reached time t = " + str(time))
             
@@ -430,7 +436,7 @@ def run(output_dir = "output/wang2010_natural_convection_air",
             restart_filepath = output_dir + "/restart_t" + str(time) + ".h5"
             
             with fenics.HDF5File(fenics.mpi_comm_world(), restart_filepath, "w") as h5:
-    
+                
                 h5.write(mesh.leaf_node(), "mesh")
             
                 h5.write(w_k.leaf_node(), "w")
