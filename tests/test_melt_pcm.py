@@ -1,7 +1,7 @@
 from builtins import str
 from builtins import range
+from .context import phaseflow
 import fenics
-import phaseflow
 import scipy.optimize as opt
 
 T_f = 0.1
