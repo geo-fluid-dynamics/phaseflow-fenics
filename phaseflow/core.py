@@ -268,7 +268,7 @@ def run(output_dir = "output/wang2010_natural_convection_air",
     
     def P(T):
     
-        return 0.5*(1. - fenics.tanh(2.*(T_f - T)/r))  # Regularized phase field.
+        return 0.5*(1. - fenics.tanh((T_f - T)/r))  # Regularized phase field.
     
     
     mu_l = fenics.Constant(liquid_viscosity)
@@ -317,7 +317,7 @@ def run(output_dir = "output/wang2010_natural_convection_air",
     
     def dP(T):
     
-        return sech(2.*(T_f - T)/r)**2/r
+        return sech((T_f - T)/r)**2/(2.*r)
 
         
     def dmu(T):
