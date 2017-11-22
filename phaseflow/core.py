@@ -100,6 +100,7 @@ def run(output_dir = "output/wang2010_natural_convection_air",
              {"subspace": 2,
                 "value_expression": "-0.5", "degree": 2, 
                 "location_expression": "near(x[0],  1.)", "method": "topological"}],
+        source_expression = ("0.", "0.", "0.", "0."),
         start_time = 0.,
         end_time = 10.,
         time_step_size = 1.e-3,
@@ -211,6 +212,11 @@ def run(output_dir = "output/wang2010_natural_convection_air",
         bcs.append(fenics.DirichletBC(W.sub(item["subspace"]), item["value_expression"],
             item["location_expression"], method=item["method"]))
     
+    # Interpolate the source term expressions
+    s_k = fenics.interpolate(fenics.Expression(source_expression, element=W_ele), W)
+    
+    s_u_k, s_p_k, s_T_k = fenics.split(s_k)
+    
     
     # Set the variational form.
     """Set local names for math operators to improve readability."""
@@ -295,14 +301,16 @@ def run(output_dir = "output/wang2010_natural_convection_air",
     u_k, p_k, T_k = fenics.split(w_k)
 
     F = (
-        b(u_k, q) - gamma*p_k*q
+        b(u_k, q) - gamma*p_k*q - s_p_k*q
         + dot(u_k - u_n, v)/dt
         + c(u_k, u_k, v) + b(v, p_k) + a(mu(T_k), u_k, v)
         + dot(f_B(T_k), v)
+        - dot(s_u_k, v)
         + C/dt*(T_k - T_n)*phi
         - dot(C*T_k*u_k, grad(phi)) 
         + K/Pr*dot(grad(T_k), grad(phi))
         + 1./dt*L*(P(T_k) - P(T_n))*phi
+        - s_T_k*phi
         )*fenics.dx
 
     def ddT_f_B(T):
