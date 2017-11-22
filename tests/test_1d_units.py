@@ -21,6 +21,10 @@ def test_1d_output():
             "0.",
             "0.",
             "(" + str(T_h) + " - " + str(T_c) + ")*near(x[0],  0.) " + str(T_c)),
+        source_expression = (
+            "0.",
+            "0.",
+            "0."),
         boundary_conditions = [
             {"subspace": 0, "value_expression": [0.], "degree": 3, "location_expression": "near(x[0],  0.) | near(x[0],  1.)", "method": "topological"},
             {"subspace": 2, "value_expression": T_h, "degree": 2, "location_expression": "near(x[0],  0.)", "method": "topological"},
