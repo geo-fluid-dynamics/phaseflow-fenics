@@ -213,7 +213,7 @@ def run(output_dir = "output/wang2010_natural_convection_air",
             item["location_expression"], method=item["method"]))
     
     # Interpolate the source term expressions
-    s_k = fenics.interpolate(fenics.Expression(source_expression, element=W_ele), W)
+    s_k = fenics.interpolate(fenics.Expression(source_expression, element=W_ele, t=time), W)
     
     s_u_k, s_p_k, s_T_k = fenics.split(s_k)
     
