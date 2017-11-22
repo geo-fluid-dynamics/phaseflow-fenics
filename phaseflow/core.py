@@ -209,8 +209,14 @@ def run(output_dir = "output/wang2010_natural_convection_air",
     
     for item in boundary_conditions:
     
-        bcs.append(fenics.DirichletBC(W.sub(item["subspace"]), item["value_expression"],
-            item["location_expression"], method=item["method"]))
+        bcs.append(
+            fenics.DirichletBC(
+                W.sub(item["subspace"]),
+                fenics.Expression(item["value_expression"],
+                    degree=3,
+                    t=time),
+                item["location_expression"], method=item["method"]))
+    
     
     # Interpolate the source term expressions
     s_k = fenics.interpolate(fenics.Expression(source_expression, element=W_ele, t=time), W)
