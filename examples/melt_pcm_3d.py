@@ -40,7 +40,7 @@ def melt_pcm_3d(
                     
                     found_left_boundary = True
                     
-                    break # There should only be one such point.
+                    break
                     
             if found_left_boundary:
                 
