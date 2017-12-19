@@ -56,8 +56,8 @@ def test_wang2010_natural_convection_air():
 def test_wang2010_natural_convection_air_restart():
 
     w, mesh = phaseflow.run(restart = True,
-        restart_filepath = output_dir+'restart_t0.067.h5',
-        start_time = 0.067,
+        restart_filepath = output_dir+'restart_t0.06.h5',
+        start_time = 0.06,
         output_dir=output_dir)
         
     verify_against_wang2010(w, mesh)
