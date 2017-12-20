@@ -2,9 +2,9 @@ import fenics
 import phaseflow
         
 def melt_pcm_3d(
-        initial_mesh_size = [1, 1, 1],
+        initial_mesh_size = [10, 10, 1],
         dt = 1.e-3,
-        initial_hot_wall_refinement_cycles = 7,
+        initial_hot_wall_refinement_cycles = 2,
         output_dir='output/melt_pcm_3d',
         start_time=0.,
         end_time=0.05,
@@ -99,8 +99,14 @@ def melt_pcm_3d(
     
 def run_melt_pcm_3d():
     
-    w, mesh = melt_pcm_3d(output_dir = 'output/melt_pcm_3d', dt = 0.001, end_time = 0.002, nlp_max_iterations = 50)
+    w, mesh = melt_pcm_3d(output_dir = 'output/melt_pcm_3d', end_time = 0.002, nlp_max_iterations = 200)
     
+    """ This diverges
+    w, mesh = melt_pcm_3d(output_dir = 'output/melt_pcm_3d/restart_t0.002/', end_time = 0.02, nlp_max_iterations = 200,
+        restart = True,
+        restart_filepath = 'output/melt_pcm_3d/restart_t0.002.h5',
+        start_time = 0.002)
+    """
     
 if __name__=='__main__':
 
