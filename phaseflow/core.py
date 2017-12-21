@@ -111,9 +111,11 @@ def run(output_dir = "output/wang2010_natural_convection_air",
         nlp_absolute_tolerance = 1.e-8,
         nlp_relative_tolerance = 1.e-8,
         nlp_max_iterations = 50,
+        nlp_relaxation = 1.,
         restart = False,
         restart_filepath = ""):
     """Run Phaseflow.
+    
     
     Phaseflow is configured entirely through the arguments in this run() function.
     
@@ -367,29 +369,38 @@ def run(output_dir = "output/wang2010_natural_convection_air",
     problem = fenics.NonlinearVariationalProblem(F, w_k, bcs, JF)
     
     
-    # Make the solvers.
+    # Make the solver.
     """ For the purposes of this project, it would be better to just always use the adaptive solver; but
     unfortunately the adaptive solver encounters nan's whenever evaluating the error for problems not 
     involving phase-change. So far my attempts at writing a MWE to reproduce the  issue have failed.
     """   
-    adaptive_solver = fenics.AdaptiveNonlinearVariationalSolver(problem, M)
+    if adaptive:
     
-    adaptive_solver.parameters["nonlinear_variational_solver"]["newton_solver"]["maximum_iterations"]\
-        = nlp_max_iterations
+        solver = fenics.AdaptiveNonlinearVariationalSolver(problem, M)
     
-    adaptive_solver.parameters["nonlinear_variational_solver"]["newton_solver"]["absolute_tolerance"]\
-        = nlp_absolute_tolerance
+        solver.parameters["nonlinear_variational_solver"]["newton_solver"]["maximum_iterations"]\
+            = nlp_max_iterations
     
-    adaptive_solver.parameters["nonlinear_variational_solver"]["newton_solver"]["relative_tolerance"]\
-        = nlp_relative_tolerance
+        solver.parameters["nonlinear_variational_solver"]["newton_solver"]["absolute_tolerance"]\
+            = nlp_absolute_tolerance
+    
+        solver.parameters["nonlinear_variational_solver"]["newton_solver"]["relative_tolerance"]\
+            = nlp_relative_tolerance
+            
+        solver.parameters["nonlinear_variational_solver"]["newton_solver"]["relaxation_parameter"]\
+            = nlp_relaxation
+            
+    else:
 
-    static_solver = fenics.NonlinearVariationalSolver(problem)
-    
-    static_solver.parameters["newton_solver"]["maximum_iterations"] = nlp_max_iterations
-    
-    static_solver.parameters["newton_solver"]["absolute_tolerance"] = nlp_absolute_tolerance
-    
-    static_solver.parameters["newton_solver"]["relative_tolerance"] = nlp_relative_tolerance
+        solver = fenics.NonlinearVariationalSolver(problem)
+        
+        solver.parameters["newton_solver"]["maximum_iterations"] = nlp_max_iterations
+        
+        solver.parameters["newton_solver"]["absolute_tolerance"] = nlp_absolute_tolerance
+        
+        solver.parameters["newton_solver"]["relative_tolerance"] = nlp_relative_tolerance
+        
+        solver.parameters["newton_solver"]["relaxation_parameter"] = nlp_relaxation
     
     
     # Open a context manager for the output file.
@@ -419,11 +430,11 @@ def run(output_dir = "output/wang2010_natural_convection_air",
             
             if adaptive:
             
-                adaptive_solver.solve(adaptive_solver_tolerance)
+                solver.solve(adaptive_solver_tolerance)
                 
             else:
             
-                static_solver.solve()
+                solver.solve()
             
             time = start_time + it*time_step_size
             

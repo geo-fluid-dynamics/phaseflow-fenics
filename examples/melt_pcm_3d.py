@@ -9,6 +9,7 @@ def melt_pcm_3d(
         start_time=0.,
         end_time=0.05,
         nlp_max_iterations = 50,
+        nlp_relaxation = 1.,
         restart=False,
         restart_filepath=''):
 
@@ -74,6 +75,7 @@ def melt_pcm_3d(
         adaptive_solver_tolerance = 1.e-4,
         nlp_relative_tolerance = 1.e-8,
         nlp_max_iterations = nlp_max_iterations,
+        nlp_relaxation = nlp_relaxation,
         initial_values_expression = (
             "0.",
             "0.",
@@ -99,14 +101,11 @@ def melt_pcm_3d(
     
 def run_melt_pcm_3d():
     
-    w, mesh = melt_pcm_3d(output_dir = 'output/melt_pcm_3d', end_time = 0.002, nlp_max_iterations = 200)
-    
-    """ This diverges
-    w, mesh = melt_pcm_3d(output_dir = 'output/melt_pcm_3d/restart_t0.002/', end_time = 0.02, nlp_max_iterations = 200,
-        restart = True,
-        restart_filepath = 'output/melt_pcm_3d/restart_t0.002.h5',
-        start_time = 0.002)
-    """
+    w, mesh = melt_pcm_3d(output_dir = "output/melt_pcm_3d/", end_time = 0.02, nlp_max_iterations = 200,
+        restart = False,
+        restart_filepath = "",
+        start_time = 0.,
+        nlp_relaxation = 0.8)
     
 if __name__=='__main__':
 
