@@ -2,14 +2,14 @@ import fenics
 import phaseflow
         
 def melt_pcm_3d(
-        initial_mesh_size = [10, 10, 1],
+        initial_mesh_size = [1, 1, 1],
         dt = 1.e-3,
         initial_hot_wall_refinement_cycles = 2,
         output_dir='output/melt_pcm_3d',
         start_time=0.,
-        end_time=0.05,
-        nlp_max_iterations = 50,
-        nlp_relaxation = 1.,
+        end_time=0.02,
+        nlp_max_iterations = 200,
+        nlp_relaxation = 0.8,
         restart=False,
         restart_filepath=''):
 
@@ -72,8 +72,7 @@ def melt_pcm_3d(
         regularization_smoothing_factor = 0.025,
         adaptive = True,
         adaptive_metric = 'phase_only',
-        adaptive_solver_tolerance = 1.e-4,
-        nlp_relative_tolerance = 1.e-8,
+        adaptive_solver_tolerance = 1.e-2,
         nlp_max_iterations = nlp_max_iterations,
         nlp_relaxation = nlp_relaxation,
         initial_values_expression = (
@@ -81,7 +80,7 @@ def melt_pcm_3d(
             "0.",
             "0.",
             "0.",
-            "("+str(T_hot)+" - "+str(T_cold)+")*(x[0] < 0.001) + "+str(T_cold)),
+            "("+str(T_hot)+" - "+str(T_cold)+")*(x[0] < + " str(initial_pci_position) + ") + "+str(T_cold)),
         boundary_conditions = [
             {'subspace': 0, 'value_expression': ("0.", "0.", "0."), 'degree': 3,
                 'location_expression': "near(x[0],  0.) | near(x[0],  1.) | near(x[1], 0.) | near(x[1],  1.) | near(x[2], -0.2) | near(x[2], 0.2)",
