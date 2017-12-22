@@ -4,7 +4,8 @@ import phaseflow
 def melt_pcm_3d(
         initial_mesh_size = [1, 1, 1],
         dt = 1.e-3,
-        initial_hot_wall_refinement_cycles = 2,
+        regularization_smoothing_factor = 0.025,
+        initial_hot_wall_refinement_cycles = 4,
         output_dir='output/melt_pcm_3d',
         start_time=0.,
         end_time=0.02,
@@ -69,7 +70,7 @@ def melt_pcm_3d(
         start_time = start_time,
         end_time = end_time,
         temperature_of_fusion = 0.1,
-        regularization_smoothing_factor = 0.025,
+        regularization_smoothing_factor = regularization_smoothing_factor,
         adaptive = True,
         adaptive_metric = 'phase_only',
         adaptive_solver_tolerance = 1.e-2,
@@ -80,7 +81,7 @@ def melt_pcm_3d(
             "0.",
             "0.",
             "0.",
-            "("+str(T_hot)+" - "+str(T_cold)+")*(x[0] < + " str(initial_pci_position) + ") + "+str(T_cold)),
+            "(" + str(T_hot) + " - " + str(T_cold) + ")*(x[0] < + " + str(initial_pci_position) + ") + " + str(T_cold)),
         boundary_conditions = [
             {'subspace': 0, 'value_expression': ("0.", "0.", "0."), 'degree': 3,
                 'location_expression': "near(x[0],  0.) | near(x[0],  1.) | near(x[1], 0.) | near(x[1],  1.) | near(x[2], -0.2) | near(x[2], 0.2)",
@@ -104,7 +105,10 @@ def run_melt_pcm_3d():
         restart = False,
         restart_filepath = "",
         start_time = 0.,
-        nlp_relaxation = 0.8)
+        nlp_relaxation = 0.8,
+        dt = 1.e-3,
+        regularization_smoothing_factor = 0.05)
+        
     
 if __name__=='__main__':
 
