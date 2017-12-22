@@ -2,60 +2,97 @@ import fenics
 import phaseflow
         
 def melt_pcm_3d(
-        m = (10, 10, 1),
+        initial_mesh_size = [1, 1, 1],
         dt = 1.e-3,
-        initial_pci_refinement_cycles = 2,
-        max_pci_refinement_cycles_per_time = 6,
+        regularization_smoothing_factor = 0.025,
+        initial_hot_wall_refinement_cycles = 4,
         output_dir='output/melt_pcm_3d',
         start_time=0.,
-        end_time=0.05,
-        nlp_divergence_threshold = 1.e12,
-        nlp_max_iterations = 50,
+        end_time=0.02,
+        nlp_max_iterations = 200,
+        nlp_relaxation = 0.8,
         restart=False,
         restart_filepath=''):
 
-    theta_hot = 1.
+    # Make the mesh.
+    mesh = fenics.BoxMesh(fenics.Point(0., 0., -0.2),
+            fenics.Point(1., 1., 0.2),
+            initial_mesh_size[0], initial_mesh_size[1], initial_mesh_size[2])
     
-    theta_cold = -0.1
+    class HotWall(fenics.SubDomain):
+        
+        def inside(self, x, on_boundary):
+        
+            return on_boundary and fenics.near(x[0], 0.)
+
+            
+    hot_wall = HotWall()
+    
+    for i in range(initial_hot_wall_refinement_cycles):
+        
+        cell_markers = fenics.CellFunction("bool", mesh, False)
+        
+        for cell in fenics.cells(mesh):
+            
+            found_left_boundary = False
+            
+            for vertex in fenics.vertices(cell):
+                
+                if fenics.near(vertex.x(0), 0.):
+                    
+                    found_left_boundary = True
+                    
+                    break
+                    
+            if found_left_boundary:
+                
+                cell_markers[cell] = True
+                
+        mesh = fenics.refine(mesh, cell_markers)
+        
+        
+    #
+    T_hot = 1.
+    
+    T_cold = -0.1
+    
+    initial_pci_position = 1./float(initial_mesh_size[0])/2.**(initial_hot_wall_refinement_cycles - 1)
 
     w, mesh = phaseflow.run(
-        Ste = 1.,
-        Ra = 1.,
-        Pr = 1.,
-        mu_s = 1.e4,
-        mu_l = 1.,
-        g = (0., -1., 0.),
-        mesh = fenics.BoxMesh(fenics.Point(0., 0., -0.2),
-            fenics.Point(1., 1., 0.2),
-            m[0], m[1], m[2]),
-        time_step_bounds = dt,
+        stefan_number = 1.,
+        rayleigh_number = 1.e6,
+        prandtl_number = 0.71,
+        solid_viscosity = 1.e4,
+        liquid_viscosity = 1.,
+        gravity = (0., -1., 0.),
+        mesh = mesh,
+        time_step_size = dt,
         start_time = start_time,
         end_time = end_time,
-        stop_when_steady = True,
-        regularization = {'T_f': 0.1, 'r': 0.05},
-        initial_pci_refinement_cycles = initial_pci_refinement_cycles,
-        max_pci_refinement_cycles_per_time = max_pci_refinement_cycles_per_time,
-        minimum_cell_diameter = 0.01,
+        temperature_of_fusion = 0.1,
+        regularization_smoothing_factor = regularization_smoothing_factor,
+        adaptive = True,
+        adaptive_metric = 'phase_only',
+        adaptive_solver_tolerance = 1.e-2,
         nlp_max_iterations = nlp_max_iterations,
-        nlp_divergence_threshold = nlp_divergence_threshold,
+        nlp_relaxation = nlp_relaxation,
         initial_values_expression = (
             "0.",
             "0.",
             "0.",
             "0.",
-            "("+str(theta_hot)+" - "+str(theta_cold)+")*(x[0] < 0.001) + "+str(theta_cold)),
+            "(" + str(T_hot) + " - " + str(T_cold) + ")*(x[0] < + " + str(initial_pci_position) + ") + " + str(T_cold)),
         boundary_conditions = [
             {'subspace': 0, 'value_expression': ("0.", "0.", "0."), 'degree': 3,
                 'location_expression': "near(x[0],  0.) | near(x[0],  1.) | near(x[1], 0.) | near(x[1],  1.) | near(x[2], -0.2) | near(x[2], 0.2)",
                 'method': "topological"},
-            {'subspace': 2, 'value_expression': str(theta_hot), 'degree': 2,
+            {'subspace': 2, 'value_expression': str(T_hot), 'degree': 2,
                 'location_expression': "near(x[0],  0.)",
                 'method': "topological"},
-            {'subspace': 2, 'value_expression': str(theta_cold), 'degree': 2,
+            {'subspace': 2, 'value_expression': str(T_cold), 'degree': 2,
                 'location_expression': "near(x[0],  1.)",
                 'method': "topological"}],
         output_dir = output_dir,
-        debug = True,
         restart = restart,
         restart_filepath = restart_filepath)
 
@@ -64,8 +101,14 @@ def melt_pcm_3d(
     
 def run_melt_pcm_3d():
     
-    w, mesh = melt_pcm_3d(output_dir = 'output/melt_pcm_3d')
-    
+    w, mesh = melt_pcm_3d(output_dir = "output/melt_pcm_3d/", end_time = 0.02, nlp_max_iterations = 200,
+        restart = False,
+        restart_filepath = "",
+        start_time = 0.,
+        nlp_relaxation = 0.8,
+        dt = 1.e-3,
+        regularization_smoothing_factor = 0.05)
+        
     
 if __name__=='__main__':
 
