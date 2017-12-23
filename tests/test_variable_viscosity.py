@@ -84,8 +84,7 @@ def test_variable_viscosity__nightly():
         initial_values_expression = (lid, "0.", "0.", "1. - 2.*(x[1] <= 0.)"),
         boundary_conditions = [
             {'subspace': 0, 'value_expression': ("1.", "0."), 'degree': 3, 'location_expression': lid, 'method': 'topological'},
-            {'subspace': 0, 'value_expression': ("0.", "0."), 'degree': 3, 'location_expression': fixed_walls, 'method': 'topological'},
-            {'subspace': 1, 'value_expression': "0.", 'degree': 2, 'location_expression': left_middle, 'method': 'pointwise'}])
+            {'subspace': 0, 'value_expression': ("0.", "0."), 'degree': 3, 'location_expression': fixed_walls, 'method': 'topological'}])
     
     
     # Verify against the known solution.
