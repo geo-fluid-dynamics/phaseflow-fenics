@@ -35,7 +35,6 @@ def test_ghia1982_steady_lid_driven_cavity():
         mesh = fenics.UnitSquareMesh(fenics.dolfin.mpi_comm_world(), m, m, 'crossed'),
         end_time = 1.e12,
         time_step_size = 1.e12,
-        nlp_relative_tolerance = 1.e-4,
         liquid_viscosity = 0.01,
         gravity = (0., 0.),
         stefan_number = 1.e16,
@@ -43,9 +42,7 @@ def test_ghia1982_steady_lid_driven_cavity():
         initial_values_expression = (lid, "0.", "0.", "1."),
         boundary_conditions = [
             {'subspace': 0, 'value_expression': ("1.", "0."), 'degree': 3, 'location_expression': lid, 'method': 'topological'},
-            {'subspace': 0, 'value_expression': ("0.", "0."), 'degree': 3, 'location_expression': fixed_walls, 'method': 'topological'},
-            {'subspace': 1, 'value_expression': "0.", 'degree': 2, 'location_expression': bottom_left_corner, 'method': 'pointwise'},
-            {'subspace': 2, 'value_expression': "1.", 'degree': 2, 'location_expression': bottom_left_corner, 'method': 'pointwise'}])
+            {'subspace': 0, 'value_expression': ("0.", "0."), 'degree': 3, 'location_expression': fixed_walls, 'method': 'topological'}])
 
     verify_against_ghia1982(w, mesh)
 

@@ -33,13 +33,13 @@ def test_variable_viscosity__nightly():
 
     ymin = -0.25
     
-    fixed_walls = "near(x[0],  0.) | near(x[0],  1.) | near(x[1],  '+str(ymin)+')"
+    fixed_walls = "near(x[0],  0.) | near(x[0],  1.) | near(x[1],  " + str(ymin) + ")"
 
     left_middle = "near(x[0], 0.) && near(x[1], 0.5)"
     
     output_dir = "output/test_variable_viscosity"
     
-    mesh = fenics.RectangleMesh(fenics.Point(0., ymin), fenics.Point(1., 1.), 20, 25, 'crossed')
+    mesh = fenics.RectangleMesh(fenics.Point(0., ymin), fenics.Point(1., 1.), 20, 25, "crossed")
     
     
     # Refine the initial PCI.
@@ -79,7 +79,7 @@ def test_variable_viscosity__nightly():
         regularization_smoothing_factor = 0.01,
         gravity = (0., 0.),
         stefan_number = 1.e16,
-        adaptive = True,
+        adaptive = False,
         output_dir = output_dir,
         initial_values_expression = (lid, "0.", "0.", "1. - 2.*(x[1] <= 0.)"),
         boundary_conditions = [
