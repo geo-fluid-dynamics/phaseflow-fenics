@@ -69,7 +69,7 @@ def test_variable_viscosity__nightly():
     w, mesh = phaseflow.run(
         mesh = mesh,
         end_time = 20.,
-        time_step_size = 4.,
+        time_step_size = 10.,
         stop_when_steady = True,
         steady_relative_tolerance = 1.e-4,
         thermal_conductivity = 0.,
