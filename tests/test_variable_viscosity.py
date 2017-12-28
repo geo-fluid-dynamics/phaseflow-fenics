@@ -4,7 +4,7 @@ from .context import phaseflow
 import fenics
 
 
-def verify_against_ghia1982(w, mesh):
+def verify_against_ghia1982(solution):
 
     data = {'Re': 100, 'x': 0.5,
         'y': [1.0000, 0.9766, 0.9688, 0.9609, 0.9531, 0.8516, 0.7344, 0.6172, 0.5000, 0.4531, 0.2813, 
@@ -12,22 +12,16 @@ def verify_against_ghia1982(w, mesh):
         'ux': [1.0000, 0.8412, 0.7887, 0.7372, 0.6872, 0.2315, 0.0033, -0.1364, -0.2058, -0.2109, -0.1566, 
                -0.1015, -0.0643, -0.0478, -0.0419, -0.0372, 0.0000]}
     
-    bbt = mesh.bounding_box_tree()
-    
     for i, true_ux in enumerate(data['ux']):
     
-        p = fenics.Point(data['x'], data['y'][i])
+        values = solution.leaf_node()(fenics.Point(data['x'], data['y'][i]))
         
-        if bbt.collides_entity(p):
+        ux = values[0]
         
-            wval = w(p)
-            
-            ux = wval[0]
-            
-            assert(abs(ux - true_ux) < 2.e-2)
+        assert(abs(ux - true_ux) < 2.e-2)
             
 
-def test_variable_viscosity__nightly():
+def test_variable_viscosity():
 
     lid = "near(x[1],  1.)"
 
@@ -69,9 +63,7 @@ def test_variable_viscosity__nightly():
     w, mesh = phaseflow.run(
         mesh = mesh,
         end_time = 20.,
-        time_step_size = 1.,
-        stop_when_steady = True,
-        steady_relative_tolerance = 1.e-4,
+        time_step_size = 20.,
         thermal_conductivity = 0.,
         liquid_viscosity = 0.01,
         solid_viscosity = 1.e6,
@@ -84,15 +76,14 @@ def test_variable_viscosity__nightly():
         initial_values_expression = (lid, "0.", "0.", "1. - 2.*(x[1] <= 0.)"),
         boundary_conditions = [
             {'subspace': 0, 'value_expression': ("1.", "0."), 'degree': 3, 'location_expression': lid, 'method': 'topological'},
-            {'subspace': 0, 'value_expression': ("0.", "0."), 'degree': 3, 'location_expression': fixed_walls, 'method': 'topological'},
-            {'subspace': 1, 'value_expression': "0.", 'degree': 2, 'location_expression': left_middle, 'method': 'pointwise'}])
+            {'subspace': 0, 'value_expression': ("0.", "0."), 'degree': 3, 'location_expression': fixed_walls, 'method': 'topological'}])
     
     
     # Verify against the known solution.
-    verify_against_ghia1982(w, mesh)
+    verify_against_ghia1982(w)
 
     
 if __name__=='__main__':
 
-    test_variable_viscosity__nightly()
+    test_variable_viscosity()
     
