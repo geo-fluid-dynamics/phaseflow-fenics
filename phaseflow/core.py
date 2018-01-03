@@ -55,12 +55,12 @@ def write_solution(solution_file, w_k, time):
         solution_file.write(var, time)
         
 
-def read_solution(solution_filepath):
-    """Read the solution, perhaps to restart."""
+def read_checkpoint(checkpoint_filepath):
+    """Read the checkpoint solution and time, perhaps to restart."""
 
     mesh = fenics.Mesh()
         
-    with fenics.HDF5File(mesh.mpi_comm(), restart_filepath, "r") as h5:
+    with fenics.HDF5File(mesh.mpi_comm(), checkpoint_filepath, "r") as h5:
     
         h5.read(mesh, "mesh", True)
     
@@ -70,11 +70,11 @@ def read_solution(solution_filepath):
 
     w = fenics.Function(W)
 
-    with fenics.HDF5File(mesh.mpi_comm(), restart_filepath, "r") as h5:
+    with fenics.HDF5File(mesh.mpi_comm(), checkpoint_filepath, "r") as h5:
     
         h5.read(w, "w")
         
-    with h5py.File(restart_filepath, "r") as h5:
+    with h5py.File(checkpoint_filepath, "r") as h5:
             
         time = h5["t"].value
         
@@ -128,9 +128,7 @@ def run(output_dir = "output/wang2010_natural_convection_air",
         nlp_absolute_tolerance = 1.e-8,
         nlp_relative_tolerance = 1.e-8,
         nlp_max_iterations = 50,
-        nlp_relaxation = 1.,
-        restart = False,
-        restart_filepath = ""):
+        nlp_relaxation = 1.):
     """Run Phaseflow.
     
     
@@ -419,10 +417,10 @@ def run(output_dir = "output/wang2010_natural_convection_air",
             write_solution(solution_file, w_k, time)
             
             
-            # Write checkpoint/restart files.
-            restart_filepath = output_dir + "/restart_t" + str(time) + ".h5"
+            # Write checkpoint files.
+            checkpoint_filepath = output_dir + "/checkpoint_t" + str(time) + ".h5"
             
-            with fenics.HDF5File(fenics.mpi_comm_world(), restart_filepath, "w") as h5:
+            with fenics.HDF5File(fenics.mpi_comm_world(), checkpoint_filepath, "w") as h5:
                 
                 h5.write(mesh.leaf_node(), "mesh")
             
@@ -430,7 +428,7 @@ def run(output_dir = "output/wang2010_natural_convection_air",
                 
             if fenics.MPI.rank(fenics.mpi_comm_world()) is 0:
             
-                with h5py.File(restart_filepath, "r+") as h5:
+                with h5py.File(checkpoint_filepath, "r+") as h5:
                     
                     h5.create_dataset("t", data=time)
             
@@ -460,7 +458,7 @@ def run(output_dir = "output/wang2010_natural_convection_air",
     # Return the interpolant to sample inside of Python.
     w_k.rename("w", "state")
     
-    return w_k, mesh
+    return w_k, time
     
     
 if __name__=="__main__":
