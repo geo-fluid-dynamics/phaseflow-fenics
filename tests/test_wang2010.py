@@ -42,12 +42,27 @@ def verify_against_wang2010(w, mesh):
             assert(abs(ux - true_ux) < 2.e-2)
             
     
-output_dir = "output/test_wang2010_natural_convection_air/"
+def wang2010_natural_convection_air(output_dir = "output/wang2010_natural_convection_air",\
+        restart = False, start_time = 0., restart_filepath = ""):
 
+    w, mesh = phaseflow.run(output_dir=output_dir, stop_when_steady = True,
+        boundary_conditions = [
+            fenics.DirichletBC(W.sub(0), ("0.", "0."), 3,
+                "near(x[0],  0.) | near(x[0],  1.) | near(x[1], 0.) | near(x[1],  1.)"),
+            fenics.DirichletBC(W.sub(2), "0.5", 2,
+                "near(x[0],  0.)"),
+            fenics.DirichletBC(W.sub(2), "-0.5", 2,
+                "near(x[0],  1.)")])
+                
+    return w, mesh
+    
+
+output_dir = "output/test_wang2010_natural_convection_air/"
+    
 @pytest.mark.dependency()
 def test_wang2010_natural_convection_air():
     
-    w, mesh = phaseflow.run(output_dir=output_dir, stop_when_steady=True)
+    w, mesh = wang2010_natural_convection_air(output_dir=output_dir)
         
     verify_against_wang2010(w, mesh)
     
@@ -55,7 +70,7 @@ def test_wang2010_natural_convection_air():
 @pytest.mark.dependency(depends=["test_wang2010_natural_convection_air"])
 def test_wang2010_natural_convection_air_restart():
 
-    w, mesh = phaseflow.run(restart = True,
+    w, mesh = wang2010_natural_convection_air(restart = True,
         restart_filepath = output_dir+'restart_t0.06.h5',
         start_time = 0.06,
         output_dir=output_dir)

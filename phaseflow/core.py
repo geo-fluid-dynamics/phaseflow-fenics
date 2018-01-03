@@ -55,6 +55,32 @@ def write_solution(solution_file, w_k, time):
         solution_file.write(var, time)
         
 
+def read_solution(solution_filepath):
+    """Read the solution, perhaps to restart."""
+
+    mesh = fenics.Mesh()
+        
+    with fenics.HDF5File(mesh.mpi_comm(), restart_filepath, "r") as h5:
+    
+        h5.read(mesh, "mesh", True)
+    
+    W_ele = make_mixed_fe(mesh.ufl_cell())
+
+    W = fenics.FunctionSpace(mesh, W_ele)
+
+    w = fenics.Function(W)
+
+    with fenics.HDF5File(mesh.mpi_comm(), restart_filepath, "r") as h5:
+    
+        h5.read(w, "w")
+        
+    with h5py.File(restart_filepath, "r") as h5:
+            
+        time = h5["t"].value
+        
+    return w, time
+    
+
 def steady(W, w, w_n, steady_relative_tolerance):
     """Check if solution has reached an approximately steady state."""
     steady = False
@@ -89,17 +115,8 @@ def run(output_dir = "output/wang2010_natural_convection_air",
         penalty_parameter = 1.e-7,
         temperature_of_fusion = -1.e12,
         regularization_smoothing_factor = 0.005,
-        mesh = fenics.UnitSquareMesh(fenics.dolfin.mpi_comm_world(), 20, 20, "crossed"),
-        initial_values_expression = ("0.", "0.", "0.", "0.5 - x[0]"),
-        boundary_conditions = [{"subspace": 0,
-                "value_expression": ("0.", "0."), "degree": 3,
-                "location_expression": "near(x[0],  0.) | near(x[0],  1.) | near(x[1], 0.) | near(x[1],  1.)", "method": "topological"},
-            {"subspace": 2,
-                "value_expression": "0.5", "degree": 2, 
-                "location_expression": "near(x[0],  0.)", "method": "topological"},
-             {"subspace": 2,
-                "value_expression": "-0.5", "degree": 2, 
-                "location_expression": "near(x[0],  1.)", "method": "topological"}],
+        initial_values = [],
+        boundary_conditions = [],
         start_time = 0.,
         end_time = 10.,
         time_step_size = 1.e-3,
@@ -154,65 +171,23 @@ def run(output_dir = "output/wang2010_natural_convection_air",
         arguments_file.close()
     
     
+    # Use function space and mesh from initial values.
+    W = initial_values.function_space()
+    
+    mesh = W.mesh()
+    
+    
     # Check if 1D/2D/3D.
     dimensionality = mesh.type().dim()
     
     phaseflow.helpers.print_once("Running "+str(dimensionality)+"D problem")
     
     
-    # Initialize time.
-    if restart:
-    
-        with h5py.File(restart_filepath, "r") as h5:
-            
-            time = h5["t"].value
-            
-            assert(abs(time - start_time) < TIME_EPS)
-    
-    else:
-    
-        time = start_time
-    
-    
-    # Define the mixed finite element and the solution function space.
-    W_ele = make_mixed_fe(mesh.ufl_cell())
-    
-    W = fenics.FunctionSpace(mesh, W_ele)
-    
-    
     # Set the initial values.
-    if restart:
-            
-        mesh = fenics.Mesh()
+    w_n = initial_values
+       
+    u_n, p_n, T_n = fenics.split(w_n)
         
-        with fenics.HDF5File(mesh.mpi_comm(), restart_filepath, "r") as h5:
-        
-            h5.read(mesh, "mesh", True)
-        
-        W_ele = make_mixed_fe(mesh.ufl_cell())
-    
-        W = fenics.FunctionSpace(mesh, W_ele)
-    
-        w_n = fenics.Function(W)
-    
-        with fenics.HDF5File(mesh.mpi_comm(), restart_filepath, "r") as h5:
-        
-            h5.read(w_n, "w")
-    
-    else:
-
-        w_n = fenics.interpolate(fenics.Expression(initial_values_expression,
-            element=W_ele), W)
-            
-        
-    # Organize the boundary conditions.
-    bcs = []
-    
-    for item in boundary_conditions:
-    
-        bcs.append(fenics.DirichletBC(W.sub(item["subspace"]), item["value_expression"],
-            item["location_expression"], method=item["method"]))
-    
     
     # Set the variational form.
     """Set local names for math operators to improve readability."""
@@ -284,8 +259,6 @@ def run(output_dir = "output/wang2010_natural_convection_air",
     
     L = C/Ste  # Latent heat
     
-    u_n, p_n, T_n = fenics.split(w_n)
-
     w_w = fenics.TrialFunction(W)
     
     u_w, p_w, T_w = fenics.split(w_w)
@@ -366,7 +339,7 @@ def run(output_dir = "output/wang2010_natural_convection_air",
         assert(False)
         
     # Make the problem.
-    problem = fenics.NonlinearVariationalProblem(F, w_k, bcs, JF)
+    problem = fenics.NonlinearVariationalProblem(F, w_k, boundary_conditions, JF)
     
     
     # Make the solver.
@@ -407,6 +380,9 @@ def run(output_dir = "output/wang2010_natural_convection_air",
     with fenics.XDMFFile(output_dir + "/solution.xdmf") as solution_file:
 
     
+        time = start_time 
+        
+        
         # Write the initial values.
         write_solution(solution_file, w_n, time) 
 
