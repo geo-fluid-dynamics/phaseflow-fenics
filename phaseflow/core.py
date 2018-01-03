@@ -37,12 +37,11 @@ def make_mixed_fe(cell):
     return mixed_element
 
     
-def write_solution(solution_file, w_k, time):
+def write_solution(solution_file, w, time):
     """Write the solution to disk."""
-
-    phaseflow.helpers.print_once("Writing solution to HDF5+XDMF")
+    phaseflow.helpers.print_once("Writing solution to " + str(solution_file.name()))
     
-    velocity, pressure, temperature = w_k.leaf_node().split()
+    velocity, pressure, temperature = w.leaf_node().split()
     
     velocity.rename("u", "velocity")
     
@@ -55,6 +54,23 @@ def write_solution(solution_file, w_k, time):
         solution_file.write(var, time)
         
 
+def write_checkpoint(checkpoint_filepath, w, time):
+    """Write checkpoint file (with solution and time) to disk."""
+    phaseflow.helpers.print_once("Writing checkpoint file to " + checkpoint_filepath)
+    
+    with fenics.HDF5File(fenics.mpi_comm_world(), checkpoint_filepath, "w") as h5:
+                
+        h5.write(w.function_space().mesh().leaf_node(), "mesh")
+    
+        h5.write(w.leaf_node(), "w")
+        
+    if fenics.MPI.rank(fenics.mpi_comm_world()) is 0:
+    
+        with h5py.File(checkpoint_filepath, "r+") as h5:
+            
+            h5.create_dataset("t", data=time)
+        
+        
 def read_checkpoint(checkpoint_filepath):
     """Read the checkpoint solution and time, perhaps to restart."""
 
@@ -418,19 +434,9 @@ def run(output_dir = "output/wang2010_natural_convection_air",
             
             
             # Write checkpoint files.
-            checkpoint_filepath = output_dir + "/checkpoint_t" + str(time) + ".h5"
-            
-            with fenics.HDF5File(fenics.mpi_comm_world(), checkpoint_filepath, "w") as h5:
-                
-                h5.write(mesh.leaf_node(), "mesh")
-            
-                h5.write(w_k.leaf_node(), "w")
-                
-            if fenics.MPI.rank(fenics.mpi_comm_world()) is 0:
-            
-                with h5py.File(checkpoint_filepath, "r+") as h5:
-                    
-                    h5.create_dataset("t", data=time)
+            write_checkpoint(checkpoint_filepath = output_dir + "/checkpoint_t" + str(time) + ".h5",
+                w = w_k,
+                time = time)
             
             
             # Check for steady state.

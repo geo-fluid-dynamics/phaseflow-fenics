@@ -38,8 +38,9 @@ def verify_against_michalek2003(w):
             
 def heat_driven_cavity_water(
         initial_values = None,
-        output_dir = "output/test_heat_driven_cavity_water",
-        start_time = 0., end_time = 10., time_step_size = 0.001):
+        output_dir = "output/test_heat_driven_cavity_water/",
+        start_time = 0., end_time = 10., time_step_size = 0.001,
+        steady_relative_tolerance = 1.e-5):
     
     m = 40
 
@@ -112,6 +113,7 @@ def heat_driven_cavity_water(
         W = initial_values.function_space()
         
     w, time = phaseflow.run(
+        output_dir = output_dir,
         rayleigh_number = Ra,
         prandtl_number = Pr,
         stefan_number = 1.e16,
@@ -122,7 +124,7 @@ def heat_driven_cavity_water(
         m_B = m_B,
         ddT_m_B = ddT_m_B,
         stop_when_steady = True,
-        steady_relative_tolerance = 1.e-5,
+        steady_relative_tolerance = steady_relative_tolerance,
         initial_values = initial_values,
         boundary_conditions = [
             fenics.DirichletBC(W.sub(0), (0., 0.),
@@ -137,17 +139,30 @@ def heat_driven_cavity_water(
 
     
 def test_heat_driven_cavity_water():
-
-    w, time = heat_driven_cavity_water(end_time = 0.01)
     
-    """
-    w, mesh = natural_convection_water(restart=True,
-        restart_filepath='output/test_natural_convection_water/restart_t0.01.h5',
-        start_time = 0.01, time_step_size = 0.002,
-        output_dir = 'output/test_natural_convection_water/restart_t0.01/')
-        
-    verify_michalek2003_natural_convection_water(w, mesh)
-    """
+    w, time = heat_driven_cavity_water(output_dir = "output/test_heat_driven_cavity_water/",
+        time_step_size = 0.001,
+        end_time = 0.001)
+   
+    w, time = phaseflow.read_checkpoint("output/test_heat_driven_cavity_water/checkpoint_t0.001.h5")
+    
+    w, time = heat_driven_cavity_water(initial_values = w,
+        start_time = time,
+        time_step_size = 0.002,
+        end_time = 0.003,
+        output_dir="output/test_heat_driven_cavity_water/restart_t0.001/")
+
+    w, time = phaseflow.read_checkpoint(
+        "output/test_heat_driven_cavity_water/restart_t0.001/checkpoint_t0.003.h5")
+    
+    w, time = heat_driven_cavity_water(initial_values = w,
+        start_time = time,
+        time_step_size = 0.004,
+        steady_relative_tolerance = 1.e-3,
+        output_dir="output/test_heat_driven_cavity_water/restart_t0.003/")
+    
+    verify_against_michalek2003(w)
+    
     
 if __name__=='__main__':
 
