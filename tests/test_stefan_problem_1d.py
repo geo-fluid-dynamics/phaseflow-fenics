@@ -74,7 +74,7 @@ def stefan_problem(output_dir = "output/stefan_problem",
     
     initial_pci_position = 1./float(initial_uniform_cell_count)/2.**(initial_hot_wall_refinement_cycles - 1)
     
-    solution, mesh = phaseflow.run(
+    solution, time = phaseflow.run(
         output_dir = output_dir,
         prandtl_number = 1.,
         stefan_number = stefan_number,
