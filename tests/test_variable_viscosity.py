@@ -59,9 +59,14 @@ def test_variable_viscosity():
         mesh = mesh.child()
     
     
+    #
+    mixed_element = phaseflow.make_mixed_fe(mesh.ufl_cell())
+        
+    W = fenics.FunctionSpace(mesh, mixed_element)
+    
+    
     # Run the simulation.
-    w, mesh = phaseflow.run(
-        mesh = mesh,
+    w, time = phaseflow.run(
         end_time = 20.,
         time_step_size = 20.,
         thermal_conductivity = 0.,
@@ -73,10 +78,11 @@ def test_variable_viscosity():
         stefan_number = 1.e16,
         adaptive = False,
         output_dir = output_dir,
-        initial_values_expression = (lid, "0.", "0.", "1. - 2.*(x[1] <= 0.)"),
+        initial_values = fenics.interpolate(
+            fenics.Expression((lid, "0.", "0.", "1. - 2.*(x[1] <= 0.)"), element = mixed_element), W),
         boundary_conditions = [
-            {'subspace': 0, 'value_expression': ("1.", "0."), 'degree': 3, 'location_expression': lid, 'method': 'topological'},
-            {'subspace': 0, 'value_expression': ("0.", "0."), 'degree': 3, 'location_expression': fixed_walls, 'method': 'topological'}])
+            fenics.DirichletBC(W.sub(0), (1., 0.), lid),
+            fenics.DirichletBC(W.sub(0), (0., 0.), fixed_walls)])
     
     
     # Verify against the known solution.
