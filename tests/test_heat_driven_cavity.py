@@ -67,10 +67,11 @@ def heat_driven_cavity(output_dir = "output/heat_driven_cavity",
         mixed_element = phaseflow.make_mixed_fe(mesh.ufl_cell())
         
         W = fenics.FunctionSpace(mesh, mixed_element)
-        
+          
         initial_values = fenics.interpolate(
             fenics.Expression(
-                ("0.", "0.", "0.", str(T_hot) + " + x[0]*(" + str(T_cold) + " - " + str(T_hot) + ")"), 
+                ("0.", "0.", "0.", "T_hot + x[0]*(T_cold - T_hot)"),
+                T_hot = T_hot, T_cold = T_cold,
                 element = mixed_element),
             W)
     
