@@ -4,7 +4,7 @@ from .context import phaseflow
 import fenics
 
 
-def verify_michalek2003_natural_convection_water(w, mesh):
+def verify_against_michalek2003(w):
     """Verify directly against steady-state data from michalek2003 published in 
 
         @article{michalek2003simulations,
@@ -21,7 +21,7 @@ def verify_michalek2003_natural_convection_water(w, mesh):
         'x': [0.00, 0.05, 0.12, 0.23, 0.40, 0.59, 0.80, 0.88, 1.00],
         'theta': [1.00, 0.66, 0.56, 0.58, 0.59, 0.62, 0.20, 0.22, 0.00]}
     
-    bbt = mesh.bounding_box_tree()
+    bbt = w.function_space().mesh().bounding_box_tree()
     
     for i, true_theta in enumerate(verified_solution['theta']):
     
@@ -36,8 +36,9 @@ def verify_michalek2003_natural_convection_water(w, mesh):
             assert(abs(theta - true_theta) < 2.e-2)
 
             
-def natural_convection_water(restart = False, restart_filepath = '',
-        output_dir = 'output/test_natural_convection_water/',
+def heat_driven_cavity_water(
+        initial_values = None,
+        output_dir = "output/test_heat_driven_cavity_water",
         start_time = 0., end_time = 10., time_step_size = 0.001):
     
     m = 40
@@ -91,7 +92,26 @@ def natural_convection_water(restart = False, restart_filepath = '',
         return -Ra/(Pr*Re*Re)/(beta*(T_h - T_c))*(ddtheta_rho(T))/rho(theta_f)
         
 
-    w, mesh = phaseflow.run(
+    if initial_values is None:
+        
+        mesh = fenics.UnitSquareMesh(fenics.mpi_comm_world(), m, m, "crossed")
+        
+        mixed_element = phaseflow.make_mixed_fe(mesh.ufl_cell())
+        
+        W = fenics.FunctionSpace(mesh, mixed_element)
+        
+        initial_values = fenics.interpolate(
+            fenics.Expression(
+                ("0.", "0.", "0.", "theta_hot + x[0]*(theta_cold - theta_hot)"),
+                theta_hot = theta_hot, theta_cold = theta_cold,
+                element = mixed_element),
+            W)
+            
+    else:
+    
+        W = initial_values.function_space()
+        
+    w, time = phaseflow.run(
         rayleigh_number = Ra,
         prandtl_number = Pr,
         stefan_number = 1.e16,
@@ -101,39 +121,35 @@ def natural_convection_water(restart = False, restart_filepath = '',
         adaptive = False,
         m_B = m_B,
         ddT_m_B = ddT_m_B,
-        mesh = fenics.UnitSquareMesh(m, m, 'crossed'),
         stop_when_steady = True,
         steady_relative_tolerance = 1.e-5,
-        initial_values_expression = (
-            "0.",
-            "0.",
-            "0.",
-            str(theta_hot)+"*near(x[0],  0.) + "+str(theta_cold)+"*near(x[0],  1.)"),
+        initial_values = initial_values,
         boundary_conditions = [
-            {'subspace': 0, 'value_expression': ("0.", "0."), 'degree': 3, 'location_expression': "near(x[0],  0.) | near(x[0],  1.) | near(x[1], 0.) | near(x[1],  1.)", 'method': "topological"},
-            {'subspace': 2, 'value_expression':str(theta_hot), 'degree': 2, 'location_expression': "near(x[0],  0.)", 'method': "topological"},
-            {'subspace': 2, 'value_expression':str(theta_cold), 'degree': 2, 'location_expression': "near(x[0],  1.)", 'method': "topological"}],
+            fenics.DirichletBC(W.sub(0), (0., 0.),
+                "near(x[0],  0.) | near(x[0],  1.) | near(x[1], 0.) | near(x[1],  1.)"),
+            fenics.DirichletBC(W.sub(2), theta_hot, "near(x[0],  0.)"),
+            fenics.DirichletBC(W.sub(2), theta_cold, "near(x[0],  1.)")],
         time_step_size = time_step_size,
         start_time = start_time,
-        end_time = end_time,
-        output_dir = "output/test_natural_convection_water")
+        end_time = end_time)
     
-    return w, mesh
+    return w, time
 
     
-def test_natural_convection_water__nightly():
+def test_heat_driven_cavity_water():
 
-    w, mesh = natural_convection_water(end_time = 0.01)
+    w, time = heat_driven_cavity_water(end_time = 0.01)
     
+    """
     w, mesh = natural_convection_water(restart=True,
         restart_filepath='output/test_natural_convection_water/restart_t0.01.h5',
         start_time = 0.01, time_step_size = 0.002,
         output_dir = 'output/test_natural_convection_water/restart_t0.01/')
         
     verify_michalek2003_natural_convection_water(w, mesh)
-
+    """
     
 if __name__=='__main__':
 
-    test_natural_convection_water__nightly()
+    test_heat_driven_cavity_water()
     
