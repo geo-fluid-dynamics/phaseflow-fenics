@@ -37,11 +37,38 @@ def make_mixed_fe(cell):
     return mixed_element
 
     
-def write_solution(solution_file, w, time):
-    """Write the solution to disk."""
-    phaseflow.helpers.print_once("Writing solution to " + str(solution_file.name()))
+def write_solution(solution_file, solution, time, solution_filepath):
+    """Write the solution to disk.
     
-    velocity, pressure, temperature = w.leaf_node().split()
+    Parameters
+    ----------
+    solution_file : fenics.XDMFFile
+    
+        write_solution should have been called from within the context of an open fenics.XDMFFile.
+    
+    solution : fenics.Function
+    
+        The FEniCS function where the solution is stored.
+    
+    time : float
+    
+        The time corresponding to the time-dependent solution.
+    
+    solution_filepath : str
+    
+        This is needed because fenics.XDMFFile does not appear to have a method for providing the file path.
+        With a Python file, one can simply do
+        
+            File = open("foo.txt", "w")
+            
+            File.name
+            
+        But fenics.XDMFFile.name returns a reference to something done with SWIG.
+    
+    """
+    phaseflow.helpers.print_once("Writing solution to " + str(solution_filepath))
+    
+    velocity, pressure, temperature = solution.leaf_node().split()
     
     velocity.rename("u", "velocity")
     
@@ -391,14 +418,15 @@ def run(output_dir = "output/wang2010_natural_convection_air",
     
     
     # Open a context manager for the output file.
-    with fenics.XDMFFile(output_dir + "/solution.xdmf") as solution_file:
-
+    solution_filepath = output_dir + "/solution.xdmf"
     
+    with fenics.XDMFFile(solution_filepath) as solution_file:
+
         time = start_time 
         
         
         # Write the initial values.
-        write_solution(solution_file, w_n, time) 
+        write_solution(solution_file, w_n, time, solution_filepath) 
 
         if start_time >= end_time - TIME_EPS:
     
@@ -430,7 +458,7 @@ def run(output_dir = "output/wang2010_natural_convection_air",
             
             phaseflow.helpers.print_once("Reached time t = " + str(time))
             
-            write_solution(solution_file, w_k, time)
+            write_solution(solution_file, w_k, time, solution_filepath)
             
             
             # Write checkpoint files.
