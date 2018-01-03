@@ -3,30 +3,22 @@ from builtins import range
 from .context import phaseflow
 
 import fenics
-import scipy.optimize as opt
 
-""" Melting data From Kai's MATLAB script"""
-melting_data = [
-    {'Ste': 1., 'time': 0.01, 'true_pci_pos': 0.075551957640682}, 
-    {'Ste': 0.1, 'time': 0.01, 'true_pci_pos': 0.037826726426565},
-    {'Ste': 0.01, 'time': 0.1, 'true_pci_pos': 0.042772111844781}] 
+def verify_against_analytical(solution):
+    """ Verify again analytical solution from Kai's MATLAB script."""
+    analytical_solution = {'Ste': 0.045, 'time': 0.10, 'true_pci_pos': 0.094,
+        'x': [0.00, 0.025, 0.050, 0.075, 0.10, 0.5, 1.], 
+        'T': [1.0, 0.73, 0.47, 0.20, 0.00, -0.01, -0.01]}
     
-"""Solidification datat from MATLAB script solving Worster2000"""
-solidification_data = [{'Ste': 0.125, 'time': 1., 'true_pci_pos': 0.49}] 
-
-def verify_pci_position(true_pci_position, r, w):
+    for x, true_T in zip(analytical_solution['x'], analytical_solution['T']):
     
-    def theta(x):
+        values = solution.leaf_node()(fenics.Point(x))
         
-        wval = w.leaf_node()(fenics.Point(x))
+        T = values[2]
         
-        return wval[2]
+        assert(abs(T - true_T) < 1.e-2)
+        
     
-    pci_pos = opt.newton(theta, 0.1)
-    
-    assert(abs(pci_pos - true_pci_position) < r)
-    
-
 def refine_near_left_boundary(mesh, cycles):
     """ Refine mesh near the left boundary.
     The usual approach of using SubDomain and EdgeFunction isn't appearing to work
@@ -48,126 +40,87 @@ def refine_near_left_boundary(mesh, cycles):
                     
                     found_left_boundary = True
                     
+                    break
+                    
             if found_left_boundary:
                 
                 cell_markers[cell] = True
                 
-                break # There should only be one such point.
+                break # There should only be one such point in 1D.
                 
         mesh = fenics.refine(mesh, cell_markers)
         
     return mesh
     
     
-def stefan_problem(Ste = 1.,
-        theta_h = 1.,
-        theta_c = -1.,
-        r = 0.005,
-        dt = 0.001,
-        end_time = 0.01,
+def stefan_problem(output_dir = "output/stefan_problem",
+        stefan_number = 0.045,
+        T_h = 1.,
+        T_c = -0.01,
+        regularization_smoothing_factor = 0.005,
+        time_step_size = 0.001,
+        end_time = 0.1,
         initial_uniform_cell_count = 1,
-        hot_boundary_refinement_cycles = 10):
+        initial_hot_wall_refinement_cycles = 10,
+        adaptive = True):
     
     mesh = fenics.UnitIntervalMesh(initial_uniform_cell_count)
     
-    mesh = refine_near_left_boundary(mesh, hot_boundary_refinement_cycles)
+    mesh = refine_near_left_boundary(mesh, initial_hot_wall_refinement_cycles)
     
-    w, mesh = phaseflow.run(
-        output_dir = "output/test_stefan_problem_Ste" + str(Ste).replace(".", "p") + "/",
-        prandtl_number = 1.,
-        stefan_number = Ste,
-        gravity = [0.],
-        mesh = mesh,
-        initial_values_expression = (
-            "0.",
-            "0.",
-            "("+str(theta_h)+" - "+str(theta_c)+")*near(x[0],  0.) + "+str(theta_c)),
-        boundary_conditions = [
-            {'subspace': 0, 'value_expression': [0.], 'degree': 3, 'location_expression': "near(x[0],  0.) | near(x[0],  1.)", 'method': "topological"},
-            {'subspace': 2, 'value_expression': theta_h, 'degree': 2, 'location_expression': "near(x[0],  0.)", 'method': "topological"},
-            {'subspace': 2, 'value_expression': theta_c, 'degree': 2, 'location_expression': "near(x[0],  1.)", 'method': "topological"}],
-        temperature_of_fusion = 0.01,
-        regularization_smoothing_factor = r,
-        nlp_relative_tolerance = 1.e-8,
-        adaptive = True,
-        adaptive_solver_tolerance = 1.e-8,
-        end_time = end_time,
-        time_step_size = dt)
+    mixed_element = phaseflow.make_mixed_fe(mesh.ufl_cell())
         
-    return w
-        
-
-def test_stefan_problem_Ste1():
+    function_space = fenics.FunctionSpace(mesh, mixed_element)
     
-    Ste = 1.
+    initial_pci_position = 1./float(initial_uniform_cell_count)/2.**(initial_hot_wall_refinement_cycles - 1)
     
-    r = 0.005
-    
-    w = stefan_problem(Ste=Ste, r=r, dt=0.001, end_time = 0.01, initial_uniform_cell_count=1)
-    
-    """ Verify against solution from Kai's MATLAB script. """
-    verify_pci_position(true_pci_position=0.0755, r=r, w=w)
-
-    
-def test_stefan_problem_Ste0p01__nightly():
-
-    Ste = 0.01
-    
-    r = 0.1
-    
-    w = stefan_problem(Ste=Ste, r=r, dt=1.e-4, end_time = 0.1, initial_uniform_cell_count=100)
-    
-    """ Verify against solution from Kai's MATLAB script. """
-    verify_pci_position(true_pci_position=0.04277, r=r, w=w)
-
-
-def test_stefan_problem_solidify__nightly(Ste = 0.125,
-        theta_h = 0.01,
-        theta_c = -1.,
-        theta_f = 0.,
-        r = 0.01,
-        dt = 0.01,
-        end_time = 1.,
-        nlp_absolute_tolerance = 1.e-4,
-        initial_uniform_cell_count = 100,
-        cool_boundary_refinement_cycles = 0):
-    
-    mesh = fenics.UnitIntervalMesh(initial_uniform_cell_count)
-    
-    mesh = refine_near_left_boundary(mesh, cool_boundary_refinement_cycles)
-    
-    w, mesh = phaseflow.run(
-        output_dir = "output/test_stefan_problem_solidify/dt" + str(dt) + 
-            "/tol" + str(nlp_absolute_tolerance) + "/",
+    solution, time = phaseflow.run(
+        output_dir = output_dir,
         prandtl_number = 1.,
-        stefan_number = Ste,
+        stefan_number = stefan_number,
         gravity = [0.],
-        mesh = mesh,
-        initial_values_expression = (
-            "0.",
-            "0.",
-            "("+str(theta_c)+" - "+str(theta_h)+")*near(x[0],  0.) + "+str(theta_h)),
+        initial_values = fenics.interpolate(
+            fenics.Expression(
+                ("0.", "0.", "(T_h - T_c)*(x[0] < initial_pci_position) + T_c"),
+                T_h = T_h, T_c = T_c, initial_pci_position = initial_pci_position,
+                element=mixed_element),
+            function_space),
         boundary_conditions = [
-            {'subspace': 0, 'value_expression': [0.], 'degree': 3, 'location_expression': "near(x[0],  0.) | near(x[0],  1.)", 'method': "topological"},
-            {'subspace': 2, 'value_expression': theta_c, 'degree': 2, 'location_expression': "near(x[0],  0.)", 'method': "topological"},
-            {'subspace': 2, 'value_expression': theta_h, 'degree': 2, 'location_expression': "near(x[0],  1.)", 'method': "topological"}],
-        temperature_of_fusion = theta_f,
-        regularization_smoothing_factor = r,
-        nlp_absolute_tolerance = nlp_absolute_tolerance,
-        adaptive = True,
-        adaptive_solver_tolerance = 1.e-8,
+            fenics.DirichletBC(function_space.sub(0), [0.], "near(x[0],  0.) | near(x[0],  1.)"),
+            fenics.DirichletBC(function_space.sub(2), T_h, "near(x[0],  0.)"),
+            fenics.DirichletBC(function_space.sub(2), T_c, "near(x[0],  1.)")],
+        temperature_of_fusion = 0.,
+        regularization_smoothing_factor = regularization_smoothing_factor,
+        adaptive = adaptive,
+        adaptive_metric = "phase_only",
+        adaptive_solver_tolerance = 1.e-6,
         end_time = end_time,
-        time_step_size = dt)
+        time_step_size = time_step_size)
+        
+    return solution
+        
+        
+def test_stefan_problem_melt_Ste0p045_uniform_grid():
     
-    """ Verify against solution from MATLAB script solving Worster2000. """
-    verify_pci_position(true_pci_position=0.49, r=r, w=w)
+    solution = stefan_problem(output_dir = "output/test_stefan_problem_melt_Ste0p045_uniform_grid/",
+        initial_uniform_cell_count = 311, initial_hot_wall_refinement_cycles = 0,
+        adaptive = False)
+    
+    verify_against_analytical(solution)
+    
+    
+def test_stefan_problem_melt_Ste0p045_amr():
+    
+    solution = stefan_problem(output_dir = "output/test_stefan_problem_melt_Ste0p045_amr/",
+        initial_uniform_cell_count = 4, initial_hot_wall_refinement_cycles = 8,
+        adaptive = True)
+    
+    verify_against_analytical(solution)
 
     
 if __name__=='__main__':
     
-    test_stefan_problem_Ste1()
+    test_stefan_problem_melt_Ste0p045_uniform_grid()
     
-    test_stefan_problem_Ste0p01__nightly()
-    
-    test_stefan_problem_solidify__nightly()
+    test_stefan_problem_melt_Ste0p045_adaptive()
     

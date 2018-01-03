@@ -37,12 +37,38 @@ def make_mixed_fe(cell):
     return mixed_element
 
     
-def write_solution(solution_file, w_k, time):
-    """Write the solution to disk."""
-
-    phaseflow.helpers.print_once("Writing solution to HDF5+XDMF")
+def write_solution(solution_file, solution, time, solution_filepath):
+    """Write the solution to disk.
     
-    velocity, pressure, temperature = w_k.leaf_node().split()
+    Parameters
+    ----------
+    solution_file : fenics.XDMFFile
+    
+        write_solution should have been called from within the context of an open fenics.XDMFFile.
+    
+    solution : fenics.Function
+    
+        The FEniCS function where the solution is stored.
+    
+    time : float
+    
+        The time corresponding to the time-dependent solution.
+    
+    solution_filepath : str
+    
+        This is needed because fenics.XDMFFile does not appear to have a method for providing the file path.
+        With a Python file, one can simply do
+        
+            File = open("foo.txt", "w")
+            
+            File.name
+            
+        But fenics.XDMFFile.name returns a reference to something done with SWIG.
+    
+    """
+    phaseflow.helpers.print_once("Writing solution to " + str(solution_filepath))
+    
+    velocity, pressure, temperature = solution.leaf_node().split()
     
     velocity.rename("u", "velocity")
     
@@ -54,6 +80,49 @@ def write_solution(solution_file, w_k, time):
     
         solution_file.write(var, time)
         
+
+def write_checkpoint(checkpoint_filepath, w, time):
+    """Write checkpoint file (with solution and time) to disk."""
+    phaseflow.helpers.print_once("Writing checkpoint file to " + checkpoint_filepath)
+    
+    with fenics.HDF5File(fenics.mpi_comm_world(), checkpoint_filepath, "w") as h5:
+                
+        h5.write(w.function_space().mesh().leaf_node(), "mesh")
+    
+        h5.write(w.leaf_node(), "w")
+        
+    if fenics.MPI.rank(fenics.mpi_comm_world()) is 0:
+    
+        with h5py.File(checkpoint_filepath, "r+") as h5:
+            
+            h5.create_dataset("t", data=time)
+        
+        
+def read_checkpoint(checkpoint_filepath):
+    """Read the checkpoint solution and time, perhaps to restart."""
+
+    mesh = fenics.Mesh()
+        
+    with fenics.HDF5File(mesh.mpi_comm(), checkpoint_filepath, "r") as h5:
+    
+        h5.read(mesh, "mesh", True)
+    
+    W_ele = make_mixed_fe(mesh.ufl_cell())
+
+    W = fenics.FunctionSpace(mesh, W_ele)
+
+    w = fenics.Function(W)
+
+    with fenics.HDF5File(mesh.mpi_comm(), checkpoint_filepath, "r") as h5:
+    
+        h5.read(w, "w")
+        
+    with h5py.File(checkpoint_filepath, "r") as h5:
+            
+        time = h5["t"].value
+        
+    return w, time
+    
 
 def steady(W, w, w_n, steady_relative_tolerance):
     """Check if solution has reached an approximately steady state."""
@@ -89,17 +158,8 @@ def run(output_dir = "output/wang2010_natural_convection_air",
         penalty_parameter = 1.e-7,
         temperature_of_fusion = -1.e12,
         regularization_smoothing_factor = 0.005,
-        mesh = fenics.UnitSquareMesh(fenics.dolfin.mpi_comm_world(), 20, 20, "crossed"),
-        initial_values_expression = ("0.", "0.", "0.", "0.5 - x[0]"),
-        boundary_conditions = [{"subspace": 0,
-                "value_expression": ("0.", "0."), "degree": 3,
-                "location_expression": "near(x[0],  0.) | near(x[0],  1.) | near(x[1], 0.) | near(x[1],  1.)", "method": "topological"},
-            {"subspace": 2,
-                "value_expression": "0.5", "degree": 2, 
-                "location_expression": "near(x[0],  0.)", "method": "topological"},
-             {"subspace": 2,
-                "value_expression": "-0.5", "degree": 2, 
-                "location_expression": "near(x[0],  1.)", "method": "topological"}],
+        initial_values = [],
+        boundary_conditions = [],
         start_time = 0.,
         end_time = 10.,
         time_step_size = 1.e-3,
@@ -111,9 +171,7 @@ def run(output_dir = "output/wang2010_natural_convection_air",
         nlp_absolute_tolerance = 1.e-8,
         nlp_relative_tolerance = 1.e-8,
         nlp_max_iterations = 50,
-        nlp_relaxation = 1.,
-        restart = False,
-        restart_filepath = ""):
+        nlp_relaxation = 1.):
     """Run Phaseflow.
     
     
@@ -154,65 +212,23 @@ def run(output_dir = "output/wang2010_natural_convection_air",
         arguments_file.close()
     
     
+    # Use function space and mesh from initial values.
+    W = initial_values.function_space()
+    
+    mesh = W.mesh()
+    
+    
     # Check if 1D/2D/3D.
     dimensionality = mesh.type().dim()
     
     phaseflow.helpers.print_once("Running "+str(dimensionality)+"D problem")
     
     
-    # Initialize time.
-    if restart:
-    
-        with h5py.File(restart_filepath, "r") as h5:
-            
-            time = h5["t"].value
-            
-            assert(abs(time - start_time) < TIME_EPS)
-    
-    else:
-    
-        time = start_time
-    
-    
-    # Define the mixed finite element and the solution function space.
-    W_ele = make_mixed_fe(mesh.ufl_cell())
-    
-    W = fenics.FunctionSpace(mesh, W_ele)
-    
-    
     # Set the initial values.
-    if restart:
-            
-        mesh = fenics.Mesh()
+    w_n = initial_values
+       
+    u_n, p_n, T_n = fenics.split(w_n)
         
-        with fenics.HDF5File(mesh.mpi_comm(), restart_filepath, "r") as h5:
-        
-            h5.read(mesh, "mesh", True)
-        
-        W_ele = make_mixed_fe(mesh.ufl_cell())
-    
-        W = fenics.FunctionSpace(mesh, W_ele)
-    
-        w_n = fenics.Function(W)
-    
-        with fenics.HDF5File(mesh.mpi_comm(), restart_filepath, "r") as h5:
-        
-            h5.read(w_n, "w")
-    
-    else:
-
-        w_n = fenics.interpolate(fenics.Expression(initial_values_expression,
-            element=W_ele), W)
-            
-        
-    # Organize the boundary conditions.
-    bcs = []
-    
-    for item in boundary_conditions:
-    
-        bcs.append(fenics.DirichletBC(W.sub(item["subspace"]), item["value_expression"],
-            item["location_expression"], method=item["method"]))
-    
     
     # Set the variational form.
     """Set local names for math operators to improve readability."""
@@ -284,8 +300,6 @@ def run(output_dir = "output/wang2010_natural_convection_air",
     
     L = C/Ste  # Latent heat
     
-    u_n, p_n, T_n = fenics.split(w_n)
-
     w_w = fenics.TrialFunction(W)
     
     u_w, p_w, T_w = fenics.split(w_w)
@@ -366,7 +380,7 @@ def run(output_dir = "output/wang2010_natural_convection_air",
         assert(False)
         
     # Make the problem.
-    problem = fenics.NonlinearVariationalProblem(F, w_k, bcs, JF)
+    problem = fenics.NonlinearVariationalProblem(F, w_k, boundary_conditions, JF)
     
     
     # Make the solver.
@@ -404,11 +418,15 @@ def run(output_dir = "output/wang2010_natural_convection_air",
     
     
     # Open a context manager for the output file.
-    with fenics.XDMFFile(output_dir + "/solution.xdmf") as solution_file:
-
+    solution_filepath = output_dir + "/solution.xdmf"
     
+    with fenics.XDMFFile(solution_filepath) as solution_file:
+
+        time = start_time 
+        
+        
         # Write the initial values.
-        write_solution(solution_file, w_n, time) 
+        write_solution(solution_file, w_n, time, solution_filepath) 
 
         if start_time >= end_time - TIME_EPS:
     
@@ -440,23 +458,13 @@ def run(output_dir = "output/wang2010_natural_convection_air",
             
             phaseflow.helpers.print_once("Reached time t = " + str(time))
             
-            write_solution(solution_file, w_k, time)
+            write_solution(solution_file, w_k, time, solution_filepath)
             
             
-            # Write checkpoint/restart files.
-            restart_filepath = output_dir + "/restart_t" + str(time) + ".h5"
-            
-            with fenics.HDF5File(fenics.mpi_comm_world(), restart_filepath, "w") as h5:
-                
-                h5.write(mesh.leaf_node(), "mesh")
-            
-                h5.write(w_k.leaf_node(), "w")
-                
-            if fenics.MPI.rank(fenics.mpi_comm_world()) is 0:
-            
-                with h5py.File(restart_filepath, "r+") as h5:
-                    
-                    h5.create_dataset("t", data=time)
+            # Write checkpoint files.
+            write_checkpoint(checkpoint_filepath = output_dir + "/checkpoint_t" + str(time) + ".h5",
+                w = w_k,
+                time = time)
             
             
             # Check for steady state.
@@ -484,7 +492,7 @@ def run(output_dir = "output/wang2010_natural_convection_air",
     # Return the interpolant to sample inside of Python.
     w_k.rename("w", "state")
     
-    return w_k, mesh
+    return w_k, time
     
     
 if __name__=="__main__":

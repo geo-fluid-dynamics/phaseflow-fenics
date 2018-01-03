@@ -7,28 +7,23 @@ import fenics
         
 def test_1d_output():
 
-    T_h = 1.
+    mesh = fenics.UnitIntervalMesh(10)
     
-    T_c = -1.
+    mixed_element = phaseflow.make_mixed_fe(mesh.ufl_cell())
+        
+    W = fenics.FunctionSpace(mesh, mixed_element)
     
-    w = phaseflow.run(
+    boundaries = "near(x[0],  0.) | near(x[0],  1.)"
+    
+    w, time = phaseflow.run(
         output_dir = "output/test_1D_output/",
-        prandtl_number = 1.,
-        stefan_number = 1.,
-        gravity = [0.],
-        mesh = fenics.UnitIntervalMesh(1000),
-        initial_values_expression = (
-            "0.",
-            "0.",
-            "(" + str(T_h) + " - " + str(T_c) + ")*near(x[0],  0.) " + str(T_c)),
+        initial_values = fenics.interpolate(
+            fenics.Expression(("0.", "0.", "0."), element = mixed_element), W),
         boundary_conditions = [
-            {"subspace": 0, "value_expression": [0.], "degree": 3, "location_expression": "near(x[0],  0.) | near(x[0],  1.)", "method": "topological"},
-            {"subspace": 2, "value_expression": T_h, "degree": 2, "location_expression": "near(x[0],  0.)", "method": "topological"},
-            {"subspace": 2, "value_expression": T_c, "degree": 2, "location_expression": "near(x[0],  1.)", "method": "topological"}],
-        temperature_of_fusion = 0.01,
-        regularization_smoothing_factor = 0.005,
-        end_time = 0.001,
-        time_step_size = 0.001)
+            fenics.DirichletBC(W.sub(0), [0.], boundaries),
+            fenics.DirichletBC(W.sub(2), 0., boundaries)],
+        gravity = [0.],
+        end_time = 0.)
 
         
 def test_1d_velocity():
