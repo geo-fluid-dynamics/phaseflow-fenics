@@ -86,7 +86,6 @@ def stefan_problem(output_dir = "output/stefan_problem",
                 element=mixed_element),
             function_space),
         boundary_conditions = [
-            fenics.DirichletBC(function_space.sub(0), [0.], "near(x[0],  0.) | near(x[0],  1.)"),
             fenics.DirichletBC(function_space.sub(2), T_h, "near(x[0],  0.)"),
             fenics.DirichletBC(function_space.sub(2), T_c, "near(x[0],  1.)")],
         temperature_of_fusion = 0.,
