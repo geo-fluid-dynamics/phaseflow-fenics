@@ -12,7 +12,7 @@ def melt_toy_pcm(output_dir = "output/test_melt_toy_pcm/"):
     # Make the mesh.
     initial_mesh_size = 1
     
-    mesh = fenics.UnitSquareMesh(initial_mesh_size, initial_mesh_size, 'crossed')
+    mesh = fenics.UnitSquareMesh(initial_mesh_size, initial_mesh_size)
     
     initial_hot_wall_refinement_cycles = 6
     
@@ -47,7 +47,7 @@ def melt_toy_pcm(output_dir = "output/test_melt_toy_pcm/"):
     
     T_cold = -0.1
     
-    initial_pci_position = 0.001
+    initial_pci_position = 1./float(initial_mesh_size)/2.**(initial_hot_wall_refinement_cycles - 1)
     
     walls = "near(x[0],  0.) | near(x[0],  1.) | near(x[1], 0.) | near(x[1],  1.)"
     
@@ -62,7 +62,7 @@ def melt_toy_pcm(output_dir = "output/test_melt_toy_pcm/"):
         solid_viscosity = 1.e8,
         liquid_viscosity = 1.,
         time_step_size = 1.,
-        end_time = 10.,
+        end_time = 2.,
         stop_when_steady = True,
         temperature_of_fusion = T_f,
         regularization_smoothing_factor = 0.05,
