@@ -56,12 +56,12 @@ def melt_toy_pcm(output_dir = "output/test_melt_toy_pcm/"):
     cold_wall = "near(x[0],  1.)"
     
     w, mesh = phaseflow.run(
-        stefan_number = 1.,
+        stefan_number = 0.045,
         rayleigh_number = 3.27e5,
         prandtl_number = 56.2,
         solid_viscosity = 1.e4,
         liquid_viscosity = 1.,
-        time_step_size = 1.e-3,
+        time_step_size = 0.1,
         end_time = 0.02,
         stop_when_steady = True,
         temperature_of_fusion = T_f,
@@ -70,7 +70,8 @@ def melt_toy_pcm(output_dir = "output/test_melt_toy_pcm/"):
         adaptive_metric = 'phase_only',
         adaptive_solver_tolerance = 1.e-4,
         nlp_relative_tolerance = 1.e-8,
-        nlp_max_iterations = 200,
+        nlp_max_iterations = 50,
+        nlp_relaxation = 1.,
         initial_values = fenics.interpolate(
             fenics.Expression(
                 ("0.", "0.", "0.", "(T_hot - T_cold)*(x[0] < initial_pci_position) + T_cold"),
