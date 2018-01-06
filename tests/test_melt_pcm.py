@@ -59,7 +59,7 @@ def melt_toy_pcm(output_dir = "output/test_melt_toy_pcm/"):
         stefan_number = 0.045,
         rayleigh_number = 3.27e5,
         prandtl_number = 56.2,
-        solid_viscosity = 1.e4,
+        solid_viscosity = 1.e8,
         liquid_viscosity = 1.,
         time_step_size = 0.1,
         end_time = 0.02,
@@ -70,7 +70,7 @@ def melt_toy_pcm(output_dir = "output/test_melt_toy_pcm/"):
         adaptive_metric = 'phase_only',
         adaptive_solver_tolerance = 1.e-4,
         nlp_relative_tolerance = 1.e-8,
-        nlp_max_iterations = 50,
+        nlp_max_iterations = 100,
         nlp_relaxation = 1.,
         initial_values = fenics.interpolate(
             fenics.Expression(
