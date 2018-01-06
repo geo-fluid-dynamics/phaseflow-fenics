@@ -4,7 +4,7 @@ from .context import phaseflow
 import fenics
 import scipy.optimize as opt
 
-T_f = 0.1
+T_f = 0.01
 
 def melt_toy_pcm(output_dir = "output/test_melt_toy_pcm/"):
     
@@ -62,7 +62,7 @@ def melt_toy_pcm(output_dir = "output/test_melt_toy_pcm/"):
         solid_viscosity = 1.e8,
         liquid_viscosity = 1.,
         time_step_size = 0.1,
-        end_time = 0.02,
+        end_time = 10.,
         stop_when_steady = True,
         temperature_of_fusion = T_f,
         regularization_smoothing_factor = 0.05,
