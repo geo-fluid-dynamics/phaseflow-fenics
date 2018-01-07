@@ -301,10 +301,8 @@ def run(output_dir = "output/wang2010_natural_convection_air",
         b(u, psi_p) - psi_p*gamma*p
         + dot(psi_u, 1./Delta_t*(u - u_n) + f_B(T))
         + c(u, u, psi_u) + b(psi_u, p) + a(mu(T), u, psi_u)
-        + 1./Delta_t*(T - T_n)*psi_T
-        - dot(T*u, grad(psi_T)) 
-        + 1./Pr*dot(grad(T), grad(psi_T))
-        + 1./Delta_t*1./Ste*(P(T) - P(T_n))*psi_T
+        + 1./Delta_t*psi_T*(T - T_n + 1./Ste*(P(T) - P(T_n)))
+        + dot(grad(psi_T), 1./Pr*grad(T) - T*u)        
         )*fenics.dx
 
     def ddT_f_B(T):
