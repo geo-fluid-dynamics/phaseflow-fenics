@@ -336,11 +336,10 @@ def run(output_dir = "output/wang2010_natural_convection_air",
     u_k, p_k, T_k = fenics.split(w_k)
     
     JF = (
-        b(delta_u, psi_p) - gamma*delta_p*psi_p 
-        + dot(delta_u, psi_u)/Delta_t
-        + c(u_k, delta_u, psi_u) + c(delta_u, u_k, psi_u) + b(psi_u, delta_p)
-        + a(delta_T*dmu(T_k), u_k, psi_u) + a(mu(T_k), delta_u, psi_u) 
-        + dot(delta_T*ddT_f_B(T_k), psi_u)
+        b(delta_u, psi_p) - psi_p*gamma*delta_p 
+        + dot(psi_u, 1./Delta_t*delta_u + delta_T*ddT_f_B(T_k))
+        + c(u_k, delta_u, psi_u) + c(delta_u, u_k, psi_u) 
+        + b(psi_u, delta_p) + a(delta_T*dmu(T_k), u_k, psi_u) + a(mu(T_k), delta_u, psi_u) 
         + 1./Delta_t*delta_T*psi_T
         - dot(T_k*delta_u, grad(psi_T))
         - dot(delta_T*u_k, grad(psi_T))
