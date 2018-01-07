@@ -298,10 +298,9 @@ def run(output_dir = "output/wang2010_natural_convection_air",
     u, p, T = fenics.split(w)
 
     F = (
-        b(u, psi_p) - gamma*p*psi_p
-        + dot(u - u_n, psi_u)/Delta_t
+        b(u, psi_p) - psi_p*gamma*p
+        + dot(psi_u, 1./Delta_t*(u - u_n) + f_B(T))
         + c(u, u, psi_u) + b(psi_u, p) + a(mu(T), u, psi_u)
-        + dot(f_B(T), psi_u)
         + 1./Delta_t*(T - T_n)*psi_T
         - dot(T*u, grad(psi_T)) 
         + 1./Pr*dot(grad(T), grad(psi_T))
