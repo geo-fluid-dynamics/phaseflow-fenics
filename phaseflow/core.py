@@ -148,8 +148,6 @@ def run(output_dir = "output/wang2010_natural_convection_air",
         rayleigh_number = 1.e6,
         prandtl_number = 0.71,
         stefan_number = 0.045,
-        heat_capacity = 1.,
-        thermal_conductivity = 1.,
         liquid_viscosity = 1.,
         solid_viscosity = 1.e8,
         gravity = (0., -1.),
@@ -267,10 +265,6 @@ def run(output_dir = "output/wang2010_natural_convection_air",
     
     Ste = fenics.Constant(stefan_number)
     
-    C = fenics.Constant(heat_capacity)
-    
-    K = fenics.Constant(thermal_conductivity)
-
     g = fenics.Constant(gravity)
     
     def f_B(T):
@@ -298,7 +292,7 @@ def run(output_dir = "output/wang2010_natural_convection_air",
         return mu_s + (mu_l - mu_s)*P(T) # Variable viscosity.
     
     
-    L = C/Ste  # Latent heat
+    L = 1./Ste  # Latent heat
     
     v, q, phi = fenics.TestFunctions(W)
     
@@ -311,9 +305,9 @@ def run(output_dir = "output/wang2010_natural_convection_air",
         + dot(u - u_n, v)/Delta_t
         + c(u, u, v) + b(v, p) + a(mu(T), u, v)
         + dot(f_B(T), v)
-        + C/Delta_t*(T - T_n)*phi
-        - dot(C*T*u, grad(phi)) 
-        + K/Pr*dot(grad(T), grad(phi))
+        + 1./Delta_t*(T - T_n)*phi
+        - dot(T*u, grad(phi)) 
+        + 1./Pr*dot(grad(T), grad(phi))
         + 1./Delta_t*L*(P(T) - P(T_n))*phi
         )*fenics.dx
 
@@ -352,10 +346,10 @@ def run(output_dir = "output/wang2010_natural_convection_air",
         + c(u_k, delta_u, v) + c(delta_u, u_k, v) + b(v, delta_p)
         + a(delta_T*dmu(T_k), u_k, v) + a(mu(T_k), delta_u, v) 
         + dot(delta_T*ddT_f_B(T_k), v)
-        + C/Delta_t*delta_T*phi
-        - dot(C*T_k*delta_u, grad(phi))
-        - dot(C*delta_T*u_k, grad(phi))
-        + K/Pr*dot(grad(delta_T), grad(phi))
+        + 1./Delta_t*delta_T*phi
+        - dot(T_k*delta_u, grad(phi))
+        - dot(delta_T*u_k, grad(phi))
+        + 1./Pr*dot(grad(delta_T), grad(phi))
         + 1./Delta_t*L*delta_T*dP(T_k)*phi
         )*fenics.dx
 
