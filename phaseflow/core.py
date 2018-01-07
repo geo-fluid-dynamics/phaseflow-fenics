@@ -291,21 +291,21 @@ def run(output_dir = "output/wang2010_natural_convection_air",
     
         return mu_s + (mu_l - mu_s)*P(T) # Variable viscosity.
     
-    v, q, phi = fenics.TestFunctions(W)
+    psi_u, psi_p, psi_T = fenics.TestFunctions(W)
     
     w = fenics.Function(W)
     
     u, p, T = fenics.split(w)
 
     F = (
-        b(u, q) - gamma*p*q
-        + dot(u - u_n, v)/Delta_t
-        + c(u, u, v) + b(v, p) + a(mu(T), u, v)
-        + dot(f_B(T), v)
-        + 1./Delta_t*(T - T_n)*phi
-        - dot(T*u, grad(phi)) 
-        + 1./Pr*dot(grad(T), grad(phi))
-        + 1./Delta_t*1./Ste*(P(T) - P(T_n))*phi
+        b(u, psi_p) - gamma*p*psi_p
+        + dot(u - u_n, psi_u)/Delta_t
+        + c(u, u, psi_u) + b(psi_u, p) + a(mu(T), u, psi_u)
+        + dot(f_B(T), psi_u)
+        + 1./Delta_t*(T - T_n)*psi_T
+        - dot(T*u, grad(psi_T)) 
+        + 1./Pr*dot(grad(T), grad(psi_T))
+        + 1./Delta_t*1./Ste*(P(T) - P(T_n))*psi_T
         )*fenics.dx
 
     def ddT_f_B(T):
@@ -338,16 +338,16 @@ def run(output_dir = "output/wang2010_natural_convection_air",
     u_k, p_k, T_k = fenics.split(w_k)
     
     JF = (
-        b(delta_u, q) - gamma*delta_p*q 
-        + dot(delta_u, v)/Delta_t
-        + c(u_k, delta_u, v) + c(delta_u, u_k, v) + b(v, delta_p)
-        + a(delta_T*dmu(T_k), u_k, v) + a(mu(T_k), delta_u, v) 
-        + dot(delta_T*ddT_f_B(T_k), v)
-        + 1./Delta_t*delta_T*phi
-        - dot(T_k*delta_u, grad(phi))
-        - dot(delta_T*u_k, grad(phi))
-        + 1./Pr*dot(grad(delta_T), grad(phi))
-        + 1./Delta_t*1./Ste*delta_T*dP(T_k)*phi
+        b(delta_u, psi_p) - gamma*delta_p*psi_p 
+        + dot(delta_u, psi_u)/Delta_t
+        + c(u_k, delta_u, psi_u) + c(delta_u, u_k, psi_u) + b(psi_u, delta_p)
+        + a(delta_T*dmu(T_k), u_k, psi_u) + a(mu(T_k), delta_u, psi_u) 
+        + dot(delta_T*ddT_f_B(T_k), psi_u)
+        + 1./Delta_t*delta_T*psi_T
+        - dot(T_k*delta_u, grad(psi_T))
+        - dot(delta_T*u_k, grad(psi_T))
+        + 1./Pr*dot(grad(delta_T), grad(psi_T))
+        + 1./Delta_t*1./Ste*delta_T*dP(T_k)*psi_T
         )*fenics.dx
 
         
