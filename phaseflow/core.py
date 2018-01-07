@@ -291,9 +291,6 @@ def run(output_dir = "output/wang2010_natural_convection_air",
     
         return mu_s + (mu_l - mu_s)*P(T) # Variable viscosity.
     
-    
-    L = 1./Ste  # Latent heat
-    
     v, q, phi = fenics.TestFunctions(W)
     
     w = fenics.Function(W)
@@ -308,7 +305,7 @@ def run(output_dir = "output/wang2010_natural_convection_air",
         + 1./Delta_t*(T - T_n)*phi
         - dot(T*u, grad(phi)) 
         + 1./Pr*dot(grad(T), grad(phi))
-        + 1./Delta_t*L*(P(T) - P(T_n))*phi
+        + 1./Delta_t*1./Ste*(P(T) - P(T_n))*phi
         )*fenics.dx
 
     def ddT_f_B(T):
@@ -350,7 +347,7 @@ def run(output_dir = "output/wang2010_natural_convection_air",
         - dot(T_k*delta_u, grad(phi))
         - dot(delta_T*u_k, grad(phi))
         + 1./Pr*dot(grad(delta_T), grad(phi))
-        + 1./Delta_t*L*delta_T*dP(T_k)*phi
+        + 1./Delta_t*1./Ste*delta_T*dP(T_k)*phi
         )*fenics.dx
 
         
