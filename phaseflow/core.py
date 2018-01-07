@@ -274,13 +274,13 @@ def run(output_dir = "output/wang2010_natural_convection_air",
     
     gamma = fenics.Constant(penalty_parameter)
     
-    T_f = fenics.Constant(temperature_of_fusion)
+    T_r = fenics.Constant(temperature_of_fusion)
     
     r = fenics.Constant(regularization_smoothing_factor)
     
-    def P(T):
+    def phi(T):
     
-        return 0.5*(1. - fenics.tanh((T_f - T)/r))  # Regularized phase field.
+        return 0.5*(1. + fenics.tanh((T_r - T)/r))  # Regularized phase field.
     
     
     mu_l = fenics.Constant(liquid_viscosity)
@@ -289,7 +289,7 @@ def run(output_dir = "output/wang2010_natural_convection_air",
     
     def mu(T):
     
-        return mu_s + (mu_l - mu_s)*P(T) # Variable viscosity.
+        return mu_l + (mu_s - mu_l)*phi(T) # Variable viscosity.
     
     psi_u, psi_p, psi_T = fenics.TestFunctions(W)
     
@@ -301,10 +301,12 @@ def run(output_dir = "output/wang2010_natural_convection_air",
         b(u, psi_p) - psi_p*gamma*p
         + dot(psi_u, 1./Delta_t*(u - u_n) + f_B(T))
         + c(u, u, psi_u) + b(psi_u, p) + a(mu(T), u, psi_u)
-        + 1./Delta_t*psi_T*(T - T_n + 1./Ste*(P(T) - P(T_n)))
+        + 1./Delta_t*psi_T*(T - T_n - 1./Ste*(phi(T) - phi(T_n)))
         + dot(grad(psi_T), 1./Pr*grad(T) - T*u)        
         )*fenics.dx
 
+        
+    # Set the Jacobian (formally the Gateaux derivative) in variational form.
     def ddT_f_B(T):
         
         return ddT_m_B(T=T, Ra=Ra, Pr=Pr, Re=Re)*g
@@ -315,17 +317,16 @@ def run(output_dir = "output/wang2010_natural_convection_air",
         return 1./fenics.cosh(theta)
     
     
-    def dP(T):
+    def dphi(T):
     
-        return sech((T_f - T)/r)**2/(2.*r)
+        return -sech((T_r - T)/r)**2/(2.*r)
 
         
     def dmu(T):
     
-        return (mu_l - mu_s)*dP(T)
-    
-    
-    # Set the Jacobian (formally the Gateaux derivative) in variational form.
+        return (mu_s - mu_l)*dphi(T)
+        
+        
     delta_w = fenics.TrialFunction(W)
     
     delta_u, delta_p, delta_T = fenics.split(delta_w)
@@ -344,7 +345,7 @@ def run(output_dir = "output/wang2010_natural_convection_air",
         - dot(T_k*delta_u, grad(psi_T))
         - dot(delta_T*u_k, grad(psi_T))
         + 1./Pr*dot(grad(delta_T), grad(psi_T))
-        + 1./Delta_t*1./Ste*delta_T*dP(T_k)*psi_T
+        - 1./Delta_t*1./Ste*delta_T*dphi(T_k)*psi_T
         )*fenics.dx
 
         
@@ -353,7 +354,7 @@ def run(output_dir = "output/wang2010_natural_convection_air",
     Ideally the user would be able to write the metric, but this would require giving the user
     access to much data that phaseflow is currently hiding.
     """
-    M = P(T_k)*fenics.dx
+    M = (1. - phi(T_k))*fenics.dx
     
     if adaptive_metric == "phase_only":
     
