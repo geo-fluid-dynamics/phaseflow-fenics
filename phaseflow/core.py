@@ -300,25 +300,21 @@ def run(output_dir = "output/wang2010_natural_convection_air",
     
     L = C/Ste  # Latent heat
     
-    w_w = fenics.TrialFunction(W)
-    
-    u_w, p_w, T_w = fenics.split(w_w)
-    
     v, q, phi = fenics.TestFunctions(W)
     
-    w_k = fenics.Function(W)
+    w = fenics.Function(W)
     
-    u_k, p_k, T_k = fenics.split(w_k)
+    u, p, T = fenics.split(w)
 
     F = (
-        b(u_k, q) - gamma*p_k*q
-        + dot(u_k - u_n, v)/dt
-        + c(u_k, u_k, v) + b(v, p_k) + a(mu(T_k), u_k, v)
-        + dot(f_B(T_k), v)
-        + C/dt*(T_k - T_n)*phi
-        - dot(C*T_k*u_k, grad(phi)) 
-        + K/Pr*dot(grad(T_k), grad(phi))
-        + 1./dt*L*(P(T_k) - P(T_n))*phi
+        b(u, q) - gamma*p*q
+        + dot(u - u_n, v)/dt
+        + c(u, u, v) + b(v, p) + a(mu(T), u, v)
+        + dot(f_B(T), v)
+        + C/dt*(T - T_n)*phi
+        - dot(C*T*u, grad(phi)) 
+        + K/Pr*dot(grad(T), grad(phi))
+        + 1./dt*L*(P(T) - P(T_n))*phi
         )*fenics.dx
 
     def ddT_f_B(T):
@@ -342,17 +338,25 @@ def run(output_dir = "output/wang2010_natural_convection_air",
     
     
     # Set the Jacobian (formally the Gateaux derivative) in variational form.
+    delta_w = fenics.TrialFunction(W)
+    
+    delta_u, delta_p, delta_T = fenics.split(delta_w)
+    
+    w_k = w
+    
+    u_k, p_k, T_k = fenics.split(w_k)
+    
     JF = (
-        b(u_w, q) - gamma*p_w*q 
-        + dot(u_w, v)/dt
-        + c(u_k, u_w, v) + c(u_w, u_k, v) + b(v, p_w)
-        + a(T_w*dmu(T_k), u_k, v) + a(mu(T_k), u_w, v) 
-        + dot(T_w*ddT_f_B(T_k), v)
-        + C/dt*T_w*phi
-        - dot(C*T_k*u_w, grad(phi))
-        - dot(C*T_w*u_k, grad(phi))
-        + K/Pr*dot(grad(T_w), grad(phi))
-        + 1./dt*L*T_w*dP(T_k)*phi
+        b(delta_u, q) - gamma*delta_p*q 
+        + dot(delta_u, v)/dt
+        + c(u_k, delta_u, v) + c(delta_u, u_k, v) + b(v, delta_p)
+        + a(delta_T*dmu(T_k), u_k, v) + a(mu(T_k), delta_u, v) 
+        + dot(delta_T*ddT_f_B(T_k), v)
+        + C/dt*delta_T*phi
+        - dot(C*T_k*delta_u, grad(phi))
+        - dot(C*delta_T*u_k, grad(phi))
+        + K/Pr*dot(grad(delta_T), grad(phi))
+        + 1./dt*L*delta_T*dP(T_k)*phi
         )*fenics.dx
 
         
