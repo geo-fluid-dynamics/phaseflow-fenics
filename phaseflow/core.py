@@ -236,8 +236,8 @@ def run(output_dir = "output/wang2010_natural_convection_air",
     for applying the finite element method to the incompressible Navier-Stokes equations,
     e.g. from danaila2014newton and huerta2003fefluids.
     """
-    def b(u, q):
-        return -div(u)*q  # Divergence
+    def b(u, p):
+        return -div(u)*p  # Divergence
     
     
     def D(u):
@@ -250,9 +250,9 @@ def run(output_dir = "output/wang2010_natural_convection_air",
         return 2.*mu*inner(D(u), D(v))  # Stokes stress-strain
     
     
-    def c(w, z, v):
+    def c(u, z, v):
         
-        return dot(dot(grad(z), w), v)  # Convection of the velocity field
+        return dot(dot(grad(z), u), v)  # Convection of the velocity field
     
     
     Delta_t = fenics.Constant(time_step_size)
