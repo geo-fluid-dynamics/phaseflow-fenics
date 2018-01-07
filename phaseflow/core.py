@@ -354,7 +354,7 @@ def run(output_dir = "output/wang2010_natural_convection_air",
     Ideally the user would be able to write the metric, but this would require giving the user
     access to much data that phaseflow is currently hiding.
     """
-    M = (1. - phi(T_k))*fenics.dx
+    M = phi(T_k)*fenics.dx
     
     if adaptive_metric == "phase_only":
     
