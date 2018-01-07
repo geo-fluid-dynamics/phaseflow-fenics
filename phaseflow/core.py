@@ -257,7 +257,7 @@ def run(output_dir = "output/wang2010_natural_convection_air",
         return dot(dot(grad(z), w), v)  # Convection of the velocity field
     
     
-    dt = fenics.Constant(time_step_size)
+    Delta_t = fenics.Constant(time_step_size)
     
     Re = fenics.Constant(reynolds_number)
     
@@ -308,13 +308,13 @@ def run(output_dir = "output/wang2010_natural_convection_air",
 
     F = (
         b(u, q) - gamma*p*q
-        + dot(u - u_n, v)/dt
+        + dot(u - u_n, v)/Delta_t
         + c(u, u, v) + b(v, p) + a(mu(T), u, v)
         + dot(f_B(T), v)
-        + C/dt*(T - T_n)*phi
+        + C/Delta_t*(T - T_n)*phi
         - dot(C*T*u, grad(phi)) 
         + K/Pr*dot(grad(T), grad(phi))
-        + 1./dt*L*(P(T) - P(T_n))*phi
+        + 1./Delta_t*L*(P(T) - P(T_n))*phi
         )*fenics.dx
 
     def ddT_f_B(T):
@@ -348,15 +348,15 @@ def run(output_dir = "output/wang2010_natural_convection_air",
     
     JF = (
         b(delta_u, q) - gamma*delta_p*q 
-        + dot(delta_u, v)/dt
+        + dot(delta_u, v)/Delta_t
         + c(u_k, delta_u, v) + c(delta_u, u_k, v) + b(v, delta_p)
         + a(delta_T*dmu(T_k), u_k, v) + a(mu(T_k), delta_u, v) 
         + dot(delta_T*ddT_f_B(T_k), v)
-        + C/dt*delta_T*phi
+        + C/Delta_t*delta_T*phi
         - dot(C*T_k*delta_u, grad(phi))
         - dot(C*delta_T*u_k, grad(phi))
         + K/Pr*dot(grad(delta_T), grad(phi))
-        + 1./dt*L*delta_T*dP(T_k)*phi
+        + 1./Delta_t*L*delta_T*dP(T_k)*phi
         )*fenics.dx
 
         
