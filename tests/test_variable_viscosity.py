@@ -69,7 +69,7 @@ def test_variable_viscosity():
     w, time = phaseflow.run(
         end_time = 20.,
         time_step_size = 20.,
-        thermal_conductivity = 0.,
+        prandtl_number = 1.e16,
         liquid_viscosity = 0.01,
         solid_viscosity = 1.e6,
         temperature_of_fusion = -0.01,
