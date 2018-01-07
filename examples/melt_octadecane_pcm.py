@@ -7,11 +7,13 @@ T_f = 0.01
 def melt_toy_pcm(output_dir = "output/melt_octadecane_pcm/",
         initial_values = None,
         start_time = 0.,
-        end_time = 80.):
+        end_time = 80.,
+        time_step_size = 1.,
+        adaptive_solver_tolerance = 1.e-5):
     
     T_hot = 1.
     
-    T_cold = -0.1
+    T_cold = -0.01
     
     if initial_values is None:
     
@@ -51,7 +53,7 @@ def melt_toy_pcm(output_dir = "output/melt_octadecane_pcm/",
         #
         initial_pci_position = 1./float(initial_mesh_size)/2.**(initial_hot_wall_refinement_cycles - 1)
         
-        fenics.interpolate(
+        initial_values = fenics.interpolate(
             fenics.Expression(
                 ("0.", "0.", "0.", "(T_hot - T_cold)*(x[0] < initial_pci_position) + T_cold"),
                 T_hot = T_hot, T_cold = T_cold, initial_pci_position = initial_pci_position,
@@ -70,13 +72,13 @@ def melt_toy_pcm(output_dir = "output/melt_octadecane_pcm/",
     
     cold_wall = "near(x[0],  1.)"
     
-    w, mesh = phaseflow.run(
+    w, time = phaseflow.run(
         stefan_number = 0.045,
         rayleigh_number = 3.27e5,
         prandtl_number = 56.2,
         solid_viscosity = 1.e8,
         liquid_viscosity = 1.,
-        time_step_size = 1.,
+        time_step_size = time_step_size,
         start_time = start_time,
         end_time = end_time,
         stop_when_steady = True,
@@ -84,9 +86,9 @@ def melt_toy_pcm(output_dir = "output/melt_octadecane_pcm/",
         regularization_smoothing_factor = 0.025,
         adaptive = True,
         adaptive_metric = "phase_only",
-        adaptive_solver_tolerance = 1.e-5,
+        adaptive_solver_tolerance = adaptive_solver_tolerance,
         nlp_relative_tolerance = 1.e-8,
-        nlp_max_iterations = 50,
+        nlp_max_iterations = 100,
         nlp_relaxation = 1.,
         initial_values = initial_values,
         boundary_conditions = [
@@ -94,20 +96,27 @@ def melt_toy_pcm(output_dir = "output/melt_octadecane_pcm/",
             fenics.DirichletBC(W.sub(2), T_hot, hot_wall),
             fenics.DirichletBC(W.sub(2), T_cold, cold_wall)],
         output_dir = output_dir)
-    
-    return w
+
+    return w, time
     
     
 def melt_octadecane_pcm():
 
-    w = melt_toy_pcm(end_time = 20.)
+    melt_toy_pcm(initial_values = w,
+        output_dir = "output/melt_octadecane_pcm/",
+        start_time = 0., 
+        adaptive_solver_tolerance = 1.e-5
+        end_time = 36.)
     
-    w, time = phaseflow.read_checkpoint("output/melt_octadecane_pcm/checkpoint_t20.0.h5")
+    w, time = phaseflow.read_checkpoint("output/melt_octadecane_pcm/checkpoint_t36.0.h5")
+    
+    assert(abs(time - 36.) < 1.e-8)
     
     melt_toy_pcm(initial_values = w,
-        output_dir = "output/melt_octadecane_pcm/restart_t20/",
-        start_time = time, end_time = 80.)
-
+        output_dir = "output/melt_octadecane_pcm/restart_t36/",
+        start_time = time, 
+        end_time = 80.,
+        adaptive_solver_tolerance = 0.5e-5)
     
     
 if __name__=='__main__':
