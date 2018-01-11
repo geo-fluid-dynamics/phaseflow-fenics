@@ -94,7 +94,6 @@ def heat_driven_cavity(output_dir = "output/heat_driven_cavity",
         gravity = (0., -1.),
         m_B = m_B,
         ddT_m_B = ddT_m_B,
-        temperature_of_fusion = -1.e12,
         stop_when_steady = True,
         steady_relative_tolerance=1.e-4,
         adaptive = False)

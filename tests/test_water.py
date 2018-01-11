@@ -117,8 +117,6 @@ def heat_driven_cavity_water(
         rayleigh_number = Ra,
         prandtl_number = Pr,
         stefan_number = 1.e16,
-        temperature_of_fusion = -1.,
-        regularization_smoothing_factor = 0.1,
         nlp_relative_tolerance = 1.e-8,
         adaptive = False,
         m_B = m_B,
