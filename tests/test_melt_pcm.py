@@ -4,7 +4,7 @@ from .context import phaseflow
 import fenics
 import scipy.optimize as opt
 
-T_f = 0.1
+T_r = 0.1
 
 def melt_toy_pcm(output_dir = "output/test_melt_toy_pcm/"):
     
@@ -42,6 +42,24 @@ def melt_toy_pcm(output_dir = "output/test_melt_toy_pcm/"):
     W = fenics.FunctionSpace(mesh, mixed_element)
     
     
+    # Set the semi-phase-field mapping
+    r = 0.025
+    
+    def phi(T):
+
+        return 0.5*(1. + fenics.tanh((T_r - T)/r))
+        
+        
+    def sech(theta):
+    
+        return 1./fenics.cosh(theta)
+    
+    
+    def dphi(T):
+    
+        return -sech((T_r - T)/r)**2/(2.*r)
+    
+    
     # Run phaseflow.
     T_hot = 1.
     
@@ -64,8 +82,8 @@ def melt_toy_pcm(output_dir = "output/test_melt_toy_pcm/"):
         time_step_size = 1.e-3,
         end_time = 0.02,
         stop_when_steady = True,
-        temperature_of_fusion = T_f,
-        regularization_smoothing_factor = 0.025,
+        semi_phasefield_mapping = phi,
+        semi_phasefield_mapping_derivative = dphi,
         adaptive = True,
         adaptive_metric = 'phase_only',
         adaptive_solver_tolerance = 1.e-4,
@@ -95,14 +113,14 @@ def test_melt_toy_pcm__regression():
     
     reference_pci_x_position = 0.226
     
-    def T_minus_T_f(x):
+    def T_minus_T_r(x):
     
         wval = w.leaf_node()(fenics.Point(x, pci_y_position_to_check))
         
-        return wval[3] - T_f
+        return wval[3] - T_r
 
         
-    pci_x_position = opt.newton(T_minus_T_f, 0.01)
+    pci_x_position = opt.newton(T_minus_T_r, 0.01)
     
     assert(abs(pci_x_position - reference_pci_x_position) < 1.e-2)
     
