@@ -154,8 +154,8 @@ def run(output_dir = "output/wang2010_natural_convection_air",
         m_B = None,
         ddT_m_B = None,
         penalty_parameter = 1.e-7,
-        temperature_of_fusion = -1.e12,
-        regularization_smoothing_factor = 0.005,
+        semi_phasefield_mapping = [],
+        semi_phasefield_mapping_derivative = [],
         initial_values = [],
         boundary_conditions = [],
         start_time = 0.,
@@ -194,6 +194,29 @@ def run(output_dir = "output/wang2010_natural_convection_air",
             return Ra/(Pr*Re**2)
     
     
+    if semi_phasefield_mapping is None:
+    
+        assert (semi_phasefield_mapping_derivative is None)
+    
+        T_r = -1.e12
+        
+        r = 0.005
+        
+        def semi_phasefield_mapping(T):
+    
+            return 0.5*(1. + fenics.tanh((T_r - T)/r))
+            
+            
+        def sech(theta):
+        
+            return 1./fenics.cosh(theta)
+        
+        
+        def semi_phasefield_mapping_derivative(T):
+        
+            return -sech((T_r - T)/r)**2/(2.*r)
+            
+        
     # Report arguments.
     phaseflow.helpers.print_once("Running Phaseflow with the following arguments:")
     
@@ -272,16 +295,9 @@ def run(output_dir = "output/wang2010_natural_convection_air",
         return m_B(T=T, Ra=Ra, Pr=Pr, Re=Re)*g  # Buoyancy force, $f = ma$
     
     
+    phi = semi_phasefield_mapping
+    
     gamma = fenics.Constant(penalty_parameter)
-    
-    T_r = fenics.Constant(temperature_of_fusion)
-    
-    r = fenics.Constant(regularization_smoothing_factor)
-    
-    def phi(T):
-    
-        return 0.5*(1. + fenics.tanh((T_r - T)/r))  # Regularized phase field.
-    
     
     mu_l = fenics.Constant(liquid_viscosity)
     
@@ -311,17 +327,8 @@ def run(output_dir = "output/wang2010_natural_convection_air",
         
         return ddT_m_B(T=T, Ra=Ra, Pr=Pr, Re=Re)*g
     
+    dphi = semi_phasefield_mapping_derivative
     
-    def sech(theta):
-    
-        return 1./fenics.cosh(theta)
-    
-    
-    def dphi(T):
-    
-        return -sech((T_r - T)/r)**2/(2.*r)
-
-        
     def dmu(T):
     
         return (mu_s - mu_l)*dphi(T)
