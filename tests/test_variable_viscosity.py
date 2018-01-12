@@ -62,7 +62,7 @@ def test_variable_viscosity():
     #
     mixed_element = phaseflow.make_mixed_fe(mesh.ufl_cell())
         
-    W = fenics.FunctionSpace(mesh, mixed_element)
+    function_space = fenics.FunctionSpace(mesh, mixed_element)
     
     
     # Set the semi-phase-field mapping
@@ -86,7 +86,15 @@ def test_variable_viscosity():
     
     
     # Run the simulation.
-    w, time = phaseflow.run(
+    solution = fenics.Function(function_space)
+    
+    phaseflow.run(solution = solution,
+        initial_values = fenics.interpolate(
+            fenics.Expression((lid, "0.", "0.", "1. - 2.*(x[1] <= 0.)"), element = mixed_element),
+            function_space),
+        boundary_conditions = [
+            fenics.DirichletBC(function_space.sub(0), (1., 0.), lid),
+            fenics.DirichletBC(function_space.sub(0), (0., 0.), fixed_walls)],
         end_time = 20.,
         time_step_size = 20.,
         prandtl_number = 1.e16,
@@ -97,16 +105,11 @@ def test_variable_viscosity():
         gravity = (0., 0.),
         stefan_number = 1.e16,
         adaptive = False,
-        output_dir = output_dir,
-        initial_values = fenics.interpolate(
-            fenics.Expression((lid, "0.", "0.", "1. - 2.*(x[1] <= 0.)"), element = mixed_element), W),
-        boundary_conditions = [
-            fenics.DirichletBC(W.sub(0), (1., 0.), lid),
-            fenics.DirichletBC(W.sub(0), (0., 0.), fixed_walls)])
+        output_dir = output_dir)
     
     
     # Verify against the known solution.
-    verify_against_ghia1982(w)
+    verify_against_ghia1982(solution)
 
     
 if __name__=='__main__':

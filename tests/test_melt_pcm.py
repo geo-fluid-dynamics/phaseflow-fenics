@@ -39,7 +39,7 @@ def melt_toy_pcm(output_dir = "output/test_melt_toy_pcm/"):
     #
     mixed_element = phaseflow.make_mixed_fe(mesh.ufl_cell())
         
-    W = fenics.FunctionSpace(mesh, mixed_element)
+    function_space = fenics.FunctionSpace(mesh, mixed_element)
     
     
     # Set the semi-phase-field mapping
@@ -73,7 +73,19 @@ def melt_toy_pcm(output_dir = "output/test_melt_toy_pcm/"):
     
     cold_wall = "near(x[0],  1.)"
     
-    w, mesh = phaseflow.run(
+    solution = fenics.Function(function_space)
+    
+    phaseflow.run(solution = solution,
+        initial_values = fenics.interpolate(
+            fenics.Expression(
+                ("0.", "0.", "0.", "(T_hot - T_cold)*(x[0] < initial_pci_position) + T_cold"),
+                T_hot = T_hot, T_cold = T_cold, initial_pci_position = initial_pci_position,
+                element = mixed_element),
+            function_space),
+        boundary_conditions = [
+            fenics.DirichletBC(function_space.sub(0), (0., 0.), walls),
+            fenics.DirichletBC(function_space.sub(2), T_hot, hot_wall),
+            fenics.DirichletBC(function_space.sub(2), T_cold, cold_wall)],
         stefan_number = 1.,
         rayleigh_number = 1.e6,
         prandtl_number = 0.71,
@@ -88,24 +100,14 @@ def melt_toy_pcm(output_dir = "output/test_melt_toy_pcm/"):
         adaptive_metric = 'phase_only',
         adaptive_solver_tolerance = 1.e-4,
         nlp_relative_tolerance = 1.e-8,
-        initial_values = fenics.interpolate(
-            fenics.Expression(
-                ("0.", "0.", "0.", "(T_hot - T_cold)*(x[0] < initial_pci_position) + T_cold"),
-                T_hot = T_hot, T_cold = T_cold, initial_pci_position = initial_pci_position,
-                element = mixed_element),
-            W),
-        boundary_conditions = [
-            fenics.DirichletBC(W.sub(0), (0., 0.), walls),
-            fenics.DirichletBC(W.sub(2), T_hot, hot_wall),
-            fenics.DirichletBC(W.sub(2), T_cold, cold_wall)],
         output_dir = output_dir)
     
-    return w
+    return solution
     
     
 def test_melt_toy_pcm__regression():
 
-    w = melt_toy_pcm()
+    solution = melt_toy_pcm()
     
     
     # Verify against a reference solution.
@@ -115,9 +117,9 @@ def test_melt_toy_pcm__regression():
     
     def T_minus_T_r(x):
     
-        wval = w.leaf_node()(fenics.Point(x, pci_y_position_to_check))
+        values = solution.leaf_node()(fenics.Point(x, pci_y_position_to_check))
         
-        return wval[3] - T_r
+        return values[3] - T_r
 
         
     pci_x_position = opt.newton(T_minus_T_r, 0.01)

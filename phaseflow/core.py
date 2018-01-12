@@ -35,7 +35,340 @@ def make_mixed_fe(cell):
     mixed_element = fenics.MixedElement([velocity_element, pressure_element, temperature_element])
     
     return mixed_element
+  
+  
+def run(solution,
+        time = 0.,
+        initial_values = None,
+        boundary_conditions = [],
+        output_dir = "output/wang2010_natural_convection_air",
+        rayleigh_number = 1.e6,
+        prandtl_number = 0.71,
+        stefan_number = 0.045,
+        liquid_viscosity = 1.,
+        solid_viscosity = 1.e8,
+        gravity = (0., -1.),
+        m_B = None,
+        ddT_m_B = None,
+        penalty_parameter = 1.e-7,
+        semi_phasefield_mapping = None,
+        semi_phasefield_mapping_derivative = None,
+        end_time = 10.,
+        time_step_size = 1.e-3,
+        stop_when_steady = True,
+        steady_relative_tolerance=1.e-4,
+        adaptive = False,
+        adaptive_metric = "all",
+        adaptive_solver_tolerance = 1.e-4,
+        nlp_absolute_tolerance = 1.e-8,
+        nlp_relative_tolerance = 1.e-8,
+        nlp_max_iterations = 50,
+        nlp_relaxation = 1.):
+    """Run Phaseflow.
+    
+    
+    Phaseflow is configured entirely through the arguments in this run() function.
+    
+    See the tests and examples for demonstrations of how to use this.
+    """
+    
 
+    # Handle default function definitions.
+    if m_B is None:
+        
+        def m_B(T, Ra, Pr, Re):
+        
+            return T*Ra/(Pr*Re**2)
+    
+    
+    if ddT_m_B is None:
+        
+        def ddT_m_B(T, Ra, Pr, Re):
+
+            return Ra/(Pr*Re**2)
+    
+    
+    if semi_phasefield_mapping is None:
+    
+        assert (semi_phasefield_mapping_derivative is None)
+
+        def semi_phasefield_mapping(T):
+    
+            return 0.
+        
+        def semi_phasefield_mapping_derivative(T):
+        
+            return 0.
+            
+        
+    # Report arguments.
+    phaseflow.helpers.print_once("Running Phaseflow with the following arguments:")
+    
+    phaseflow.helpers.print_once(phaseflow.helpers.arguments())
+    
+    phaseflow.helpers.mkdir_p(output_dir)
+    
+    if fenics.MPI.rank(fenics.mpi_comm_world()) is 0:
+        
+        arguments_file = open(output_dir + "/arguments.txt", "w")
+        
+        arguments_file.write(str(phaseflow.helpers.arguments()))
+
+        arguments_file.close()
+    
+    
+    # Use function space and mesh from initial solution.
+    W = solution.function_space()
+    
+    mesh = W.mesh()
+    
+    
+    # Check if 1D/2D/3D.
+    dimensionality = mesh.type().dim()
+    
+    phaseflow.helpers.print_once("Running "+str(dimensionality)+"D problem")
+    
+    
+    # Set the variational form.
+    """Set local names for math operators to improve readability."""
+    inner, dot, grad, div, sym = fenics.inner, fenics.dot, fenics.grad, fenics.div, fenics.sym
+    
+    """The linear, bilinear, and trilinear forms b, a, and c, follow the common notation 
+    for applying the finite element method to the incompressible Navier-Stokes equations,
+    e.g. from danaila2014newton and huerta2003fefluids.
+    """
+    def b(u, p):
+        return -div(u)*p  # Divergence
+    
+    
+    def D(u):
+    
+        return sym(grad(u))  # Symmetric part of velocity gradient
+    
+    
+    def a(mu, u, v):
+        
+        return 2.*mu*inner(D(u), D(v))  # Stokes stress-strain
+    
+    
+    def c(u, z, v):
+        
+        return dot(dot(grad(z), u), v)  # Convection of the velocity field
+    
+    
+    Delta_t = fenics.Constant(time_step_size)
+    
+    Re = fenics.Constant(reynolds_number)
+    
+    Ra = fenics.Constant(rayleigh_number)
+    
+    Pr = fenics.Constant(prandtl_number)
+    
+    Ste = fenics.Constant(stefan_number)
+    
+    g = fenics.Constant(gravity)
+    
+    def f_B(T):
+    
+        return m_B(T=T, Ra=Ra, Pr=Pr, Re=Re)*g  # Buoyancy force, $f = ma$
+    
+    
+    phi = semi_phasefield_mapping
+    
+    gamma = fenics.Constant(penalty_parameter)
+    
+    mu_l = fenics.Constant(liquid_viscosity)
+    
+    mu_s = fenics.Constant(solid_viscosity)
+    
+    def mu(T):
+    
+        return mu_l + (mu_s - mu_l)*phi(T) # Variable viscosity.
+    
+    psi_u, psi_p, psi_T = fenics.TestFunctions(W)
+    
+    w = solution 
+    
+    u, p, T = fenics.split(w)
+    
+    w_n = initial_values
+     
+    u_n, p_n, T_n = fenics.split(w_n)
+    
+    F = (
+        b(u, psi_p) - psi_p*gamma*p
+        + dot(psi_u, 1./Delta_t*(u - u_n) + f_B(T))
+        + c(u, u, psi_u) + b(psi_u, p) + a(mu(T), u, psi_u)
+        + 1./Delta_t*psi_T*(T - T_n - 1./Ste*(phi(T) - phi(T_n)))
+        + dot(grad(psi_T), 1./Pr*grad(T) - T*u)        
+        )*fenics.dx
+
+        
+    # Set the Jacobian (formally the Gateaux derivative) in variational form.
+    def ddT_f_B(T):
+        
+        return ddT_m_B(T=T, Ra=Ra, Pr=Pr, Re=Re)*g
+    
+    dphi = semi_phasefield_mapping_derivative
+    
+    def dmu(T):
+    
+        return (mu_s - mu_l)*dphi(T)
+        
+        
+    delta_w = fenics.TrialFunction(W)
+    
+    delta_u, delta_p, delta_T = fenics.split(delta_w)
+    
+    w_k = w
+    
+    u_k, p_k, T_k = fenics.split(w_k)
+    
+    JF = (
+        b(delta_u, psi_p) - psi_p*gamma*delta_p 
+        + dot(psi_u, 1./Delta_t*delta_u + delta_T*ddT_f_B(T_k))
+        + c(u_k, delta_u, psi_u) + c(delta_u, u_k, psi_u) 
+        + b(psi_u, delta_p) 
+        + a(delta_T*dmu(T_k), u_k, psi_u) + a(mu(T_k), delta_u, psi_u) 
+        + 1./Delta_t*psi_T*delta_T*(1. - 1./Ste*dphi(T_k))
+        + dot(grad(psi_T), 1./Pr*grad(delta_T) - T_k*delta_u - delta_T*u_k)
+        )*fenics.dx
+
+        
+    # Make the problem.
+    problem = fenics.NonlinearVariationalProblem(F, w_k, boundary_conditions, JF)
+    
+    
+    # Make the solver.
+    """ For the purposes of this project, it would be better to just always use the adaptive solver; but
+    unfortunately the adaptive solver encounters nan's whenever evaluating the error for problems not 
+    involving phase-change. So far my attempts at writing a MWE to reproduce the  issue have failed.
+    """   
+    if adaptive:
+    
+        # Set the functional metric for the error estimator for adaptive mesh refinement.
+        """I haven't found a good way to make this flexible yet.
+        Ideally the user would be able to write the metric, but this would require giving the user
+        access to much data that phaseflow is currently hiding.
+        """
+        M = phi(T)*fenics.dx
+        
+        if adaptive_metric == "phase_only":
+        
+            pass
+            
+        elif adaptive_metric == "all":
+            
+            M += T*fenics.dx
+            
+            for i in range(dimensionality):
+            
+                M += u[i]*fenics.dx
+                
+        else:
+            
+            assert(False)
+    
+        solver = fenics.AdaptiveNonlinearVariationalSolver(problem, M)
+    
+        solver.parameters["nonlinear_variational_solver"]["newton_solver"]["maximum_iterations"]\
+            = nlp_max_iterations
+    
+        solver.parameters["nonlinear_variational_solver"]["newton_solver"]["absolute_tolerance"]\
+            = nlp_absolute_tolerance
+    
+        solver.parameters["nonlinear_variational_solver"]["newton_solver"]["relative_tolerance"]\
+            = nlp_relative_tolerance
+            
+        solver.parameters["nonlinear_variational_solver"]["newton_solver"]["relaxation_parameter"]\
+            = nlp_relaxation
+            
+    else:
+
+        solver = fenics.NonlinearVariationalSolver(problem)
+        
+        solver.parameters["newton_solver"]["maximum_iterations"] = nlp_max_iterations
+        
+        solver.parameters["newton_solver"]["absolute_tolerance"] = nlp_absolute_tolerance
+        
+        solver.parameters["newton_solver"]["relative_tolerance"] = nlp_relative_tolerance
+        
+        solver.parameters["newton_solver"]["relaxation_parameter"] = nlp_relaxation
+    
+    
+    # 
+    start_time = 0. + time
+    
+    
+    # Open a context manager for the output file.
+    solution_filepath = output_dir + "/solution.xdmf"
+    
+    with fenics.XDMFFile(solution_filepath) as solution_file:
+
+    
+        # Write the initial values.
+        write_solution(solution_file, w_n, time, solution_filepath) 
+
+        if start_time >= end_time - TIME_EPS:
+    
+            phaseflow.helpers.print_once("Start time is already too close to end time. Only writing initial values.")
+            
+            return w_n, mesh
+    
+    
+        # Solve each time step.
+        progress = fenics.Progress("Time-stepping")
+        
+        fenics.set_log_level(fenics.PROGRESS)
+        
+        for it in range(1, MAX_TIME_STEPS):
+            
+            if(time > end_time - TIME_EPS):
+                
+                break
+            
+            if adaptive:
+            
+                solver.solve(adaptive_solver_tolerance)
+                
+            else:
+            
+                solver.solve()
+            
+            time = start_time + it*time_step_size
+            
+            phaseflow.helpers.print_once("Reached time t = " + str(time))
+            
+            write_solution(solution_file, w, time, solution_filepath)
+            
+            
+            # Write checkpoint files.
+            write_checkpoint(checkpoint_filepath = output_dir + "/checkpoint_t" + str(time) + ".h5",
+                w = w,
+                time = time)
+            
+            
+            # Check for steady state.
+            if stop_when_steady and steady(W, w, w_n, steady_relative_tolerance):
+            
+                phaseflow.helpers.print_once("Reached steady state at time t = " + str(time))
+                
+                break
+                
+                
+            # Set initial values for next time step.
+            w_n.leaf_node().vector()[:] = w.leaf_node().vector()
+            
+            
+            # Report progress.
+            progress.update(time / end_time)
+            
+            if time >= (end_time - fenics.dolfin.DOLFIN_EPS):
+            
+                phaseflow.helpers.print_once("Reached end time, t = " + str(end_time))
+            
+                break
+    
     
 def write_solution(solution_file, solution, time, solution_filepath):
     """Write the solution to disk.
@@ -142,344 +475,6 @@ def steady(W, w, w_n, steady_relative_tolerance):
         steady = True
     
     return steady
-  
-  
-def run(output_dir = "output/wang2010_natural_convection_air",
-        rayleigh_number = 1.e6,
-        prandtl_number = 0.71,
-        stefan_number = 0.045,
-        liquid_viscosity = 1.,
-        solid_viscosity = 1.e8,
-        gravity = (0., -1.),
-        m_B = None,
-        ddT_m_B = None,
-        penalty_parameter = 1.e-7,
-        semi_phasefield_mapping = None,
-        semi_phasefield_mapping_derivative = None,
-        initial_values = None,
-        boundary_conditions = [],
-        start_time = 0.,
-        end_time = 10.,
-        time_step_size = 1.e-3,
-        stop_when_steady = True,
-        steady_relative_tolerance=1.e-4,
-        adaptive = False,
-        adaptive_metric = "all",
-        adaptive_solver_tolerance = 1.e-4,
-        nlp_absolute_tolerance = 1.e-8,
-        nlp_relative_tolerance = 1.e-8,
-        nlp_max_iterations = 50,
-        nlp_relaxation = 1.):
-    """Run Phaseflow.
-    
-    
-    Phaseflow is configured entirely through the arguments in this run() function.
-    
-    See the tests and examples for demonstrations of how to use this.
-    """
-    
-
-    # Handle default function definitions.
-    if m_B is None:
-        
-        def m_B(T, Ra, Pr, Re):
-        
-            return T*Ra/(Pr*Re**2)
-    
-    
-    if ddT_m_B is None:
-        
-        def ddT_m_B(T, Ra, Pr, Re):
-
-            return Ra/(Pr*Re**2)
-    
-    
-    if semi_phasefield_mapping is None:
-    
-        assert (semi_phasefield_mapping_derivative is None)
-
-        def semi_phasefield_mapping(T):
-    
-            return 0.
-        
-        def semi_phasefield_mapping_derivative(T):
-        
-            return 0.
-            
-        
-    # Report arguments.
-    phaseflow.helpers.print_once("Running Phaseflow with the following arguments:")
-    
-    phaseflow.helpers.print_once(phaseflow.helpers.arguments())
-    
-    phaseflow.helpers.mkdir_p(output_dir)
-    
-    if fenics.MPI.rank(fenics.mpi_comm_world()) is 0:
-        
-        arguments_file = open(output_dir + "/arguments.txt", "w")
-        
-        arguments_file.write(str(phaseflow.helpers.arguments()))
-
-        arguments_file.close()
-    
-    
-    # Use function space and mesh from initial values.
-    W = initial_values.function_space()
-    
-    mesh = W.mesh()
-    
-    
-    # Check if 1D/2D/3D.
-    dimensionality = mesh.type().dim()
-    
-    phaseflow.helpers.print_once("Running "+str(dimensionality)+"D problem")
-    
-    
-    # Set the initial values.
-    w_n = initial_values
-       
-    u_n, p_n, T_n = fenics.split(w_n)
-        
-    
-    # Set the variational form.
-    """Set local names for math operators to improve readability."""
-    inner, dot, grad, div, sym = fenics.inner, fenics.dot, fenics.grad, fenics.div, fenics.sym
-    
-    """The linear, bilinear, and trilinear forms b, a, and c, follow the common notation 
-    for applying the finite element method to the incompressible Navier-Stokes equations,
-    e.g. from danaila2014newton and huerta2003fefluids.
-    """
-    def b(u, p):
-        return -div(u)*p  # Divergence
-    
-    
-    def D(u):
-    
-        return sym(grad(u))  # Symmetric part of velocity gradient
-    
-    
-    def a(mu, u, v):
-        
-        return 2.*mu*inner(D(u), D(v))  # Stokes stress-strain
-    
-    
-    def c(u, z, v):
-        
-        return dot(dot(grad(z), u), v)  # Convection of the velocity field
-    
-    
-    Delta_t = fenics.Constant(time_step_size)
-    
-    Re = fenics.Constant(reynolds_number)
-    
-    Ra = fenics.Constant(rayleigh_number)
-    
-    Pr = fenics.Constant(prandtl_number)
-    
-    Ste = fenics.Constant(stefan_number)
-    
-    g = fenics.Constant(gravity)
-    
-    def f_B(T):
-    
-        return m_B(T=T, Ra=Ra, Pr=Pr, Re=Re)*g  # Buoyancy force, $f = ma$
-    
-    
-    phi = semi_phasefield_mapping
-    
-    gamma = fenics.Constant(penalty_parameter)
-    
-    mu_l = fenics.Constant(liquid_viscosity)
-    
-    mu_s = fenics.Constant(solid_viscosity)
-    
-    def mu(T):
-    
-        return mu_l + (mu_s - mu_l)*phi(T) # Variable viscosity.
-    
-    psi_u, psi_p, psi_T = fenics.TestFunctions(W)
-    
-    w = fenics.Function(W)
-    
-    u, p, T = fenics.split(w)
-
-    F = (
-        b(u, psi_p) - psi_p*gamma*p
-        + dot(psi_u, 1./Delta_t*(u - u_n) + f_B(T))
-        + c(u, u, psi_u) + b(psi_u, p) + a(mu(T), u, psi_u)
-        + 1./Delta_t*psi_T*(T - T_n - 1./Ste*(phi(T) - phi(T_n)))
-        + dot(grad(psi_T), 1./Pr*grad(T) - T*u)        
-        )*fenics.dx
-
-        
-    # Set the Jacobian (formally the Gateaux derivative) in variational form.
-    def ddT_f_B(T):
-        
-        return ddT_m_B(T=T, Ra=Ra, Pr=Pr, Re=Re)*g
-    
-    dphi = semi_phasefield_mapping_derivative
-    
-    def dmu(T):
-    
-        return (mu_s - mu_l)*dphi(T)
-        
-        
-    delta_w = fenics.TrialFunction(W)
-    
-    delta_u, delta_p, delta_T = fenics.split(delta_w)
-    
-    w_k = w
-    
-    u_k, p_k, T_k = fenics.split(w_k)
-    
-    JF = (
-        b(delta_u, psi_p) - psi_p*gamma*delta_p 
-        + dot(psi_u, 1./Delta_t*delta_u + delta_T*ddT_f_B(T_k))
-        + c(u_k, delta_u, psi_u) + c(delta_u, u_k, psi_u) 
-        + b(psi_u, delta_p) 
-        + a(delta_T*dmu(T_k), u_k, psi_u) + a(mu(T_k), delta_u, psi_u) 
-        + 1./Delta_t*psi_T*delta_T*(1. - 1./Ste*dphi(T_k))
-        + dot(grad(psi_T), 1./Pr*grad(delta_T) - T_k*delta_u - delta_T*u_k)
-        )*fenics.dx
-
-        
-    # Make the problem.
-    problem = fenics.NonlinearVariationalProblem(F, w_k, boundary_conditions, JF)
-    
-    
-    # Make the solver.
-    """ For the purposes of this project, it would be better to just always use the adaptive solver; but
-    unfortunately the adaptive solver encounters nan's whenever evaluating the error for problems not 
-    involving phase-change. So far my attempts at writing a MWE to reproduce the  issue have failed.
-    """   
-    if adaptive:
-    
-        # Set the functional metric for the error estimator for adaptive mesh refinement.
-        """I haven't found a good way to make this flexible yet.
-        Ideally the user would be able to write the metric, but this would require giving the user
-        access to much data that phaseflow is currently hiding.
-        """
-        M = phi(T_k)*fenics.dx
-        
-        if adaptive_metric == "phase_only":
-        
-            pass
-            
-        elif adaptive_metric == "all":
-            
-            M += T_k*fenics.dx
-            
-            for i in range(dimensionality):
-            
-                M += u_k[i]*fenics.dx
-                
-        else:
-            
-            assert(False)
-    
-        solver = fenics.AdaptiveNonlinearVariationalSolver(problem, M)
-    
-        solver.parameters["nonlinear_variational_solver"]["newton_solver"]["maximum_iterations"]\
-            = nlp_max_iterations
-    
-        solver.parameters["nonlinear_variational_solver"]["newton_solver"]["absolute_tolerance"]\
-            = nlp_absolute_tolerance
-    
-        solver.parameters["nonlinear_variational_solver"]["newton_solver"]["relative_tolerance"]\
-            = nlp_relative_tolerance
-            
-        solver.parameters["nonlinear_variational_solver"]["newton_solver"]["relaxation_parameter"]\
-            = nlp_relaxation
-            
-    else:
-
-        solver = fenics.NonlinearVariationalSolver(problem)
-        
-        solver.parameters["newton_solver"]["maximum_iterations"] = nlp_max_iterations
-        
-        solver.parameters["newton_solver"]["absolute_tolerance"] = nlp_absolute_tolerance
-        
-        solver.parameters["newton_solver"]["relative_tolerance"] = nlp_relative_tolerance
-        
-        solver.parameters["newton_solver"]["relaxation_parameter"] = nlp_relaxation
-    
-    
-    # Open a context manager for the output file.
-    solution_filepath = output_dir + "/solution.xdmf"
-    
-    with fenics.XDMFFile(solution_filepath) as solution_file:
-
-        time = start_time 
-        
-        
-        # Write the initial values.
-        write_solution(solution_file, w_n, time, solution_filepath) 
-
-        if start_time >= end_time - TIME_EPS:
-    
-            phaseflow.helpers.print_once("Start time is already too close to end time. Only writing initial values.")
-            
-            return w_n, mesh
-    
-    
-        # Solve each time step.
-        progress = fenics.Progress("Time-stepping")
-        
-        fenics.set_log_level(fenics.PROGRESS)
-        
-        for it in range(1, MAX_TIME_STEPS):
-            
-            if(time > end_time - TIME_EPS):
-                
-                break
-            
-            if adaptive:
-            
-                solver.solve(adaptive_solver_tolerance)
-                
-            else:
-            
-                solver.solve()
-            
-            time = start_time + it*time_step_size
-            
-            phaseflow.helpers.print_once("Reached time t = " + str(time))
-            
-            write_solution(solution_file, w_k, time, solution_filepath)
-            
-            
-            # Write checkpoint files.
-            write_checkpoint(checkpoint_filepath = output_dir + "/checkpoint_t" + str(time) + ".h5",
-                w = w_k,
-                time = time)
-            
-            
-            # Check for steady state.
-            if stop_when_steady and steady(W, w_k, w_n, steady_relative_tolerance):
-            
-                phaseflow.helpers.print_once("Reached steady state at time t = " + str(time))
-                
-                break
-                
-                
-            # Set initial values for next time step.
-            w_n.leaf_node().vector()[:] = w_k.leaf_node().vector()
-            
-            
-            # Report progress.
-            progress.update(time / end_time)
-            
-            if time >= (end_time - fenics.dolfin.DOLFIN_EPS):
-            
-                phaseflow.helpers.print_once("Reached end time, t = " + str(end_time))
-            
-                break
-    
-    
-    # Return the interpolant to sample inside of Python.
-    w_k.rename("w", "state")
-    
-    return w_k, time
     
     
 if __name__=="__main__":

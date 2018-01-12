@@ -39,7 +39,7 @@ def verify_against_michalek2003(w):
 def heat_driven_cavity_water(
         initial_values = None,
         output_dir = "output/test_heat_driven_cavity_water/",
-        start_time = 0., end_time = 10., time_step_size = 0.001,
+        time = 0., end_time = 10., time_step_size = 0.001,
         steady_relative_tolerance = 1.e-5):
     
     m = 40
@@ -99,20 +99,29 @@ def heat_driven_cavity_water(
         
         mixed_element = phaseflow.make_mixed_fe(mesh.ufl_cell())
         
-        W = fenics.FunctionSpace(mesh, mixed_element)
+        function_space = fenics.FunctionSpace(mesh, mixed_element)
         
         initial_values = fenics.interpolate(
             fenics.Expression(
                 ("0.", "0.", "0.", "theta_hot + x[0]*(theta_cold - theta_hot)"),
                 theta_hot = theta_hot, theta_cold = theta_cold,
                 element = mixed_element),
-            W)
+            function_space)
             
     else:
     
-        W = initial_values.function_space()
+        function_space = initial_values.function_space()
         
-    w, time = phaseflow.run(
+    solution = fenics.Function(function_space)
+    
+    phaseflow.run(solution = solution,
+        initial_values = initial_values,
+        boundary_conditions = [
+            fenics.DirichletBC(function_space.sub(0), (0., 0.),
+                "near(x[0],  0.) | near(x[0],  1.) | near(x[1], 0.) | near(x[1],  1.)"),
+            fenics.DirichletBC(function_space.sub(2), theta_hot, "near(x[0],  0.)"),
+            fenics.DirichletBC(function_space.sub(2), theta_cold, "near(x[0],  1.)")],
+        time = time,
         output_dir = output_dir,
         rayleigh_number = Ra,
         prandtl_number = Pr,
@@ -123,43 +132,36 @@ def heat_driven_cavity_water(
         ddT_m_B = ddT_m_B,
         stop_when_steady = True,
         steady_relative_tolerance = steady_relative_tolerance,
-        initial_values = initial_values,
-        boundary_conditions = [
-            fenics.DirichletBC(W.sub(0), (0., 0.),
-                "near(x[0],  0.) | near(x[0],  1.) | near(x[1], 0.) | near(x[1],  1.)"),
-            fenics.DirichletBC(W.sub(2), theta_hot, "near(x[0],  0.)"),
-            fenics.DirichletBC(W.sub(2), theta_cold, "near(x[0],  1.)")],
         time_step_size = time_step_size,
-        start_time = start_time,
         end_time = end_time)
     
-    return w, time
+    return solution, time
 
     
 def test_heat_driven_cavity_water():
     
-    w, time = heat_driven_cavity_water(output_dir = "output/test_heat_driven_cavity_water/",
+    solution, time = heat_driven_cavity_water(output_dir = "output/test_heat_driven_cavity_water/",
         time_step_size = 0.001,
         end_time = 0.001)
    
-    w, time = phaseflow.read_checkpoint("output/test_heat_driven_cavity_water/checkpoint_t0.001.h5")
+    solution, time = phaseflow.read_checkpoint("output/test_heat_driven_cavity_water/checkpoint_t0.001.h5")
     
-    w, time = heat_driven_cavity_water(initial_values = w,
-        start_time = time,
+    solution, time = heat_driven_cavity_water(initial_values = solution,
+        time = time,
         time_step_size = 0.002,
         end_time = 0.003,
         output_dir="output/test_heat_driven_cavity_water/restart_t0.001/")
 
-    w, time = phaseflow.read_checkpoint(
+    solution, time = phaseflow.read_checkpoint(
         "output/test_heat_driven_cavity_water/restart_t0.001/checkpoint_t0.003.h5")
     
-    w, time = heat_driven_cavity_water(initial_values = w,
-        start_time = time,
+    solution, time = heat_driven_cavity_water(initial_values = solution,
+        time = time,
         time_step_size = 0.004,
         steady_relative_tolerance = 1.e-3,
         output_dir="output/test_heat_driven_cavity_water/restart_t0.003/")
     
-    verify_against_michalek2003(w)
+    verify_against_michalek2003(solution)
     
     
 if __name__=='__main__':
