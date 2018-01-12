@@ -75,7 +75,7 @@ def melt_toy_pcm(output_dir = "output/test_melt_toy_pcm/"):
     
     solution = fenics.Function(function_space)
     
-    u, p, T = fenics.split(solution)
+    p, u, T = fenics.split(solution)
     
     phaseflow.run(solution = solution,
         initial_values = fenics.interpolate(
@@ -85,7 +85,7 @@ def melt_toy_pcm(output_dir = "output/test_melt_toy_pcm/"):
                 element = mixed_element),
             function_space),
         boundary_conditions = [
-            fenics.DirichletBC(function_space.sub(0), (0., 0.), walls),
+            fenics.DirichletBC(function_space.sub(1), (0., 0.), walls),
             fenics.DirichletBC(function_space.sub(2), T_hot, hot_wall),
             fenics.DirichletBC(function_space.sub(2), T_cold, cold_wall)],
         stefan_number = 1.,

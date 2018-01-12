@@ -37,7 +37,7 @@ def verify_against_wang2010(w):
         
             wval = w(p)
         
-            ux = wval[0]*data['Pr']/data['Ra']**0.5
+            ux = wval[1]*data['Pr']/data['Ra']**0.5
         
             assert(abs(ux - true_ux) < 2.e-2)
             
@@ -85,7 +85,7 @@ def heat_driven_cavity(output_dir = "output/heat_driven_cavity",
         initial_values = initial_values,
         time = time,
         boundary_conditions = [
-            fenics.DirichletBC(W.sub(0), (0., 0.),
+            fenics.DirichletBC(W.sub(1), (0., 0.),
                 "near(x[0],  0.) | near(x[0],  1.) | near(x[1], 0.) | near(x[1],  1.)"),
             fenics.DirichletBC(W.sub(2), T_hot, "near(x[0],  0.)"),
             fenics.DirichletBC(W.sub(2), T_cold, "near(x[0],  1.)")],

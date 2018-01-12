@@ -105,7 +105,7 @@ def stefan_problem(output_dir = "output/stefan_problem",
     #
     solution = fenics.Function(function_space)
     
-    u, p, T = fenics.split(solution)
+    p, u, T = fenics.split(solution)
     
     if adaptive:
     
