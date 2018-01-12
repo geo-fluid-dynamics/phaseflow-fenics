@@ -39,6 +39,7 @@ def make_mixed_fe(cell):
   
 def run(solution,
         time = 0.,
+        initial_values = None,
         boundary_conditions = [],
         output_dir = "output/wang2010_natural_convection_air",
         rayleigh_number = 1.e6,
@@ -117,9 +118,7 @@ def run(solution,
     
     
     # Use function space and mesh from initial solution.
-    w = solution
-    
-    W = w.function_space()
+    W = solution.function_space()
     
     mesh = W.mesh()
     
@@ -128,12 +127,6 @@ def run(solution,
     dimensionality = mesh.type().dim()
     
     phaseflow.helpers.print_once("Running "+str(dimensionality)+"D problem")
-    
-    
-    # Set the initial values.
-    w_n = fenics.Function(W)
-    
-    w_n.leaf_node().vector()[:] = w.leaf_node().vector()
     
     
     # Set the variational form.
@@ -194,8 +187,12 @@ def run(solution,
     
     psi_u, psi_p, psi_T = fenics.TestFunctions(W)
     
+    w = solution 
+    
     u, p, T = fenics.split(w)
     
+    w_n = initial_values
+     
     u_n, p_n, T_n = fenics.split(w_n)
     
     F = (
@@ -254,7 +251,7 @@ def run(solution,
         Ideally the user would be able to write the metric, but this would require giving the user
         access to much data that phaseflow is currently hiding.
         """
-        M = phi(T_k)*fenics.dx
+        M = phi(T)*fenics.dx
         
         if adaptive_metric == "phase_only":
         
@@ -262,11 +259,11 @@ def run(solution,
             
         elif adaptive_metric == "all":
             
-            M += T_k*fenics.dx
+            M += T*fenics.dx
             
             for i in range(dimensionality):
             
-                M += u_k[i]*fenics.dx
+                M += u[i]*fenics.dx
                 
         else:
             
@@ -372,9 +369,7 @@ def run(solution,
             
                 break
     
-    
-    # Return the interpolant to sample inside of Python.
-    w_k.rename("w", "state")
+    solution.leaf_node().vector()[:] = w_k.leaf_node().vector()
     
     
 def write_solution(solution_file, solution, time, solution_filepath):
