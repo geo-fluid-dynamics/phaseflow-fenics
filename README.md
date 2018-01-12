@@ -59,7 +59,7 @@ The FEniCS project provides a [Docker image](https://hub.docker.com/r/fenicsproj
 Get the [free community edition of Docker](https://www.docker.com/community-edition).
     
 ## Run Phaseflow in Docker
-Run the container
+Pull the image and run the container with Docker
 
     docker run -ti zimmerman/phaseflow-fenics:latest
 
@@ -74,29 +74,9 @@ Run tests
     python3 -m pytest -v -s -k "not debug"
 
 ## Some Docker details
-Pull the image and run the container with Docker
-
-    docker run -ti zimmerman/phaseflow-fenics:latest
-    
-Or run the container with access to a shared folder (shared between the host and the container)
-
-    docker run -ti -v $(pwd):/home/fenics/shared zimmerman/phaseflow-fenics:latest
-
-If you plan to use this container repeatedly, then instead use this command to also give it a name
+To share a folder between the host container, and to name the container for future use (with start/stop), enter
 
     docker run -ti -v $(pwd):/home/fenics/shared --name phaseflow-fenics zimmerman/phaseflow-fenics:latest
-
-After exiting the container, you can start it again with
-
-    docker start phaseflow-fenics
-    
-You can confirm that the container is running with
-
-    docker ps
-    
-or list all containers (running or not) with
-
-    docker ps -a
 
 To enter a bash terminal inside of the running container
     
