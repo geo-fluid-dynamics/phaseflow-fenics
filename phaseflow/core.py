@@ -339,17 +339,17 @@ def run(solution,
             
             phaseflow.helpers.print_once("Reached time t = " + str(time))
             
-            write_solution(solution_file, w_k, time, solution_filepath)
+            write_solution(solution_file, w, time, solution_filepath)
             
             
             # Write checkpoint files.
             write_checkpoint(checkpoint_filepath = output_dir + "/checkpoint_t" + str(time) + ".h5",
-                w = w_k,
+                w = w,
                 time = time)
             
             
             # Check for steady state.
-            if stop_when_steady and steady(W, w_k, w_n, steady_relative_tolerance):
+            if stop_when_steady and steady(W, w, w_n, steady_relative_tolerance):
             
                 phaseflow.helpers.print_once("Reached steady state at time t = " + str(time))
                 
@@ -357,7 +357,7 @@ def run(solution,
                 
                 
             # Set initial values for next time step.
-            w_n.leaf_node().vector()[:] = w_k.leaf_node().vector()
+            w_n.leaf_node().vector()[:] = w.leaf_node().vector()
             
             
             # Report progress.
