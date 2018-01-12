@@ -16,7 +16,7 @@ def verify_against_ghia1982(solution):
     
         values = solution.leaf_node()(fenics.Point(data['x'], data['y'][i]))
         
-        ux = values[0]
+        ux = values[1]
         
         assert(abs(ux - true_ux) < 2.e-2)
             
@@ -90,11 +90,11 @@ def test_variable_viscosity():
     
     phaseflow.run(solution = solution,
         initial_values = fenics.interpolate(
-            fenics.Expression((lid, "0.", "0.", "1. - 2.*(x[1] <= 0.)"), element = mixed_element),
+            fenics.Expression(("0.", lid, "0.", "1. - 2.*(x[1] <= 0.)"), element = mixed_element),
             function_space),
         boundary_conditions = [
-            fenics.DirichletBC(function_space.sub(0), (1., 0.), lid),
-            fenics.DirichletBC(function_space.sub(0), (0., 0.), fixed_walls)],
+            fenics.DirichletBC(function_space.sub(1), (1., 0.), lid),
+            fenics.DirichletBC(function_space.sub(1), (0., 0.), fixed_walls)],
         end_time = 20.,
         time_step_size = 20.,
         prandtl_number = 1.e16,

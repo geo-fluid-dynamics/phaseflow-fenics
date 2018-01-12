@@ -24,15 +24,15 @@ def make_mixed_fe(cell):
     MixedFunctionSpace used to be available but is now deprecated. 
     To create the mixed space, I'm using the approach from https://fenicsproject.org/qa/11983/mixedfunctionspace-in-2016-2-0
     """
+    pressure_element = fenics.FiniteElement("P", cell, pressure_degree)
+    
     velocity_degree = pressure_degree + 1
     
     velocity_element = fenics.VectorElement("P", cell, velocity_degree)
-    
-    pressure_element = fenics.FiniteElement("P", cell, pressure_degree)
 
     temperature_element = fenics.FiniteElement("P", cell, temperature_degree)
 
-    mixed_element = fenics.MixedElement([velocity_element, pressure_element, temperature_element])
+    mixed_element = fenics.MixedElement([pressure_element, velocity_element, temperature_element])
     
     return mixed_element
   
@@ -184,15 +184,15 @@ def run(solution,
     
         return mu_l + (mu_s - mu_l)*phi(T) # Variable viscosity.
     
-    psi_u, psi_p, psi_T = fenics.TestFunctions(W)
+    psi_p, psi_u, psi_T = fenics.TestFunctions(W)
     
     w = solution 
     
-    u, p, T = fenics.split(w)
+    p, u, T = fenics.split(w)
     
     w_n = initial_values
      
-    u_n, p_n, T_n = fenics.split(w_n)
+    p_n, u_n, T_n = fenics.split(w_n)
     
     F = (
         b(u, psi_p) - psi_p*gamma*p
@@ -217,11 +217,11 @@ def run(solution,
         
     delta_w = fenics.TrialFunction(W)
     
-    delta_u, delta_p, delta_T = fenics.split(delta_w)
+    delta_p, delta_u, delta_T = fenics.split(delta_w)
     
     w_k = w
     
-    u_k, p_k, T_k = fenics.split(w_k)
+    p_k, u_k, T_k = fenics.split(w_k)
     
     JF = (
         b(delta_u, psi_p) - psi_p*gamma*delta_p 
@@ -386,15 +386,15 @@ def write_solution(solution_file, solution, time, solution_filepath):
     """
     phaseflow.helpers.print_once("Writing solution to " + str(solution_filepath))
     
-    velocity, pressure, temperature = solution.leaf_node().split()
-    
-    velocity.rename("u", "velocity")
+    pressure, velocity, temperature = solution.leaf_node().split()
     
     pressure.rename("p", "pressure")
     
+    velocity.rename("u", "velocity")
+    
     temperature.rename("T", "temperature")
     
-    for i, var in enumerate([velocity, pressure, temperature]):
+    for i, var in enumerate([pressure, velocity, temperature]):
     
         solution_file.write(var, time)
         

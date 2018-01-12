@@ -20,7 +20,7 @@ def verify_against_ghia1982(solution):
         
             values = solution(p)
             
-            ux = values[0]
+            ux = values[1]
             
             assert(abs(ux - true_ux) < 2.e-2)
 
@@ -45,10 +45,10 @@ def test_lid_driven_cavity():
     
     time = phaseflow.run(solution = solution,
         initial_values = fenics.interpolate(
-            fenics.Expression((lid, "0.", "0.", "1."), element = mixed_element), function_space),
+            fenics.Expression(("0.", lid, "0.", "1."), element = mixed_element), function_space),
         boundary_conditions = [
-            fenics.DirichletBC(function_space.sub(0), (1., 0.), lid),
-            fenics.DirichletBC(function_space.sub(0), (0., 0.), fixed_walls)],
+            fenics.DirichletBC(function_space.sub(1), (1., 0.), lid),
+            fenics.DirichletBC(function_space.sub(1), (0., 0.), fixed_walls)],
         end_time = 1.e12,
         time_step_size = 1.e12,
         liquid_viscosity = 0.01,

@@ -4,7 +4,7 @@ from .context import phaseflow
 import fenics
 
 
-def verify_against_michalek2003(w):
+def verify_against_michalek2003(solution):
     """Verify directly against steady-state data from michalek2003 published in 
 
         @article{michalek2003simulations,
@@ -21,7 +21,7 @@ def verify_against_michalek2003(w):
         'x': [0.00, 0.05, 0.12, 0.23, 0.40, 0.59, 0.80, 0.88, 1.00],
         'theta': [1.00, 0.66, 0.56, 0.58, 0.59, 0.62, 0.20, 0.22, 0.00]}
     
-    bbt = w.function_space().mesh().bounding_box_tree()
+    bbt = solution.function_space().mesh().bounding_box_tree()
     
     for i, true_theta in enumerate(verified_solution['theta']):
     
@@ -29,9 +29,9 @@ def verify_against_michalek2003(w):
         
         if bbt.collides_entity(p):
             
-            wval = w(p)
+            values = solution(p)
             
-            theta = wval[3]
+            theta = values[3]
             
             assert(abs(theta - true_theta) < 2.e-2)
 
@@ -117,7 +117,7 @@ def heat_driven_cavity_water(
     phaseflow.run(solution = solution,
         initial_values = initial_values,
         boundary_conditions = [
-            fenics.DirichletBC(function_space.sub(0), (0., 0.),
+            fenics.DirichletBC(function_space.sub(1), (0., 0.),
                 "near(x[0],  0.) | near(x[0],  1.) | near(x[1], 0.) | near(x[1],  1.)"),
             fenics.DirichletBC(function_space.sub(2), theta_hot, "near(x[0],  0.)"),
             fenics.DirichletBC(function_space.sub(2), theta_cold, "near(x[0],  1.)")],
