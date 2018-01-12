@@ -37,7 +37,10 @@ def make_mixed_fe(cell):
     return mixed_element
   
   
-def run(output_dir = "output/wang2010_natural_convection_air",
+def run(solution,
+        time = 0.,
+        boundary_conditions = [],
+        output_dir = "output/wang2010_natural_convection_air",
         rayleigh_number = 1.e6,
         prandtl_number = 0.71,
         stefan_number = 0.045,
@@ -49,9 +52,6 @@ def run(output_dir = "output/wang2010_natural_convection_air",
         penalty_parameter = 1.e-7,
         semi_phasefield_mapping = None,
         semi_phasefield_mapping_derivative = None,
-        initial_values = None,
-        boundary_conditions = [],
-        start_time = 0.,
         end_time = 10.,
         time_step_size = 1.e-3,
         stop_when_steady = True,
@@ -116,8 +116,10 @@ def run(output_dir = "output/wang2010_natural_convection_air",
         arguments_file.close()
     
     
-    # Use function space and mesh from initial values.
-    W = initial_values.function_space()
+    # Use function space and mesh from initial solution.
+    w = solution
+    
+    W = w.function_space()
     
     mesh = W.mesh()
     
@@ -129,10 +131,10 @@ def run(output_dir = "output/wang2010_natural_convection_air",
     
     
     # Set the initial values.
-    w_n = initial_values
-       
-    u_n, p_n, T_n = fenics.split(w_n)
-        
+    w_n = fenics.Function(W)
+    
+    w_n.leaf_node().vector()[:] = w.leaf_node().vector()
+    
     
     # Set the variational form.
     """Set local names for math operators to improve readability."""
@@ -192,10 +194,10 @@ def run(output_dir = "output/wang2010_natural_convection_air",
     
     psi_u, psi_p, psi_T = fenics.TestFunctions(W)
     
-    w = fenics.Function(W)
-    
     u, p, T = fenics.split(w)
-
+    
+    u_n, p_n, T_n = fenics.split(w_n)
+    
     F = (
         b(u, psi_p) - psi_p*gamma*p
         + dot(psi_u, 1./Delta_t*(u - u_n) + f_B(T))
@@ -297,14 +299,16 @@ def run(output_dir = "output/wang2010_natural_convection_air",
         solver.parameters["newton_solver"]["relaxation_parameter"] = nlp_relaxation
     
     
+    # 
+    start_time = 0. + time
+    
+    
     # Open a context manager for the output file.
     solution_filepath = output_dir + "/solution.xdmf"
     
     with fenics.XDMFFile(solution_filepath) as solution_file:
 
-        time = start_time 
-        
-        
+    
         # Write the initial values.
         write_solution(solution_file, w_n, time, solution_filepath) 
 
@@ -371,8 +375,6 @@ def run(output_dir = "output/wang2010_natural_convection_air",
     
     # Return the interpolant to sample inside of Python.
     w_k.rename("w", "state")
-    
-    return w_k, time
     
     
 def write_solution(solution_file, solution, time, solution_filepath):
