@@ -85,7 +85,7 @@ def melt_toy_pcm(output_dir = "output/test_melt_toy_pcm/"):
         boundary_conditions = [
             fenics.DirichletBC(function_space.sub(0), (0., 0.), walls),
             fenics.DirichletBC(function_space.sub(2), T_hot, hot_wall),
-            fenics.DirichletBC(function_space.sub(2), T_cold, cold_wall)]
+            fenics.DirichletBC(function_space.sub(2), T_cold, cold_wall)],
         stefan_number = 1.,
         rayleigh_number = 1.e6,
         prandtl_number = 0.71,

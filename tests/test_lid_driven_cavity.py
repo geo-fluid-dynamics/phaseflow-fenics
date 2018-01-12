@@ -48,7 +48,7 @@ def test_lid_driven_cavity():
             fenics.Expression((lid, "0.", "0.", "1."), element = mixed_element), function_space),
         boundary_conditions = [
             fenics.DirichletBC(function_space.sub(0), (1., 0.), lid),
-            fenics.DirichletBC(function_space.sub(0), (0., 0.), fixed_walls)]
+            fenics.DirichletBC(function_space.sub(0), (0., 0.), fixed_walls)],
         end_time = 1.e12,
         time_step_size = 1.e12,
         liquid_viscosity = 0.01,

@@ -11,17 +11,13 @@ def test_1d_output():
     
     mixed_element = phaseflow.make_mixed_fe(mesh.ufl_cell())
         
-    W = fenics.FunctionSpace(mesh, mixed_element)
+    function_space = fenics.FunctionSpace(mesh, mixed_element)
     
     boundaries = "near(x[0],  0.) | near(x[0],  1.)"
     
-    w, time = phaseflow.run(solution = fenics.Function(W)
+    phaseflow.run(solution = fenics.Function(function_space),
+        initial_values = fenics.Function(function_space),
         output_dir = "output/test_1D_output/",
-        initial_values = fenics.interpolate(
-            fenics.Expression(("0.", "0.", "0."), element = mixed_element), W),
-        boundary_conditions = [
-            fenics.DirichletBC(W.sub(0), [0.], boundaries),
-            fenics.DirichletBC(W.sub(2), 0., boundaries)],
         gravity = [0.],
         end_time = 0.)
 
