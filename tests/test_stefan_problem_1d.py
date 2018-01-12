@@ -94,8 +94,6 @@ def stefan_problem(output_dir = "output/stefan_problem",
     
     
     # Set initial values.
-    solution = fenics.Function(function_space)
-    
     initial_values = fenics.interpolate(
             fenics.Expression(
                 ("0.", "0.", "(T_h - T_c)*(x[0] < initial_pci_position) + T_c"),
@@ -104,6 +102,20 @@ def stefan_problem(output_dir = "output/stefan_problem",
             function_space)
     
     
+    #
+    solution = fenics.Function(function_space)
+    
+    u, p, T = fenics.split(solution)
+    
+    if adaptive:
+    
+        adaptive_goal_functional = phi(T)*fenics.dx
+        
+    else:
+    
+        adaptive_goal_functional = None
+        
+        
     #
     phaseflow.run(solution = solution,
         initial_values = initial_values,
@@ -115,8 +127,7 @@ def stefan_problem(output_dir = "output/stefan_problem",
         gravity = [0.],
         semi_phasefield_mapping = phi,
         semi_phasefield_mapping_derivative = dphi,
-        adaptive = adaptive,
-        adaptive_metric = "phase_only",
+        adaptive_goal_functional = adaptive_goal_functional,
         adaptive_solver_tolerance = 1.e-6,
         end_time = end_time,
         time_step_size = time_step_size,

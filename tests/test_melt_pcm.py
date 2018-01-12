@@ -75,6 +75,8 @@ def melt_toy_pcm(output_dir = "output/test_melt_toy_pcm/"):
     
     solution = fenics.Function(function_space)
     
+    u, p, T = fenics.split(solution)
+    
     phaseflow.run(solution = solution,
         initial_values = fenics.interpolate(
             fenics.Expression(
@@ -96,8 +98,7 @@ def melt_toy_pcm(output_dir = "output/test_melt_toy_pcm/"):
         stop_when_steady = True,
         semi_phasefield_mapping = phi,
         semi_phasefield_mapping_derivative = dphi,
-        adaptive = True,
-        adaptive_metric = 'phase_only',
+        adaptive_goal_functional = phi(T)*fenics.dx,
         adaptive_solver_tolerance = 1.e-4,
         nlp_relative_tolerance = 1.e-8,
         output_dir = output_dir)

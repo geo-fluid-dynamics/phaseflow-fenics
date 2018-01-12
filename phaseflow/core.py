@@ -38,13 +38,13 @@ def make_mixed_fe(cell):
   
   
 def run(solution,
+        initial_values,
+        boundary_conditions,
         time = 0.,
-        initial_values = None,
-        boundary_conditions = [],
-        output_dir = "output/wang2010_natural_convection_air",
-        rayleigh_number = 1.e6,
-        prandtl_number = 0.71,
-        stefan_number = 0.045,
+        output_dir = "phaseflow_output/",
+        rayleigh_number = 1.,
+        prandtl_number = 1.,
+        stefan_number = 1.,
         liquid_viscosity = 1.,
         solid_viscosity = 1.e8,
         gravity = (0., -1.),
@@ -57,8 +57,7 @@ def run(solution,
         time_step_size = 1.e-3,
         stop_when_steady = True,
         steady_relative_tolerance=1.e-4,
-        adaptive = False,
-        adaptive_metric = "all",
+        adaptive_goal_functional = None,
         adaptive_solver_tolerance = 1.e-4,
         nlp_absolute_tolerance = 1.e-8,
         nlp_relative_tolerance = 1.e-8,
@@ -241,50 +240,36 @@ def run(solution,
     
     # Make the solver.
     """ For the purposes of this project, it would be better to just always use the adaptive solver; but
-    unfortunately the adaptive solver encounters nan's whenever evaluating the error for problems not 
-    involving phase-change. So far my attempts at writing a MWE to reproduce the  issue have failed.
-    """   
+    unfortunately the adaptive solver encounters nan's in some cases.
+    So far my attempts at writing a MWE to reproduce the  issue have failed.
+    """
+    if adaptive_goal_functional is not None:
+    
+        adaptive = True
+        
+    else:
+        
+        adaptive = False
+        
     if adaptive:
-    
-        # Set the functional metric for the error estimator for adaptive mesh refinement.
-        """I haven't found a good way to make this flexible yet.
-        Ideally the user would be able to write the metric, but this would require giving the user
-        access to much data that phaseflow is currently hiding.
-        """
-        M = phi(T)*fenics.dx
         
-        if adaptive_metric == "phase_only":
+        solver = fenics.AdaptiveNonlinearVariationalSolver(problem = problem, 
+            goal = adaptive_goal_functional)
         
-            pass
-            
-        elif adaptive_metric == "all":
-            
-            M += T*fenics.dx
-            
-            for i in range(dimensionality):
-            
-                M += u[i]*fenics.dx
-                
-        else:
-            
-            assert(False)
-    
-        solver = fenics.AdaptiveNonlinearVariationalSolver(problem, M)
-    
         solver.parameters["nonlinear_variational_solver"]["newton_solver"]["maximum_iterations"]\
             = nlp_max_iterations
-    
+        
         solver.parameters["nonlinear_variational_solver"]["newton_solver"]["absolute_tolerance"]\
             = nlp_absolute_tolerance
-    
+        
         solver.parameters["nonlinear_variational_solver"]["newton_solver"]["relative_tolerance"]\
             = nlp_relative_tolerance
-            
+        
         solver.parameters["nonlinear_variational_solver"]["newton_solver"]["relaxation_parameter"]\
             = nlp_relaxation
-            
+        
     else:
-
+        
         solver = fenics.NonlinearVariationalSolver(problem)
         
         solver.parameters["newton_solver"]["maximum_iterations"] = nlp_max_iterations

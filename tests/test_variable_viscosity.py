@@ -104,7 +104,6 @@ def test_variable_viscosity():
         semi_phasefield_mapping_derivative = dphi,
         gravity = (0., 0.),
         stefan_number = 1.e16,
-        adaptive = False,
         output_dir = output_dir)
     
     

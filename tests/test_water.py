@@ -127,7 +127,6 @@ def heat_driven_cavity_water(
         prandtl_number = Pr,
         stefan_number = 1.e16,
         nlp_relative_tolerance = 1.e-8,
-        adaptive = False,
         m_B = m_B,
         ddT_m_B = ddT_m_B,
         stop_when_steady = True,

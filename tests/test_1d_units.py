@@ -17,6 +17,7 @@ def test_1d_output():
     
     phaseflow.run(solution = fenics.Function(function_space),
         initial_values = fenics.Function(function_space),
+        boundary_conditions = None,
         output_dir = "output/test_1D_output/",
         gravity = [0.],
         end_time = 0.)
