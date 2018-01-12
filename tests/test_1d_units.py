@@ -15,7 +15,7 @@ def test_1d_output():
     
     boundaries = "near(x[0],  0.) | near(x[0],  1.)"
     
-    w, time = phaseflow.run(
+    w, time = phaseflow.run(solution = fenics.Function(W)
         output_dir = "output/test_1D_output/",
         initial_values = fenics.interpolate(
             fenics.Expression(("0.", "0.", "0."), element = mixed_element), W),

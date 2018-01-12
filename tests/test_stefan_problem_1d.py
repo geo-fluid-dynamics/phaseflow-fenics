@@ -96,19 +96,20 @@ def stefan_problem(output_dir = "output/stefan_problem",
     # Set initial values.
     solution = fenics.Function(function_space)
     
-    
-    #
-    phaseflow.run(solution,
-        initial_values = fenics.interpolate(
+    initial_values = fenics.interpolate(
             fenics.Expression(
                 ("0.", "0.", "(T_h - T_c)*(x[0] < initial_pci_position) + T_c"),
                 T_h = T_h, T_c = T_c, initial_pci_position = initial_pci_position,
                 element=mixed_element),
-            function_space),
+            function_space)
+    
+    
+    #
+    phaseflow.run(solution = solution,
+        initial_values = initial_values,
         boundary_conditions = [
             fenics.DirichletBC(function_space.sub(2), T_h, "near(x[0],  0.)"),
             fenics.DirichletBC(function_space.sub(2), T_c, "near(x[0],  1.)")],
-        output_dir = output_dir,
         prandtl_number = 1.,
         stefan_number = stefan_number,
         gravity = [0.],
@@ -118,7 +119,8 @@ def stefan_problem(output_dir = "output/stefan_problem",
         adaptive_metric = "phase_only",
         adaptive_solver_tolerance = 1.e-6,
         end_time = end_time,
-        time_step_size = time_step_size)
+        time_step_size = time_step_size,
+        output_dir = output_dir,)
         
     return solution
         
