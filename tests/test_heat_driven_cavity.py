@@ -43,7 +43,7 @@ def verify_against_wang2010(w):
             
     
 def heat_driven_cavity(output_dir = "output/heat_driven_cavity",
-        start_time = 0.,
+        time = 0.,
         initial_values = None):
 
     T_hot = 0.5
@@ -79,14 +79,17 @@ def heat_driven_cavity(output_dir = "output/heat_driven_cavity",
     
         W = initial_values.function_space()
         
-    w, time = phaseflow.run(output_dir=output_dir,
+    solution = fenics.Function(W)
+    
+    phaseflow.run(solution,
         initial_values = initial_values,
+        time = time,
         boundary_conditions = [
             fenics.DirichletBC(W.sub(0), (0., 0.),
                 "near(x[0],  0.) | near(x[0],  1.) | near(x[1], 0.) | near(x[1],  1.)"),
             fenics.DirichletBC(W.sub(2), T_hot, "near(x[0],  0.)"),
             fenics.DirichletBC(W.sub(2), T_cold, "near(x[0],  1.)")],
-        start_time = start_time,
+        output_dir=output_dir,
         time_step_size = 1.e-3,
         end_time = 10.,
         rayleigh_number = 1.e6,
@@ -98,27 +101,27 @@ def heat_driven_cavity(output_dir = "output/heat_driven_cavity",
         steady_relative_tolerance=1.e-4,
         adaptive = False)
                 
-    return w, time
+    return solution, time
     
     
 @pytest.mark.dependency()
 def test_heat_driven_cavity():
     
-    w, time = heat_driven_cavity(output_dir="output/test_heat_driven_cavity")
+    solution, time = heat_driven_cavity(output_dir="output/test_heat_driven_cavity")
         
-    verify_against_wang2010(w)
+    verify_against_wang2010(solution)
     
 
 @pytest.mark.dependency(depends=["test_heat_driven_cavity"])
 def test_heat_driven_cavity_restart():
 
-    w, time = phaseflow.read_checkpoint("output/test_heat_driven_cavity/checkpoint_t0.06.h5")
+    solution, time = phaseflow.read_checkpoint("output/test_heat_driven_cavity/checkpoint_t0.06.h5")
     
-    w, time = heat_driven_cavity(initial_values = w,
-        start_time = time,
+    solution, time = heat_driven_cavity(initial_values = solution,
+        time = time,
         output_dir="output/test_heat_driven_cavity/restart_t0.06/")
         
-    verify_against_wang2010(w)
+    verify_against_wang2010(solution)
     
     
 if __name__=='__main__':
