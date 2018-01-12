@@ -154,9 +154,9 @@ def run(output_dir = "output/wang2010_natural_convection_air",
         m_B = None,
         ddT_m_B = None,
         penalty_parameter = 1.e-7,
-        temperature_of_fusion = -1.e12,
-        regularization_smoothing_factor = 0.005,
-        initial_values = [],
+        semi_phasefield_mapping = None,
+        semi_phasefield_mapping_derivative = None,
+        initial_values = None,
         boundary_conditions = [],
         start_time = 0.,
         end_time = 10.,
@@ -194,6 +194,19 @@ def run(output_dir = "output/wang2010_natural_convection_air",
             return Ra/(Pr*Re**2)
     
     
+    if semi_phasefield_mapping is None:
+    
+        assert (semi_phasefield_mapping_derivative is None)
+
+        def semi_phasefield_mapping(T):
+    
+            return 0.
+        
+        def semi_phasefield_mapping_derivative(T):
+        
+            return 0.
+            
+        
     # Report arguments.
     phaseflow.helpers.print_once("Running Phaseflow with the following arguments:")
     
@@ -272,16 +285,9 @@ def run(output_dir = "output/wang2010_natural_convection_air",
         return m_B(T=T, Ra=Ra, Pr=Pr, Re=Re)*g  # Buoyancy force, $f = ma$
     
     
+    phi = semi_phasefield_mapping
+    
     gamma = fenics.Constant(penalty_parameter)
-    
-    T_r = fenics.Constant(temperature_of_fusion)
-    
-    r = fenics.Constant(regularization_smoothing_factor)
-    
-    def phi(T):
-    
-        return 0.5*(1. + fenics.tanh((T_r - T)/r))  # Regularized phase field.
-    
     
     mu_l = fenics.Constant(liquid_viscosity)
     
@@ -311,17 +317,8 @@ def run(output_dir = "output/wang2010_natural_convection_air",
         
         return ddT_m_B(T=T, Ra=Ra, Pr=Pr, Re=Re)*g
     
+    dphi = semi_phasefield_mapping_derivative
     
-    def sech(theta):
-    
-        return 1./fenics.cosh(theta)
-    
-    
-    def dphi(T):
-    
-        return -sech((T_r - T)/r)**2/(2.*r)
-
-        
     def dmu(T):
     
         return (mu_s - mu_l)*dphi(T)
@@ -346,29 +343,6 @@ def run(output_dir = "output/wang2010_natural_convection_air",
         )*fenics.dx
 
         
-    # Set the functional metric for the error estimator for adaptive mesh refinement.
-    """I haven't found a good way to make this flexible yet.
-    Ideally the user would be able to write the metric, but this would require giving the user
-    access to much data that phaseflow is currently hiding.
-    """
-    M = phi(T_k)*fenics.dx
-    
-    if adaptive_metric == "phase_only":
-    
-        pass
-        
-    elif adaptive_metric == "all":
-        
-        M += T_k*fenics.dx
-        
-        for i in range(dimensionality):
-        
-            M += u_k[i]*fenics.dx
-            
-    else:
-        
-        assert(False)
-        
     # Make the problem.
     problem = fenics.NonlinearVariationalProblem(F, w_k, boundary_conditions, JF)
     
@@ -379,6 +353,29 @@ def run(output_dir = "output/wang2010_natural_convection_air",
     involving phase-change. So far my attempts at writing a MWE to reproduce the  issue have failed.
     """   
     if adaptive:
+    
+        # Set the functional metric for the error estimator for adaptive mesh refinement.
+        """I haven't found a good way to make this flexible yet.
+        Ideally the user would be able to write the metric, but this would require giving the user
+        access to much data that phaseflow is currently hiding.
+        """
+        M = phi(T_k)*fenics.dx
+        
+        if adaptive_metric == "phase_only":
+        
+            pass
+            
+        elif adaptive_metric == "all":
+            
+            M += T_k*fenics.dx
+            
+            for i in range(dimensionality):
+            
+                M += u_k[i]*fenics.dx
+                
+        else:
+            
+            assert(False)
     
         solver = fenics.AdaptiveNonlinearVariationalSolver(problem, M)
     

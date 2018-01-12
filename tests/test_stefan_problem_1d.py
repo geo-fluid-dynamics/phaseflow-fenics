@@ -74,6 +74,24 @@ def stefan_problem(output_dir = "output/stefan_problem",
     
     initial_pci_position = 1./float(initial_uniform_cell_count)/2.**(initial_hot_wall_refinement_cycles - 1)
     
+    T_r = 0.
+        
+    r = regularization_smoothing_factor
+    
+    def phi(T):
+
+        return 0.5*(1. + fenics.tanh((T_r - T)/r))
+        
+        
+    def sech(theta):
+    
+        return 1./fenics.cosh(theta)
+    
+    
+    def dphi(T):
+    
+        return -sech((T_r - T)/r)**2/(2.*r)
+    
     solution, time = phaseflow.run(
         output_dir = output_dir,
         prandtl_number = 1.,
@@ -88,8 +106,8 @@ def stefan_problem(output_dir = "output/stefan_problem",
         boundary_conditions = [
             fenics.DirichletBC(function_space.sub(2), T_h, "near(x[0],  0.)"),
             fenics.DirichletBC(function_space.sub(2), T_c, "near(x[0],  1.)")],
-        temperature_of_fusion = 0.,
-        regularization_smoothing_factor = regularization_smoothing_factor,
+        semi_phasefield_mapping = phi,
+        semi_phasefield_mapping_derivative = dphi,
         adaptive = adaptive,
         adaptive_metric = "phase_only",
         adaptive_solver_tolerance = 1.e-6,

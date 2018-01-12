@@ -65,6 +65,26 @@ def test_variable_viscosity():
     W = fenics.FunctionSpace(mesh, mixed_element)
     
     
+    # Set the semi-phase-field mapping
+    T_r = -0.01
+    
+    r = 0.01
+    
+    def phi(T):
+
+        return 0.5*(1. + fenics.tanh((T_r - T)/r))
+        
+        
+    def sech(theta):
+    
+        return 1./fenics.cosh(theta)
+    
+    
+    def dphi(T):
+    
+        return -sech((T_r - T)/r)**2/(2.*r)
+    
+    
     # Run the simulation.
     w, time = phaseflow.run(
         end_time = 20.,
@@ -72,8 +92,8 @@ def test_variable_viscosity():
         prandtl_number = 1.e16,
         liquid_viscosity = 0.01,
         solid_viscosity = 1.e6,
-        temperature_of_fusion = -0.01,
-        regularization_smoothing_factor = 0.01,
+        semi_phasefield_mapping = phi,
+        semi_phasefield_mapping_derivative = dphi,
         gravity = (0., 0.),
         stefan_number = 1.e16,
         adaptive = False,
