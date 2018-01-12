@@ -98,8 +98,7 @@ def heat_driven_cavity(output_dir = "output/heat_driven_cavity",
         m_B = m_B,
         ddT_m_B = ddT_m_B,
         stop_when_steady = True,
-        steady_relative_tolerance=1.e-4,
-        adaptive = False)
+        steady_relative_tolerance=1.e-4)
                 
     return solution, time
     
