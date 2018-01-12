@@ -369,8 +369,6 @@ def run(solution,
             
                 break
     
-    solution.leaf_node().vector()[:] = w_k.leaf_node().vector()
-    
     
 def write_solution(solution_file, solution, time, solution_filepath):
     """Write the solution to disk.
