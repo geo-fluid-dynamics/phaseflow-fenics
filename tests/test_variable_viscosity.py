@@ -86,12 +86,16 @@ def test_variable_viscosity():
     
     
     # Run the simulation.
+    initial_values = initial_values = fenics.interpolate(
+        fenics.Expression(("0.", lid, "0.", "1. - 2.*(x[1] <= 0.)"), element = mixed_element),
+        function_space)
+            
     solution = fenics.Function(function_space)
     
+    solution.leaf_node().vector()[:] = initial_values.leaf_node().vector()
+    
     phaseflow.run(solution = solution,
-        initial_values = fenics.interpolate(
-            fenics.Expression(("0.", lid, "0.", "1. - 2.*(x[1] <= 0.)"), element = mixed_element),
-            function_space),
+        initial_values = initial_values,
         boundary_conditions = [
             fenics.DirichletBC(function_space.sub(1), (1., 0.), lid),
             fenics.DirichletBC(function_space.sub(1), (0., 0.), fixed_walls)],

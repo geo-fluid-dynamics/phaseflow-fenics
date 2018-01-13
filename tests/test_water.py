@@ -114,6 +114,8 @@ def heat_driven_cavity_water(
         
     solution = fenics.Function(function_space)
     
+    solution.leaf_node().vector()[:] = initial_values.leaf_node().vector()
+    
     phaseflow.run(solution = solution,
         initial_values = initial_values,
         boundary_conditions = [
