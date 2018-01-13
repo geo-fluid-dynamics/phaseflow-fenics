@@ -62,7 +62,8 @@ def stefan_problem(output_dir = "output/stefan_problem",
         end_time = 0.1,
         initial_uniform_cell_count = 1,
         initial_hot_wall_refinement_cycles = 10,
-        adaptive = True):
+        adaptive = True,
+        zero_initial_guess = False):
     
     mesh = fenics.UnitIntervalMesh(initial_uniform_cell_count)
     
@@ -100,8 +101,8 @@ def stefan_problem(output_dir = "output/stefan_problem",
                 T_h = T_h, T_c = T_c, initial_pci_position = initial_pci_position,
                 element=mixed_element),
             function_space)
-    
-    
+
+            
     #
     solution = fenics.Function(function_space)
     
@@ -117,6 +118,10 @@ def stefan_problem(output_dir = "output/stefan_problem",
         
         
     #
+    if not zero_initial_guess:
+    
+        solution.leaf_node().vector()[:] = initial_values.leaf_node().vector()
+    
     phaseflow.run(solution = solution,
         initial_values = initial_values,
         boundary_conditions = [
@@ -140,6 +145,7 @@ def test_stefan_problem_melt_Ste0p045_uniform_grid():
     
     solution = stefan_problem(output_dir = "output/test_stefan_problem_melt_Ste0p045_uniform_grid/",
         initial_uniform_cell_count = 311, initial_hot_wall_refinement_cycles = 0,
+        zero_initial_guess = False,
         adaptive = False)
     
     verify_against_analytical(solution)
@@ -148,7 +154,9 @@ def test_stefan_problem_melt_Ste0p045_uniform_grid():
 def test_stefan_problem_melt_Ste0p045_amr():
     
     solution = stefan_problem(output_dir = "output/test_stefan_problem_melt_Ste0p045_amr/",
-        initial_uniform_cell_count = 4, initial_hot_wall_refinement_cycles = 8,
+        initial_uniform_cell_count = 4,
+        initial_hot_wall_refinement_cycles = 8,
+        zero_initial_guess = True,
         adaptive = True)
     
     verify_against_analytical(solution)

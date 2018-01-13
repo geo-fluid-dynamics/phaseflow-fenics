@@ -81,6 +81,8 @@ def heat_driven_cavity(output_dir = "output/heat_driven_cavity",
         
     solution = fenics.Function(W)
     
+    solution.leaf_node().vector()[:] = initial_values.leaf_node().vector()
+    
     phaseflow.run(solution,
         initial_values = initial_values,
         time = time,

@@ -2,11 +2,11 @@ import fenics
 import phaseflow
         
 
-T_f = 0.01
+T_r = 0.01
 
 def melt_toy_pcm(output_dir = "output/melt_octadecane_pcm/",
         initial_values = None,
-        start_time = 0.,
+        time = 0.,
         end_time = 80.,
         time_step_size = 1.,
         adaptive_solver_tolerance = 1.e-5):
@@ -47,7 +47,7 @@ def melt_toy_pcm(output_dir = "output/melt_octadecane_pcm/",
         #
         mixed_element = phaseflow.make_mixed_fe(mesh.ufl_cell())
             
-        W = fenics.FunctionSpace(mesh, mixed_element)
+        function_space = fenics.FunctionSpace(mesh, mixed_element)
     
     
         #
@@ -58,11 +58,29 @@ def melt_toy_pcm(output_dir = "output/melt_octadecane_pcm/",
                 ("0.", "0.", "0.", "(T_hot - T_cold)*(x[0] < initial_pci_position) + T_cold"),
                 T_hot = T_hot, T_cold = T_cold, initial_pci_position = initial_pci_position,
                 element = mixed_element),
-            W)
+            function_space)
             
     else:
     
-        W = initial_values.function_space()
+        function_space = initial_values.function_space()
+        
+        
+    # Set the semi-phase-field mapping
+    r = 0.025
+    
+    def phi(T):
+
+        return 0.5*(1. + fenics.tanh((T_r - T)/r))
+        
+        
+    def sech(theta):
+    
+        return 1./fenics.cosh(theta)
+    
+    
+    def dphi(T):
+    
+        return -sech((T_r - T)/r)**2/(2.*r)
         
         
     # Run phaseflow.
@@ -72,49 +90,53 @@ def melt_toy_pcm(output_dir = "output/melt_octadecane_pcm/",
     
     cold_wall = "near(x[0],  1.)"
     
-    w, time = phaseflow.run(
+    solution = fenics.Function(function_space)
+    
+    p, u, T = fenics.split(solution)
+    
+    solution.leaf_node().vector()[:] = initial_values.leaf_node().vector()
+    
+    phaseflow.run(solution = solution,
+        initial_values = initial_values,
+        boundary_conditions = [
+            fenics.DirichletBC(function_space.sub(1), (0., 0.), walls),
+            fenics.DirichletBC(function_space.sub(2), T_hot, hot_wall),
+            fenics.DirichletBC(function_space.sub(2), T_cold, cold_wall)],
+        time = time,
         stefan_number = 0.045,
         rayleigh_number = 3.27e5,
         prandtl_number = 56.2,
         solid_viscosity = 1.e8,
         liquid_viscosity = 1.,
         time_step_size = time_step_size,
-        start_time = start_time,
         end_time = end_time,
         stop_when_steady = True,
-        temperature_of_fusion = T_f,
-        regularization_smoothing_factor = 0.025,
-        adaptive = True,
-        adaptive_metric = "phase_only",
+        semi_phasefield_mapping = phi,
+        semi_phasefield_mapping_derivative = dphi,
+        adaptive_goal_functional = phi(T)*fenics.dx,
         adaptive_solver_tolerance = adaptive_solver_tolerance,
         nlp_relative_tolerance = 1.e-8,
         nlp_max_iterations = 100,
         nlp_relaxation = 1.,
-        initial_values = initial_values,
-        boundary_conditions = [
-            fenics.DirichletBC(W.sub(0), (0., 0.), walls),
-            fenics.DirichletBC(W.sub(2), T_hot, hot_wall),
-            fenics.DirichletBC(W.sub(2), T_cold, cold_wall)],
         output_dir = output_dir)
 
-    return w, time
+    return solution, time
     
     
 def melt_octadecane_pcm():
 
-    melt_toy_pcm(initial_values = w,
-        output_dir = "output/melt_octadecane_pcm/",
-        start_time = 0., 
-        adaptive_solver_tolerance = 1.e-5
+    melt_toy_pcm(output_dir = "output/melt_octadecane_pcm/",
+        time = 0., 
+        adaptive_solver_tolerance = 1.e-5,
         end_time = 36.)
     
-    w, time = phaseflow.read_checkpoint("output/melt_octadecane_pcm/checkpoint_t36.0.h5")
+    solution, time = phaseflow.read_checkpoint("output/melt_octadecane_pcm/checkpoint_t36.0.h5")
     
     assert(abs(time - 36.) < 1.e-8)
     
-    melt_toy_pcm(initial_values = w,
+    melt_toy_pcm(initial_values = solution,
         output_dir = "output/melt_octadecane_pcm/restart_t36/",
-        start_time = time, 
+        time = time, 
         end_time = 80.,
         adaptive_solver_tolerance = 0.5e-5)
     
