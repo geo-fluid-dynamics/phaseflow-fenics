@@ -94,7 +94,7 @@ def melt_toy_pcm(output_dir = "output/melt_octadecane_pcm/",
     
     p, u, T = fenics.split(solution)
     
-    #solution.leaf_node().vector()[:] = initial_values.leaf_node().vector()
+    solution.leaf_node().vector()[:] = initial_values.leaf_node().vector()
     
     phaseflow.run(solution = solution,
         initial_values = initial_values,
