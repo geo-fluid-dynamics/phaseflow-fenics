@@ -55,14 +55,15 @@ def run(solution,
         semi_phasefield_mapping_derivative = None,
         end_time = 10.,
         time_step_size = 1.e-3,
-        stop_when_steady = True,
+        stop_when_steady = False,
         steady_relative_tolerance=1.e-4,
         adaptive_goal_functional = None,
         adaptive_solver_tolerance = 1.e-4,
         nlp_absolute_tolerance = 1.e-8,
         nlp_relative_tolerance = 1.e-8,
         nlp_max_iterations = 50,
-        nlp_relaxation = 1.):
+        nlp_relaxation = 1.,
+        quadrature_degree = None):
     """Run Phaseflow.
     
     
@@ -194,13 +195,21 @@ def run(solution,
      
     p_n, u_n, T_n = fenics.split(w_n)
     
+    if quadrature_degree is None:
+    
+        dx = fenics.dx
+        
+    else:
+    
+        dx = fenics.dx(metadata={'quadrature_degree': quadrature_degree})
+    
     F = (
         b(u, psi_p) - psi_p*gamma*p
         + dot(psi_u, 1./Delta_t*(u - u_n) + f_B(T))
         + c(u, u, psi_u) + b(psi_u, p) + a(mu(T), u, psi_u)
         + 1./Delta_t*psi_T*(T - T_n - 1./Ste*(phi(T) - phi(T_n)))
         + dot(grad(psi_T), 1./Pr*grad(T) - T*u)        
-        )*fenics.dx
+        )*dx
 
         
     # Set the Jacobian (formally the Gateaux derivative) in variational form.
