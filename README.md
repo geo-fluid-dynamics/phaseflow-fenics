@@ -109,8 +109,3 @@ Edit the Dockerfile, then
     docker tag phaseflow-fenics zimmerman/phaseflow-fenics:latest
     
     docker push zimmerman/phaseflow-fenics:latest
-
-    
-
-
-
