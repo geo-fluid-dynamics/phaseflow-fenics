@@ -56,6 +56,7 @@ def test_lid_driven_cavity():
             fenics.DirichletBC(function_space.sub(1), (0., 0.), fixed_walls)],
         end_time = 1.e12,
         time_step_size = 1.e12,
+        stop_when_steady = True,
         liquid_viscosity = 0.01,
         gravity = (0., 0.),
         output_dir='output/test_lid_driven_cavity')

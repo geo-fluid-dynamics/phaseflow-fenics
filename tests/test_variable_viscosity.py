@@ -101,6 +101,7 @@ def test_variable_viscosity():
             fenics.DirichletBC(function_space.sub(1), (0., 0.), fixed_walls)],
         end_time = 20.,
         time_step_size = 20.,
+        stop_when_steady = True,
         prandtl_number = 1.e16,
         liquid_viscosity = 0.01,
         solid_viscosity = 1.e6,
