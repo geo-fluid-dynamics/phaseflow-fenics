@@ -1,49 +1,39 @@
 # phaseflow-fenics
+<img src="./docs/images/MeltingPCM.png" width="320"> 
 Phaseflow simulates the convection-coupled melting and solidification of phase-change materials (PCM's). We adopt an enthalpy-based, single-domain semi-phase-field, finite element method, with monolithic system coupling and global Newton linearization.
+
 The model system is composed of
 - Incompressible flow driven by buoyancy: unsteady Navier-Stokes mass and momentum with Boussinesq approximation
 - Convection-diffusion of the enthalpy field, with an enthalpy source term accounting for the latent heat of the phase-change material
 
-Phaseflow spatially discretizes the PDE's with the finite element method, and to this end uses the Python/C++ finite element library [FEniCS](https://fenicsproject.org/). Many other features are provided by FEniCS, including the nonlinear (Newton) solver and solution output to HDF5, among others.
+Phaseflow spatially discretizes the PDE's with the finite element method, and to this end uses the Python/C++ finite element library [FEniCS](https://fenicsproject.org/). Many other features are provided by FEniCS, including the nonlinear (Newton) solver, goal-oriented adaptive mesh refinement, and solution output to HDF5, among others.
 
-We present Phaseflow and benchmark results in a [submitted proceedings paper, with the preprint here on arXiv](https://arxiv.org/abs/1801.03429).
+We present the mathematical model, the numerical methods, the Phaseflow implementation and its verification in a submitted proceedings paper, [*Monolithic simulation of convection-coupled phase-change - verification and reproducibility*](https://arxiv.org/abs/1801.03429).
 
 Author: Alexander G. Zimmerman <zimmerman@aices.rwth-aachen.de>
 
 [![Build Status](https://travis-ci.org/geo-fluid-dynamics/phaseflow-fenics.svg?branch=master)](https://travis-ci.org/geo-fluid-dynamics/phaseflow-fenics) (<b>Continuous integration status</b>; click the button to go to Travis-CI)
 
 ## Current capabilities
-- Unsteady incompressible Navier-Stokes
+- Unsteady incompressible flow
 
     Benchmark: Lid-driven cavity
     
-    <img src="./docs/images/LidDrivenCavity.png" width="480">
+    <img src="./docs/images/LidDrivenCavity.png" width="360">
 
-- Thermal convection: the momentum equation includes a temperature-based bouyancy force per the Boussinesq approximation
+- Thermal convection
 
-    Benchmark: Natural convection of air (i.e. the heat-driven cavity)
+    Benchmarks: Heat-driven cavity (left), natural convection of water (right)
     
-    <img src="./docs/images/NaturalConvectionAir.png" width="480">
+    <img src="./docs/images/NaturalConvectionAir.png" width="360"> <img src="./docs/images/NaturalConvectionWater.png" width="360">
     
-- Nonlinear bouyancy
+- Phase-change
 
-    Benchmark: Natural convection of water
+    Benchmark: Stefan problem (i.e. melting without convection)
     
-    <img src="./docs/images/NaturalConvectionWater.png" width="480">
+    <img src="./docs/images/StefanProblem.png" width="360">
     
-- Phase-change: The energy equation written in enthalpy form, with latent heat sources/sinks from the phase-change
-
-    Benchmark: Stefan problem (melting without convection)
-    
-    <img src="./docs/images/StefanProblem.png" width="480">
-    
-- Variable viscosity: Apply the same momentum equation throughout the single phase-change material domain
-
-    Test: Analogy of lid-driven cavity, with a solid sub-domain outside of the unit square
-    
-    <img src="./docs/images/VariableViscosity.png" width="480">
-    
-- Monolithic coupling of all of the above features
+- Convection-coupled melting 
 
     Benchmark: Convection-coupled melting of an octadecane PCM
     
