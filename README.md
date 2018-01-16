@@ -1,11 +1,12 @@
 # phaseflow-fenics
-Phaseflow simulates the melting and solidification of phase-change materials (PCM).
-
-Phaseflow adopts an enthalpy-based, single domain phase-field, variable viscosity approach, with monolithic system coupling and global Newton linearization of the system of nonlinear partial differential equations (PDE's). The system is composed of
-- Incompressible flow driven by buoyancy: unsteady Navier-Stokes momentum and mass (penalty formulation) with Boussinesq approximation
+Phaseflow simulates the convection-coupled melting and solidification of phase-change materials (PCM's). We adopt an enthalpy-based, single-domain semi-phase-field, finite element method, with monolithic system coupling and global Newton linearization.
+The model system is composed of
+- Incompressible flow driven by buoyancy: unsteady Navier-Stokes mass and momentum with Boussinesq approximation
 - Convection-diffusion of the enthalpy field, with an enthalpy source term accounting for the latent heat of the phase-change material
 
-Phaseflow spatially discretizes the PDE's with the finite element method, and to this end uses the Python/C++ finite element library [FEniCS](https://fenicsproject.org/). Many other features are provided by FEniCS, including the Newton iterative algorithm and solution output to HDF5, among others.
+Phaseflow spatially discretizes the PDE's with the finite element method, and to this end uses the Python/C++ finite element library [FEniCS](https://fenicsproject.org/). Many other features are provided by FEniCS, including the nonlinear (Newton) solver and solution output to HDF5, among others.
+
+We present Phaseflow and benchmark results in a [submitted proceedings paper, with the preprint here on arXiv](https://arxiv.org/abs/1801.03429).
 
 Author: Alexander G. Zimmerman <zimmerman@aices.rwth-aachen.de>
 
@@ -20,7 +21,7 @@ Author: Alexander G. Zimmerman <zimmerman@aices.rwth-aachen.de>
 
 - Thermal convection: the momentum equation includes a temperature-based bouyancy force per the Boussinesq approximation
 
-    Benchmark: Natural convection of air
+    Benchmark: Natural convection of air (i.e. the heat-driven cavity)
     
     <img src="./docs/images/NaturalConvectionAir.png" width="480">
     
@@ -32,24 +33,22 @@ Author: Alexander G. Zimmerman <zimmerman@aices.rwth-aachen.de>
     
 - Phase-change: The energy equation written in enthalpy form, with latent heat sources/sinks from the phase-change
 
-    Benchmark: Stefan problem
+    Benchmark: Stefan problem (melting without convection)
     
     <img src="./docs/images/StefanProblem.png" width="480">
     
 - Variable viscosity: Apply the same momentum equation throughout the single phase-change material domain
 
-    Test: Analogy of lid-driven cavity
+    Test: Analogy of lid-driven cavity, with a solid sub-domain outside of the unit square
     
     <img src="./docs/images/VariableViscosity.png" width="480">
     
 - Monolithic coupling of all of the above features
 
-    Qualitatively correct, still need to reproduce benchmark
+    Benchmark: Convection-coupled melting of an octadecane PCM
     
     <img src="./docs/images/MeltingPCM.png" width="480">
 
-## References
-- Danaila, I., Moglan, R., Hecht, F., & Le Masson, S. (2014). A Newton method with adaptive finite elements for solving phase-change problems with natural convection. Journal of Computational Physics, 826-840.
     
 # For users:
 ## [Docker](https://www.docker.com)
