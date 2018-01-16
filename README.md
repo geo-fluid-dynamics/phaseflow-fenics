@@ -1,60 +1,48 @@
 # phaseflow-fenics
-Phaseflow simulates the melting and solidification of phase-change materials (PCM).
+<img src="./docs/images/MeltingPCM.png" width="320"> [![Build Status](https://travis-ci.org/geo-fluid-dynamics/phaseflow-fenics.svg?branch=master)](https://travis-ci.org/geo-fluid-dynamics/phaseflow-fenics)
 
-Phaseflow adopts an enthalpy-based, single domain phase-field, variable viscosity approach, with monolithic system coupling and global Newton linearization of the system of nonlinear partial differential equations (PDE's). The system is composed of
-- Incompressible flow driven by buoyancy: unsteady Navier-Stokes momentum and mass (penalty formulation) with Boussinesq approximation
+Phaseflow simulates the convection-coupled melting and solidification of phase-change materials (PCM's). We adopt an enthalpy-based, single-domain semi-phase-field, finite element method, with monolithic system coupling and global Newton linearization.
+
+The model system is composed of
+- Incompressible flow driven by buoyancy: unsteady Navier-Stokes mass and momentum with Boussinesq approximation
 - Convection-diffusion of the enthalpy field, with an enthalpy source term accounting for the latent heat of the phase-change material
 
-Phaseflow spatially discretizes the PDE's with the finite element method, and to this end uses the Python/C++ finite element library [FEniCS](https://fenicsproject.org/). Many other features are provided by FEniCS, including the Newton iterative algorithm and solution output to HDF5, among others.
+Phaseflow spatially discretizes the PDE's with the finite element method, and to this end uses the Python/C++ finite element library [FEniCS](https://fenicsproject.org/). Many other features are provided by FEniCS, including the nonlinear (Newton) solver, goal-oriented adaptive mesh refinement, and solution output to HDF5, among others.
+
+We present the mathematical model, the numerical methods, the Phaseflow implementation and its verification in a submitted proceedings paper, [*Monolithic simulation of convection-coupled phase-change - verification and reproducibility*](https://arxiv.org/abs/1801.03429).
 
 Author: Alexander G. Zimmerman <zimmerman@aices.rwth-aachen.de>
 
-[![Build Status](https://travis-ci.org/geo-fluid-dynamics/phaseflow-fenics.svg?branch=master)](https://travis-ci.org/geo-fluid-dynamics/phaseflow-fenics) (<b>Continuous integration status</b>; click the button to go to Travis-CI)
-
 ## Current capabilities
-- Unsteady incompressible Navier-Stokes
+- Unsteady incompressible flow
 
     Benchmark: Lid-driven cavity
     
-    <img src="./docs/images/LidDrivenCavity.png" width="480">
+    <img src="./docs/images/LidDrivenCavity.png" width="360">
 
-- Thermal convection: the momentum equation includes a temperature-based bouyancy force per the Boussinesq approximation
+- Thermal convection
 
-    Benchmark: Natural convection of air
+    Benchmarks: Heat-driven cavity (left), natural convection of water (right)
     
-    <img src="./docs/images/NaturalConvectionAir.png" width="480">
+    <img src="./docs/images/NaturalConvectionAir.png" width="360"> <img src="./docs/images/NaturalConvectionWater.png" width="360">
     
-- Nonlinear bouyancy
+- Phase-change
 
-    Benchmark: Natural convection of water
+    Benchmark: 1D Stefan problem (i.e. melting without convection)
     
-    <img src="./docs/images/NaturalConvectionWater.png" width="480">
+    <img src="./docs/images/StefanProblem.png" width="360">
     
-- Phase-change: The energy equation written in enthalpy form, with latent heat sources/sinks from the phase-change
+- Convection-coupled melting 
 
-    Benchmark: Stefan problem
-    
-    <img src="./docs/images/StefanProblem.png" width="480">
-    
-- Variable viscosity: Apply the same momentum equation throughout the single phase-change material domain
-
-    Test: Analogy of lid-driven cavity
-    
-    <img src="./docs/images/VariableViscosity.png" width="480">
-    
-- Monolithic coupling of all of the above features
-
-    Qualitatively correct, still need to reproduce benchmark
+    Benchmark: Convection-coupled melting of an octadecane PCM
     
     <img src="./docs/images/MeltingPCM.png" width="480">
 
-## References
-- Danaila, I., Moglan, R., Hecht, F., & Le Masson, S. (2014). A Newton method with adaptive finite elements for solving phase-change problems with natural convection. Journal of Computational Physics, 826-840.
     
 # For users:
 ## [Docker](https://www.docker.com)
 
-The FEniCS project provides a [Docker image](https://hub.docker.com/r/fenicsproject/stable/) with a pre-configured Python environment and pre-built fenics. See their ["FEniCS in Docker" manual](https://fenics.readthedocs.io/projects/containers/en/latest/). Our [custom Docker image for Phaseflow](https://hub.docker.com/r/zimmerman/phaseflow-fenics/) only adds a Phaseflow installation including any missing dependencies.
+The FEniCS project provides a [Docker image](https://hub.docker.com/r/fenicsproject/stable/) with FEniCS and its dependencies already installed. See their ["FEniCS in Docker" manual](https://fenics.readthedocs.io/projects/containers/en/latest/). [Phaseflow's Docker image](https://hub.docker.com/r/zimmerman/phaseflow-fenics/) only adds a Phaseflow installation including any missing dependencies.
 
 Get the [free community edition of Docker](https://www.docker.com/community-edition).
     
@@ -84,7 +72,7 @@ To enter a bash terminal inside of the running container
     
 Note that the "-u fenics" logs into the machine as the "fenics" user.
 
-The Docker image has phaseflow installed, so in your own Python scripts you can
+Our Docker image has phaseflow installed, so in your own Python scripts you can
 
     import phaseflow
 
@@ -110,8 +98,3 @@ Edit the Dockerfile, then
     docker tag phaseflow-fenics zimmerman/phaseflow-fenics:latest
     
     docker push zimmerman/phaseflow-fenics:latest
-
-    
-
-
-
