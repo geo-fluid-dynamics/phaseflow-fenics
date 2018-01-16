@@ -29,7 +29,7 @@ Author: Alexander G. Zimmerman <zimmerman@aices.rwth-aachen.de>
     
 - Phase-change
 
-    Benchmark: Stefan problem (i.e. melting without convection)
+    Benchmark: 1D Stefan problem (i.e. melting without convection)
     
     <img src="./docs/images/StefanProblem.png" width="360">
     
@@ -43,7 +43,7 @@ Author: Alexander G. Zimmerman <zimmerman@aices.rwth-aachen.de>
 # For users:
 ## [Docker](https://www.docker.com)
 
-The FEniCS project provides a [Docker image](https://hub.docker.com/r/fenicsproject/stable/) with a pre-configured Python environment and pre-built fenics. See their ["FEniCS in Docker" manual](https://fenics.readthedocs.io/projects/containers/en/latest/). Our [custom Docker image for Phaseflow](https://hub.docker.com/r/zimmerman/phaseflow-fenics/) only adds a Phaseflow installation including any missing dependencies.
+The FEniCS project provides a [Docker image](https://hub.docker.com/r/fenicsproject/stable/) with FEniCS and its dependencies already installed. See their ["FEniCS in Docker" manual](https://fenics.readthedocs.io/projects/containers/en/latest/). Our [custom Docker image for Phaseflow](https://hub.docker.com/r/zimmerman/phaseflow-fenics/) only adds a Phaseflow installation including any missing dependencies.
 
 Get the [free community edition of Docker](https://www.docker.com/community-edition).
     
@@ -73,7 +73,7 @@ To enter a bash terminal inside of the running container
     
 Note that the "-u fenics" logs into the machine as the "fenics" user.
 
-The Docker image has phaseflow installed, so in your own Python scripts you can
+Our Docker image has phaseflow installed, so in your own Python scripts you can
 
     import phaseflow
 
