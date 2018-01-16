@@ -1,1 +1,6 @@
-pytest
+pytest==2.8.7
+setuptools==35.0.2
+numpy==1.11.0
+h5py==2.7.1
+fenics==2017.2.0
+scipy==1.0.0
