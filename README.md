@@ -1,5 +1,6 @@
 # phaseflow-fenics
-<img src="./docs/images/MeltingPCM.png" width="320"> 
+<img src="./docs/images/MeltingPCM.png" width="320"> [![Build Status](https://travis-ci.org/geo-fluid-dynamics/phaseflow-fenics.svg?branch=master)](https://travis-ci.org/geo-fluid-dynamics/phaseflow-fenics)
+
 Phaseflow simulates the convection-coupled melting and solidification of phase-change materials (PCM's). We adopt an enthalpy-based, single-domain semi-phase-field, finite element method, with monolithic system coupling and global Newton linearization.
 
 The model system is composed of
@@ -11,8 +12,6 @@ Phaseflow spatially discretizes the PDE's with the finite element method, and to
 We present the mathematical model, the numerical methods, the Phaseflow implementation and its verification in a submitted proceedings paper, [*Monolithic simulation of convection-coupled phase-change - verification and reproducibility*](https://arxiv.org/abs/1801.03429).
 
 Author: Alexander G. Zimmerman <zimmerman@aices.rwth-aachen.de>
-
-[![Build Status](https://travis-ci.org/geo-fluid-dynamics/phaseflow-fenics.svg?branch=master)](https://travis-ci.org/geo-fluid-dynamics/phaseflow-fenics) (<b>Continuous integration status</b>; click the button to go to Travis-CI)
 
 ## Current capabilities
 - Unsteady incompressible flow
