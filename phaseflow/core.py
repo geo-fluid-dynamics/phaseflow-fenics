@@ -4,51 +4,58 @@ import h5py
 import numpy
 import phaseflow.helpers
 
+TIME_EPS = 1.e-8
 
-class State(fenics.Function):
+pressure_degree = 1
 
-    def __init__(self, time = 0., solution):
+temperature_degree = 1
+
+""" The equations are scaled with unit Reynolds Number
+per Equation 8 from danaila2014newton, i.e.
+
+    v_ref = nu_liquid/H => t_ref = nu_liquid/H^2 => Re = 1.
+"""
+reynolds_number = 1.
+
+MAX_TIME_STEPS = 1000000000000
+
+def make_mixed_fe(cell):
+    """ Define the mixed finite element.
+    MixedFunctionSpace used to be available but is now deprecated. 
+    To create the mixed space, I'm using the approach from https://fenicsproject.org/qa/11983/mixedfunctionspace-in-2016-2-0
+    """
+    pressure_element = fenics.FiniteElement("P", cell, pressure_degree)
     
-        self.time = time
-        
-        self.solution = solution
-        
-        self.spatial_dimensionality = solution.function_space().mesh.type().dim()
-
-        
-class ImplicitEulerIBVP(fenics.NonlinearVariationalProblem):
-
-    def __init__(self, 
-            state, 
-            time_step_size, 
-            nonlinear_variational_form, 
-            boundary_conditions, 
-            gateaux_derivative)
+    velocity_degree = pressure_degree + 1
     
-        fenics.NonlinearVariationalProblem.__init__(self, 
-            nonlinear_variational_form, 
-            state.solution, 
-            boundary_conditions, 
-            gateaux_derivative)
+    velocity_element = fenics.VectorElement("P", cell, velocity_degree)
 
-        self.state = state
+    temperature_element = fenics.FiniteElement("P", cell, temperature_degree)
+
+    mixed_element = fenics.MixedElement([pressure_element, velocity_element, temperature_element])
     
-        self.old_state = fenics.Function(state.function_space())
-        
-        self.old_state.leaf_node().vector()[:] = self.state.leaf_node().vector()
-        
-
-class ContinuousFunction():
-
-    def __init__(self, function, derivative_function)
-    
-        self.function = function
-        
-        self.derivative_function = derivative_function
-            
-
-def run(
+    return mixed_element
+  
+  
+def run(solution,
+        initial_values,
+        boundary_conditions,
+        time = 0.,
         output_dir = "phaseflow_output/",
+        rayleigh_number = 1.,
+        prandtl_number = 1.,
+        stefan_number = 1.,
+        liquid_viscosity = 1.,
+        solid_viscosity = 1.e8,
+        gravity = (0., -1.),
+        m_B = None,
+        ddT_m_B = None,
+        penalty_parameter = 1.e-7,
+        semi_phasefield_mapping = None,
+        semi_phasefield_mapping_derivative = None,
+        end_time = 10.,
+        time_step_size = 1.e-3,
+        stop_when_steady = False,
         steady_relative_tolerance=1.e-4,
         adaptive_goal_functional = None,
         adaptive_solver_tolerance = 1.e-4,
@@ -64,8 +71,36 @@ def run(
     
     See the tests and examples for demonstrations of how to use this.
     """
-
     
+
+    # Handle default function definitions.
+    if m_B is None:
+        
+        def m_B(T, Ra, Pr, Re):
+        
+            return T*Ra/(Pr*Re**2)
+    
+    
+    if ddT_m_B is None:
+        
+        def ddT_m_B(T, Ra, Pr, Re):
+
+            return Ra/(Pr*Re**2)
+    
+    
+    if semi_phasefield_mapping is None:
+    
+        assert (semi_phasefield_mapping_derivative is None)
+
+        def semi_phasefield_mapping(T):
+    
+            return 0.
+        
+        def semi_phasefield_mapping_derivative(T):
+        
+            return 0.
+            
+        
     # Report arguments.
     phaseflow.helpers.print_once("Running Phaseflow with the following arguments:")
     
@@ -94,7 +129,122 @@ def run(
     phaseflow.helpers.print_once("Running "+str(dimensionality)+"D problem")
     
     
+    # Set the variational form.
+    """Set local names for math operators to improve readability."""
+    inner, dot, grad, div, sym = fenics.inner, fenics.dot, fenics.grad, fenics.div, fenics.sym
     
+    """The linear, bilinear, and trilinear forms b, a, and c, follow the common notation 
+    for applying the finite element method to the incompressible Navier-Stokes equations,
+    e.g. from danaila2014newton and huerta2003fefluids.
+    """
+    def b(u, p):
+        return -div(u)*p  # Divergence
+    
+    
+    def D(u):
+    
+        return sym(grad(u))  # Symmetric part of velocity gradient
+    
+    
+    def a(mu, u, v):
+        
+        return 2.*mu*inner(D(u), D(v))  # Stokes stress-strain
+    
+    
+    def c(u, z, v):
+        
+        return dot(dot(grad(z), u), v)  # Convection of the velocity field
+    
+    
+    Delta_t = fenics.Constant(time_step_size)
+    
+    Re = fenics.Constant(reynolds_number)
+    
+    Ra = fenics.Constant(rayleigh_number)
+    
+    Pr = fenics.Constant(prandtl_number)
+    
+    Ste = fenics.Constant(stefan_number)
+    
+    g = fenics.Constant(gravity)
+    
+    def f_B(T):
+    
+        return m_B(T=T, Ra=Ra, Pr=Pr, Re=Re)*g  # Buoyancy force, $f = ma$
+    
+    
+    phi = semi_phasefield_mapping
+    
+    gamma = fenics.Constant(penalty_parameter)
+    
+    mu_l = fenics.Constant(liquid_viscosity)
+    
+    mu_s = fenics.Constant(solid_viscosity)
+    
+    def mu(T):
+    
+        return mu_l + (mu_s - mu_l)*phi(T) # Variable viscosity.
+    
+    psi_p, psi_u, psi_T = fenics.TestFunctions(W)
+    
+    w = solution 
+    
+    p, u, T = fenics.split(w)
+    
+    w_n = initial_values
+     
+    p_n, u_n, T_n = fenics.split(w_n)
+    
+    if quadrature_degree is None:
+    
+        dx = fenics.dx
+        
+    else:
+    
+        dx = fenics.dx(metadata={'quadrature_degree': quadrature_degree})
+    
+    F = (
+        b(u, psi_p) - psi_p*gamma*p
+        + dot(psi_u, 1./Delta_t*(u - u_n) + f_B(T))
+        + c(u, u, psi_u) + b(psi_u, p) + a(mu(T), u, psi_u)
+        + 1./Delta_t*psi_T*(T - T_n - 1./Ste*(phi(T) - phi(T_n)))
+        + dot(grad(psi_T), 1./Pr*grad(T) - T*u)        
+        )*dx
+
+        
+    # Set the Jacobian (formally the Gateaux derivative) in variational form.
+    def ddT_f_B(T):
+        
+        return ddT_m_B(T=T, Ra=Ra, Pr=Pr, Re=Re)*g
+    
+    dphi = semi_phasefield_mapping_derivative
+    
+    def dmu(T):
+    
+        return (mu_s - mu_l)*dphi(T)
+        
+        
+    delta_w = fenics.TrialFunction(W)
+    
+    delta_p, delta_u, delta_T = fenics.split(delta_w)
+    
+    w_k = w
+    
+    p_k, u_k, T_k = fenics.split(w_k)
+    
+    JF = (
+        b(delta_u, psi_p) - psi_p*gamma*delta_p 
+        + dot(psi_u, 1./Delta_t*delta_u + delta_T*ddT_f_B(T_k))
+        + c(u_k, delta_u, psi_u) + c(delta_u, u_k, psi_u) 
+        + b(psi_u, delta_p) 
+        + a(delta_T*dmu(T_k), u_k, psi_u) + a(mu(T_k), delta_u, psi_u) 
+        + 1./Delta_t*psi_T*delta_T*(1. - 1./Ste*dphi(T_k))
+        + dot(grad(psi_T), 1./Pr*grad(delta_T) - T_k*delta_u - delta_T*u_k)
+        )*fenics.dx
+
+        
+    # Make the problem.
+    problem = fenics.NonlinearVariationalProblem(F, w_k, boundary_conditions, JF)
     
     
     # Make the solver.
@@ -212,8 +362,115 @@ def run(
                 phaseflow.helpers.print_once("Reached end time, t = " + str(end_time))
             
                 break
+    
+    
+def write_solution(solution_file, solution, time, solution_filepath):
+    """Write the solution to disk.
+    
+    Parameters
+    ----------
+    solution_file : fenics.XDMFFile
+    
+        write_solution should have been called from within the context of an open fenics.XDMFFile.
+    
+    solution : fenics.Function
+    
+        The FEniCS function where the solution is stored.
+    
+    time : float
+    
+        The time corresponding to the time-dependent solution.
+    
+    solution_filepath : str
+    
+        This is needed because fenics.XDMFFile does not appear to have a method for providing the file path.
+        With a Python file, one can simply do
+        
+            File = open("foo.txt", "w")
+            
+            File.name
+            
+        But fenics.XDMFFile.name returns a reference to something done with SWIG.
+    
+    """
+    phaseflow.helpers.print_once("Writing solution to " + str(solution_filepath))
+    
+    pressure, velocity, temperature = solution.leaf_node().split()
+    
+    pressure.rename("p", "pressure")
+    
+    velocity.rename("u", "velocity")
+    
+    temperature.rename("T", "temperature")
+    
+    for i, var in enumerate([pressure, velocity, temperature]):
+    
+        solution_file.write(var, time)
+        
 
+def write_checkpoint(checkpoint_filepath, w, time):
+    """Write checkpoint file (with solution and time) to disk."""
+    phaseflow.helpers.print_once("Writing checkpoint file to " + checkpoint_filepath)
+    
+    with fenics.HDF5File(fenics.mpi_comm_world(), checkpoint_filepath, "w") as h5:
                 
+        h5.write(w.function_space().mesh().leaf_node(), "mesh")
+    
+        h5.write(w.leaf_node(), "w")
+        
+    if fenics.MPI.rank(fenics.mpi_comm_world()) is 0:
+    
+        with h5py.File(checkpoint_filepath, "r+") as h5:
+            
+            h5.create_dataset("t", data=time)
+        
+        
+def read_checkpoint(checkpoint_filepath):
+    """Read the checkpoint solution and time, perhaps to restart."""
+
+    mesh = fenics.Mesh()
+        
+    with fenics.HDF5File(mesh.mpi_comm(), checkpoint_filepath, "r") as h5:
+    
+        h5.read(mesh, "mesh", True)
+    
+    W_ele = make_mixed_fe(mesh.ufl_cell())
+
+    W = fenics.FunctionSpace(mesh, W_ele)
+
+    w = fenics.Function(W)
+
+    with fenics.HDF5File(mesh.mpi_comm(), checkpoint_filepath, "r") as h5:
+    
+        h5.read(w, "w")
+        
+    with h5py.File(checkpoint_filepath, "r") as h5:
+            
+        time = h5["t"].value
+        
+    return w, time
+    
+
+def steady(W, w, w_n, steady_relative_tolerance):
+    """Check if solution has reached an approximately steady state."""
+    steady = False
+    
+    time_residual = fenics.Function(W)
+    
+    time_residual.assign(w - w_n)
+    
+    unsteadiness = fenics.norm(time_residual, "L2")/fenics.norm(w_n, "L2")
+    
+    phaseflow.helpers.print_once(
+        "Unsteadiness (L2 norm of relative time residual), || w_{n+1} || / || w_n || = "+str(unsteadiness))
+
+    if (unsteadiness < steady_relative_tolerance):
+        
+        steady = True
+    
+    return steady
+    
+    
 if __name__=="__main__":
 
     run()
