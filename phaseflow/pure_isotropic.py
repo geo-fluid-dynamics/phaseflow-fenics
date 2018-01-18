@@ -1,12 +1,11 @@
-import phaseflow.pure_material
+import phaseflow.pure
 
 
-class PureIsotropicProblem(phaseflow.ImplicitEulerIBVP):
+class Model(phaseflow.Model):
 
     def __init__(self,
-            state,
-            boundary_conditions,
-            buoyancy_model,
+            mesh,
+            buoyancy_function,
             semi_phasefield_mapping,
             time_step_size = 1.,
             rayleigh_number = 1.,
@@ -16,7 +15,7 @@ class PureIsotropicProblem(phaseflow.ImplicitEulerIBVP):
             solid_viscosity = 1.e8,
             gravity = (0., -1.),
             penalty_parameter = 1.e-7,
-            integration_metric = fenics.dx)
+            quadrature_degree = None,)
         """
         Parameters
         ----------
@@ -26,12 +25,16 @@ class PureIsotropicProblem(phaseflow.ImplicitEulerIBVP):
         
         boundary_conditions : [fenics.DirichletBoundaryCondition,]
         
-        buoyancy_model : phaseflow.ContinuousFunctionOfTemperature
+        buoyancy_function : phaseflow.ContinuousFunctionOfTemperature
         
         semi_phasefield_mapping : phaseflow.ContinuousFunctionOfTemperature
         """
-        
-        
+        phaseflow.Model__init__(self,
+            mesh = mesh,
+            element = phaseflow.pure.DanailaTaylorHoodElement(),
+            quadrature_degree = quadrature_degree)
+            
+            
         ## Set the variational form.
         """Set local names for math operators to improve readability."""
         inner, dot, grad, div, sym = fenics.inner, fenics.dot, fenics.grad, fenics.div, fenics.sym
@@ -67,7 +70,7 @@ class PureIsotropicProblem(phaseflow.ImplicitEulerIBVP):
         
         g = fenics.Constant(gravity)
         
-        f_B = buoyancy_model.function
+        f_B = buoyancy_function.function
         
         phi = semi_phasefield_mapping.function
         
@@ -77,7 +80,7 @@ class PureIsotropicProblem(phaseflow.ImplicitEulerIBVP):
         
         mu_S = fenics.Constant(solid_viscosity)
         
-        phase_dependent_viscosity = phaseflow.pure_material.PhaseDependentMaterialProperty(mu_L, mu_S)
+        phase_dependent_viscosity = phaseflow.pure.PhaseDependentMaterialProperty(mu_L, mu_S)
         
         mu = phase_dependent_viscosity.function
         
@@ -91,9 +94,9 @@ class PureIsotropicProblem(phaseflow.ImplicitEulerIBVP):
          
         p_n, u_n, T_n = fenics.split(w_n)
         
-        dx = integration_metric
-        
-        F = (
+        dx = self.integration_metric
+    
+        self.variational_form = (
             b(u, psi_p) - psi_p*gamma*p
             + dot(psi_u, 1./Delta_t*(u - u_n) + f_B(T))
             + c(u, u, psi_u) + b(psi_u, p) + a(mu(T), u, psi_u)
@@ -103,7 +106,7 @@ class PureIsotropicProblem(phaseflow.ImplicitEulerIBVP):
 
             
         # Set the Gateaux derivative in variational form.
-        df_B = buoyancy_model.derivative_function
+        df_B = buoyancy_function.derivative_function
         
         dphi = semi_phasefield_mapping.derivative_function
         
@@ -117,7 +120,7 @@ class PureIsotropicProblem(phaseflow.ImplicitEulerIBVP):
         
         p_k, u_k, T_k = fenics.split(w_k)
         
-        gateaux_derivative = (
+        self.derivative_of_variational_form = (
             b(delta_u, psi_p) - psi_p*gamma*delta_p 
             + dot(psi_u, 1./Delta_t*delta_u + delta_T*ddT_f_B(T_k))
             + c(u_k, delta_u, psi_u) + c(delta_u, u_k, psi_u) 
@@ -125,13 +128,4 @@ class PureIsotropicProblem(phaseflow.ImplicitEulerIBVP):
             + a(delta_T*dmu(T_k), u_k, psi_u) + a(mu(T_k), delta_u, psi_u) 
             + 1./Delta_t*psi_T*delta_T*(1. - 1./Ste*dphi(T_k))
             + dot(grad(psi_T), 1./Pr*grad(delta_T) - T_k*delta_u - delta_T*u_k)
-            )*fenics.dx
-
-            
-        # Construct the initial boundary value problem.
-        phaseflow.ImplicitEulerIBVP.__init__(self, 
-            nonlinear_variational_form, 
-            state, 
-            boundary_conditions, 
-            gateaux_derivative)
-    
+            )*dx

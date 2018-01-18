@@ -3,6 +3,12 @@ import fenics
 
 class DanailaTaylorHoodElement(fenics.MixedElement):
 
+    pressure_subspace = 0
+    
+    velocity_subspace = 1
+    
+    temperature_subspace = 2
+
     def __init__(self, pressure_degree = 1, temperature_degree = 1, cell):
         
         pressure_element = fenics.FiniteElement("P", cell, pressure_degree)
@@ -90,65 +96,20 @@ class TanhSemiPhasefieldMapping(ContinuousFunction):
             
         ContinuousFunction.__init__(self, function=phi, derivative_function=dphi)
         
-       
-class ConstantPhase(ContinuousFunctionOfTemperature):
+
+class ConstantFunctionOfTemperature(ContinuousFunctionOfTemperature):
 
     def __init__(self, constant_value)
     
         constant = fenics.Constant(constant_value)
         
-        def phi(T):
+        def f(T):
     
             return constant
         
-        def dphi(T):
+        def df(T):
         
             return 0.
             
-        ContinuousFunctionOfTemperature.__init__(self, function=phi, derivative_function=dphi)
-        
-        
-def write_solution(solution_file, solution, time, solution_filepath):
-    """Write the solution to disk.
-    
-    Parameters
-    ----------
-    solution_file : fenics.XDMFFile
-    
-        write_solution should have been called from within the context of an open fenics.XDMFFile.
-    
-    solution : fenics.Function
-    
-        The FEniCS function where the solution is stored.
-    
-    time : float
-    
-        The time corresponding to the time-dependent solution.
-    
-    solution_filepath : str
-    
-        This is needed because fenics.XDMFFile does not appear to have a method for providing the file path.
-        With a Python file, one can simply do
-        
-            File = open("foo.txt", "w")
-            
-            File.name
-            
-        But fenics.XDMFFile.name returns a reference to something done with SWIG.
-    
-    """
-    phaseflow.helpers.print_once("Writing solution to " + str(solution_filepath))
-    
-    pressure, velocity, temperature = solution.leaf_node().split()
-    
-    pressure.rename("p", "pressure")
-    
-    velocity.rename("u", "velocity")
-    
-    temperature.rename("T", "temperature")
-    
-    for i, var in enumerate([pressure, velocity, temperature]):
-    
-        solution_file.write(var, time)
-        
-        
+        ContinuousFunctionOfTemperature.__init__(self, function=f, derivative_function=df)
+ 
