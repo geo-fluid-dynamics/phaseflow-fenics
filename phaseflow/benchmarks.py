@@ -182,7 +182,7 @@ class HeatDrivenCavity(Cavity):
             ux = [val*self.Ra**0.5/self.Pr 
                 for val in [0.0000, -0.0649, -0.0194, 0.0000, 0.0194, 0.0649, 0.0000]],
             relative_tolerance = 2.e-2,
-            absolute_tolerance = 1.e-2)
+            absolute_tolerance = 1.e-2*0.0649*self.Ra**0.5/self.Pr)
     
     
 class AdaptiveHeatDrivenCavity(HeatDrivenCavity):
