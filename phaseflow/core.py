@@ -42,9 +42,9 @@ class State:
         
         temperature.rename("T", "temperature")
         
-        for i, var in enumerate([pressure, velocity, temperature]):
+        for var in [pressure, velocity, temperature]:
         
-            file.write(var, time)
+            file.write(var, self.time)
         
     
     def write_checkpoint(self, output_dir):
@@ -63,7 +63,7 @@ class State:
         
             with h5py.File(filepath, "r+") as h5:
                 
-                h5.create_dataset("time", data=time)
+                h5.create_dataset("time", data=self.time)
         
         
     def read_checkpoint(self, filepath):
@@ -182,7 +182,7 @@ class Solver(fenics.AdaptiveNonlinearVariationalSolver):
         self.adaptive_solver_tolerance = adaptive_solver_tolerance
         
         
-    def solve():
+    def solve(self):
 
         fenics.AdaptiveNonlinearVariationalSolver.solve(self, self.adaptive_solver_tolerance)
     
@@ -205,31 +205,33 @@ class TimeStepper:
 
         self.output_dir = output_dir
         
+        self.solution_file = None
+        
         self.stop_when_steady = stop_when_steady
         
         self.steady_relative_tolerance = steady_relative_tolerance
         
         
-    def run_until(end_time):
+    def run_until(self, end_time):
         """ Optionally run inside of a file context manager.
         Without this, exceptions are more likely to corrupt the outputs.
         """
         if self.output_dir is None:
         
-            __run_until(end_time)
+            self.__run_until(end_time)
         
         else:
         
-            solution_filepath = output_dir + "/solution.xdmf"
+            solution_filepath = self.output_dir + "/solution.xdmf"
         
-            with SolutionFile(solution_filepath) as solution_file:
+            with SolutionFile(solution_filepath) as self.solution_file:
             
-                state.write_solution_to_xdmf(solution_file)
+                self.solver.model.state.write_solution_to_xdmf(self.solution_file)
             
-                __run_until(end_time)
+                self.__run_until(end_time)
                 
         
-    def __run_until(end_time):
+    def __run_until(self, end_time):
     
         state = self.solver.model.state
         
@@ -252,7 +254,7 @@ class TimeStepper:
         
         for it in range(1, self.max_time_steps):
             
-            if(time > end_time - self.time_epsilon):
+            if(state.time > end_time - self.time_epsilon):
                 
                 break
                 
@@ -262,7 +264,7 @@ class TimeStepper:
             
             if self.output_dir is not None:
             
-                state.write_solution(solution_file)
+                state.write_solution_to_xdmf(self.solution_file)
 
                 state.write_checkpoint(output_dir = self.output_dir)
             
@@ -285,7 +287,7 @@ class TimeStepper:
                 break
     
     
-    def run_time_step():
+    def run_time_step(self):
 
         state = self.solver.model.state
         
@@ -300,7 +302,7 @@ class TimeStepper:
         state.time += self.solver.model.time_step_size
         
         
-    def steady():
+    def steady(self):
         """Check if solution has reached an approximately steady state."""
         steady = False
         

@@ -87,7 +87,7 @@ class LidDrivenCavity(Cavity):
             'ux': [1.0000, 0.8412, 0.7887, 0.7372, 0.6872, 0.2315, 0.0033, -0.1364, 
                 -0.2058, -0.2109, -0.1566, -0.1015, -0.0643, -0.0478, -0.0419, -0.0372, 0.0000]}
         
-        bbt = self.model.mesh().bounding_box_tree()
+        bbt = self.model.mesh.bounding_box_tree()
         
         for i, true_ux in enumerate(data['ux']):
         
@@ -95,7 +95,7 @@ class LidDrivenCavity(Cavity):
             
             if bbt.collides_entity(p):
             
-                values = solution(p)
+                values = self.model.state.solution(p)
                 
                 ux = values[1]
                 
