@@ -1,12 +1,16 @@
+import phaseflow
 import phaseflow.pure
 
 
-class Model(phaseflow.Model):
+class Model(phaseflow.core.Model):
 
     def __init__(self,
             mesh,
-            buoyancy_function,
-            semi_phasefield_mapping,
+            initial_values_expressions = None,
+            velocity_boundary_conditions = None, 
+            temperature_boundary_conditions = None,
+            buoyancy_function = None,
+            semi_phasefield_mapping = None,
             time_step_size = 1.,
             rayleigh_number = 1.,
             prandtl_number = 1.,
@@ -15,7 +19,7 @@ class Model(phaseflow.Model):
             solid_viscosity = 1.e8,
             gravity = (0., -1.),
             penalty_parameter = 1.e-7,
-            quadrature_degree = None,)
+            quadrature_degree = None):
         """
         Parameters
         ----------
@@ -29,12 +33,26 @@ class Model(phaseflow.Model):
         
         semi_phasefield_mapping : phaseflow.ContinuousFunctionOfTemperature
         """
-        phaseflow.Model__init__(self,
+        phaseflow.core.Model.__init__(self,
             mesh = mesh,
-            element = phaseflow.pure.DanailaTaylorHoodElement(),
+            element = phaseflow.pure.DanailaTaylorHoodElement(mesh.ufl_cell()),
+            initial_values_expressions = initial_values_expressions,
+            velocity_boundary_conditions = velocity_boundary_conditions,
+            temperature_boundary_conditions = temperature_boundary_conditions,
+            time_step_size = time_step_size,
             quadrature_degree = quadrature_degree)
             
             
+        ## Handle default arguments.
+        if buoyancy_function is None:
+        
+            buoyancy_function = pure.ConstantFunctionOfTemperature(0.)
+            
+        if semi_phasefield_mapping is None:
+        
+            semi_phasefield_mapping = pure.ConstantFunctionOfTemperature(0.)
+            
+        
         ## Set the variational form.
         """Set local names for math operators to improve readability."""
         inner, dot, grad, div, sym = fenics.inner, fenics.dot, fenics.grad, fenics.div, fenics.sym
@@ -44,6 +62,7 @@ class Model(phaseflow.Model):
         e.g. from danaila2014newton and huerta2003fefluids.
         """
         def b(u, p):
+        
             return -div(u)*p  # Divergence
         
         
@@ -129,3 +148,8 @@ class Model(phaseflow.Model):
             + 1./Delta_t*psi_T*delta_T*(1. - 1./Ste*dphi(T_k))
             + dot(grad(psi_T), 1./Pr*grad(delta_T) - T_k*delta_u - delta_T*u_k)
             )*dx
+
+            
+        #
+        self.setup_problem()
+        

@@ -1,7 +1,43 @@
- class Cavity():
+import phaseflow
+import fenics
+
+ 
+class Benchmark():
+ 
+    def __init__(self):
+    
+        self.model = None
+        
+        self.adaptive_goal_functional = None
+        
+        self.adaptive_solver_tolerance = 1.e-4
+    
+
+    def verify(self):
+    
+        assert(False)
+        
+        
+    def run(self):
+    
+        solver = phaseflow.Solver(
+            problem = self.model.problem, 
+            adaptive_goal_functional = self.adaptive_goal_functional, 
+            adaptive_solver_tolerance = self.adaptive_solver_tolerance)
+
+        time_stepper = phaseflow.TimeStepper(output_dir = "output/benchmarks/lid_driven_cavity")
+        
+        time_stepper.run_until(self.model.problem, end_time = self.model.time_step_size)
+            
+        self.verify()
+    
+ 
+class Cavity(Benchmark):
 
     def __init__(self, grid_size = 20):
     
+        Benchmark.__init__(self)
+        
         self.mesh = fenics.UnitSquareMesh(fenics.mpi_comm_world(), grid_size, grid_size)
     
         self.left_wall = "near(x[0],  0.)"
@@ -19,26 +55,17 @@ class LidDrivenCavity(Cavity):
     
         Cavity.__init__(self, grid_size)
         
-        self.model = phaseflow.pure_isotropic.Model(self.mesh, 
-            buoyancy_function = pure.ConstantFunctionOfTemperature(0.),
-            semi_phasefield_mapping = pure.ConstantFunctionOfTemperature(0.),
-            liquid_viscosity = 0.01,
-            time_step_size = 1.e12)
-        
-        self.model.state.solution = fenics.interpolate(
-            fenics.Expression(("0.", lid, "0.", "1."), element = model.element), 
-            model.function_space)
-
-        problem = pure.Problem(
-            model,
+        self.model = phaseflow.pure_isotropic.Model(self.mesh,
+            initial_values_expressions = ("0.", self.top_wall, "0.", "1."),
             velocity_boundary_conditions = 
                 {self.top_wall: (1., 0.),
                 self.bottom_wall + " | " + self.left_wall + " | " + self.right_wall: (0., 0.)},
-            time_step_size = self.end_time)
-            
+            time_step_size = 1.e12,
+            liquid_viscosity = 0.01)
+        
     
     def verify(self):
-        """ Verify against ghia1982 """
+        """ Verify against ghia1982. """
         data = {'Re': 100, 'x': 0.5, 
             'y': [1.0000, 0.9766, 0.9688, 0.9609, 0.9531, 0.8516, 0.7344, 0.6172, 
                 0.5000, 0.4531, 0.2813, 0.1719, 0.1016, 0.0703, 0.0625, 0.0547, 0.0000], 
@@ -58,15 +85,6 @@ class LidDrivenCavity(Cavity):
                 ux = values[1]
                 
                 assert(abs(ux - true_ux) < 2.e-2)
-                
-                
-    def run():
-
-        time_stepper = phaseflow.TimeStepper(output_dir = "output/benchmarks/lid_driven_cavity")
-        
-        time_stepper.run_until(problem, end_time = self.model.time_step_size)
-            
-        self.verify()
     
     
 if __name__=='__main__':

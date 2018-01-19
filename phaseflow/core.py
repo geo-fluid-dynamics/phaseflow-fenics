@@ -5,7 +5,7 @@ import numpy
 import phaseflow.helpers
 
 
-class SolutionFile(fenics.XDMFFile)
+class SolutionFile(fenics.XDMFFile):
 
     def __init__(self, filepath):
     
@@ -16,9 +16,9 @@ class SolutionFile(fenics.XDMFFile)
     
 class State():
 
-    def __init__(self, time = 0., function_space):
+    def __init__(self, function_space, time = 0.):
     
-        self.solution = fenics.Function.(function_space)
+        self.solution = fenics.Function(function_space)
         
         self.time = time
         
@@ -91,8 +91,22 @@ class State():
     
 class Model():
     
-    def __init__(mesh, element, quadrature_degree = None):
-    
+    def __init__(self,
+            mesh, 
+            element,
+            initial_values_expressions = None,
+            velocity_boundary_conditions = None, 
+            temperature_boundary_conditions = None,
+            time_step_size = 1.,
+            quadrature_degree = None):
+        """
+        Parameters
+        ----------
+        model : phaseflow.Model
+        velocity_boundary_conditions : {str: (float,),}
+        temperature_boundary_conditions : {str: float,}
+        time_step_size : float
+        """
         self.mesh = mesh
         
         self.element = element
@@ -103,11 +117,13 @@ class Model():
         
         self.old_state = State(function_space)
         
-        self.time_step_size = 1.
+        self.time_step_size = time_step_size
         
         self.variational_form = None
         
         self.derivative_of_variational_form = None
+        
+        self.problem = None
         
         if quadrature_degree is None:
         
@@ -115,23 +131,8 @@ class Model():
 
         else:
         
-            self.integration_metric = fenics.dx(metadata={'quadrature_degree': quadrature_degree}
-    
-            
-class Problem(fenics.NonlinearVariationalProblem):
-
-    def __init__(self, 
-            model, 
-            velocity_boundary_conditions = None, 
-            temperature_boundary_conditions = None)
-        """
-        Parameters
-        ----------
-        model : phaseflow.Model
-        velocity_boundary_conditions : {str: (float,),}
-        temperature_boundary_conditions : {str: float,}
-        time_step_size : float
-        """
+            self.integration_metric = fenics.dx(metadata={'quadrature_degree': quadrature_degree})
+        
         boundary_conditions = []
         
         for bc in velocity_boundary_conditions:
@@ -147,16 +148,17 @@ class Problem(fenics.NonlinearVariationalProblem):
                 fenics.DirichletBC(model.function_space.sub(model.element.temperature_subspace), 
                     bc.value, 
                     bc.location))
-                    
-        fenics.NonlinearVariationalProblem.__init__(self, 
-            model.nonlinear_variational_form, 
-            model.state.solution, 
-            boundary_conditions, 
-            model.gateaux_derivative)
-            
-        self.model = model
+       
+       
+    def setup_problem(self):
+        """ This must be called after setting the variational form and its derivative. """
+        self.problem = fenics.NonlinearVariationalProblem( 
+            self.nonlinear_variational_form, 
+            self.state.solution, 
+            self.boundary_conditions, 
+            self.derivative_of_variational_form)
         
-    
+        
     def write_dict(self):
     
         if fenics.MPI.rank(fenics.mpi_comm_world()) is 0:
@@ -248,7 +250,7 @@ class TimeStepper():
                     
                     break
                     
-                self.run_time_step(problem)
+                self.run_time_step()
         
                 phaseflow.helpers.print_once("Reached time t = " + str(self.model.state.time))
                 
@@ -277,7 +279,7 @@ class TimeStepper():
                     break
         
     
-    def run_time_step(problem):
+    def run_time_step():
 
         self.old_state.solution.leaf_node().vector()[:] = self.state.solution.leaf_node().vector()
         
@@ -292,7 +294,7 @@ class TimeStepper():
         """Check if solution has reached an approximately steady state."""
         steady = False
         
-        time_residual = fenics.Function(self.model.state.solution.function_space().)
+        time_residual = fenics.Function(self.model.state.solution.function_space())
         
         time_residual.assign(self.model.state.solution - self.model.old_state.solution)
         
@@ -311,7 +313,7 @@ class TimeStepper():
 
 class ContinuousFunction():
 
-    def __init__(self, function, derivative_function)
+    def __init__(self, function, derivative_function):
     
         self.function = function
         

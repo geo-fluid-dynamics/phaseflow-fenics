@@ -1,4 +1,5 @@
 import fenics
+import phaseflow
 
 
 class DanailaTaylorHoodElement(fenics.MixedElement):
@@ -9,20 +10,20 @@ class DanailaTaylorHoodElement(fenics.MixedElement):
     
     temperature_subspace = 2
 
-    def __init__(self, pressure_degree = 1, temperature_degree = 1, cell):
+    def __init__(self, mesh_ufl_cell, pressure_degree = 1, temperature_degree = 1):
         
-        pressure_element = fenics.FiniteElement("P", cell, pressure_degree)
+        pressure_element = fenics.FiniteElement("P", mesh_ufl_cell, pressure_degree)
         
         velocity_degree = pressure_degree + 1
         
-        velocity_element = fenics.VectorElement("P", cell, velocity_degree)
+        velocity_element = fenics.VectorElement("P", mesh_ufl_cell, velocity_degree)
 
-        temperature_element = fenics.FiniteElement("P", cell, temperature_degree)
+        temperature_element = fenics.FiniteElement("P", mesh_ufl_cell, temperature_degree)
 
         fenics.MixedElement.__init__(self, [pressure_element, velocity_element, temperature_element])
 
 
-class PhaseDependentMaterialProperty(ContinuousFunction):
+class PhaseDependentMaterialProperty(phaseflow.ContinuousFunction):
 
     def __init__(self, semi_phasefield_mapping, liquid_value, solid_value):
     
@@ -43,10 +44,12 @@ class PhaseDependentMaterialProperty(ContinuousFunction):
         
             return (P_S - P_L)*dphi(T)
             
+        phaseflow.ContinuousFunction.__init__(self, function = P, derivative_function = dP)
             
-class IdealizedLinearBoussinesqBuoyancy(ContinuousFunction)
+            
+class IdealizedLinearBoussinesqBuoyancy(phaseflow.ContinuousFunction):
     
-    def __init__(self, gravity = [0., -1.], reynolds_number = 1., rayleigh_numer, prandtl_number):
+    def __init__(self, rayleigh_numer, prandtl_number, gravity = [0., -1.], reynolds_number = 1.):
     
         g = fenics.Constant(gravity)
         
@@ -69,12 +72,12 @@ class IdealizedLinearBoussinesqBuoyancy(ContinuousFunction)
 
             return Ra/(Pr*Re**2)*g
     
-        ContinuousFunction.__init__(self, function=f_B, derivative_function=df_B)
+        phaseflow.ContinuousFunction.__init__(self, function=f_B, derivative_function=df_B)
         
         
-class TanhSemiPhasefieldMapping(ContinuousFunction):
+class TanhSemiPhasefieldMapping(phaseflow.ContinuousFunction):
 
-    def __init__(self, regularization_central_temperature = 0., regularization_smoothing_parameter)
+    def __init__(self, regularization_smoothing_parameter, regularization_central_temperature = 0.):
     
         T_r = fenics.Constant(regularization_central_temperature)
         
@@ -94,12 +97,12 @@ class TanhSemiPhasefieldMapping(ContinuousFunction):
         
             return -sech((T_r - T)/r)**2/(2.*r)
             
-        ContinuousFunction.__init__(self, function=phi, derivative_function=dphi)
+        phaseflow.ContinuousFunction.__init__(self, function=phi, derivative_function=dphi)
         
 
-class ConstantFunctionOfTemperature(ContinuousFunctionOfTemperature):
+class ConstantFunctionOfTemperature(phaseflow.ContinuousFunction):
 
-    def __init__(self, constant_value)
+    def __init__(self, constant_value):
     
         constant = fenics.Constant(constant_value)
         
@@ -111,5 +114,5 @@ class ConstantFunctionOfTemperature(ContinuousFunctionOfTemperature):
         
             return 0.
             
-        ContinuousFunctionOfTemperature.__init__(self, function=f, derivative_function=df)
+        ContinuousFunction.__init__(self, function=f, derivative_function=df)
  
