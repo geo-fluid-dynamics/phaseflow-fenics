@@ -12,7 +12,6 @@ class Model(phaseflow.core.Model):
             buoyancy = None,
             semi_phasefield_mapping = None,
             time_step_size = 1.,
-            rayleigh_number = 1.,
             prandtl_number = 1.,
             stefan_number = 1.,
             liquid_viscosity = 1.,

@@ -52,7 +52,7 @@ class Cavity(Benchmark):
     
         Benchmark.__init__(self)
         
-        self.mesh = fenics.UnitSquareMesh(fenics.mpi_comm_world(), grid_size, grid_size)
+        self.mesh = fenics.UnitSquareMesh(fenics.mpi_comm_world(), grid_size, grid_size, "crossed")
     
         self.left_wall = "near(x[0],  0.)"
         
@@ -61,6 +61,9 @@ class Cavity(Benchmark):
         self.bottom_wall = "near(x[1],  0.)"
         
         self.top_wall = "near(x[1],  1.)"
+        
+        self.walls = \
+            self.top_wall + " | " + self.bottom_wall + " | " + self.left_wall + " | " + self.right_wall
         
   
     def verify_horizontal_velocity_at_centerline(self, y, ux, tolerance):
@@ -128,23 +131,25 @@ class HeatDrivenCavity(Cavity):
         T_hot = 0.5
     
         T_cold = -T_hot
+        
+        self.Ra = 1.e6
+        
+        self.Pr = 0.71
     
         initial_values = ("0.", "0.", "0.",
             "T_hot + x[0]*(T_cold - T_hot)".replace("T_hot", str(T_hot)).replace("T_cold", str(T_cold)))
         
-        walls = self.top_wall + " | " + self.bottom_wall + " | " + self.left_wall + " | " + self.right_wall
-        
         self.model = phaseflow.pure_isotropic.Model(self.mesh,
             initial_values = initial_values,
             boundary_conditions = [
-                {"subspace": 1, "location": walls, "value": (0., 0.)},
+                {"subspace": 1, "location": self.walls, "value": (0., 0.)},
                 {"subspace": 2, "location": self.left_wall, "value": T_hot},
                 {"subspace": 2, "location": self.right_wall, "value": T_cold}],
+            prandtl_number = self.Pr,
             buoyancy = phaseflow.pure.IdealizedLinearBoussinesqBuoyancy(
-                rayleigh_numer = 1.e6, 
-                prandtl_number = 0.71),
-            time_step_size = 1.e-3,
-            liquid_viscosity = 0.01)
+                rayleigh_numer = self.Ra, 
+                prandtl_number = self.Pr),
+            time_step_size = 1.e-3)
             
         self.output_dir = "output/benchmarks/heat_driven_cavity"
         
@@ -157,23 +162,11 @@ class HeatDrivenCavity(Cavity):
     
     def verify(self):
         """ Verify against the result published in \cite{wang2010comprehensive}. """
-        data = {"Ra": 1.e6, "Pr": 0.71, "x": 0.5, 
-            "y": [0., 0.15, 0.35, 0.5, 0.65, 0.85, 1.], 
-            "ux": [0.0000, -0.0649, -0.0194, 0.0000, 0.0194, 0.0649, 0.0000]}
-        
-        bbt = w.function_space().mesh().bounding_box_tree()
-        
-        for i, true_ux in enumerate(data['ux']):
-        
-            p = fenics.Point(data['x'], data['y'][i])
-            
-            if bbt.collides_entity(p):
-            
-                wval = w(p)
-            
-                ux = wval[1]*data['Pr']/data['Ra']**0.5
-            
-                assert(abs(ux - true_ux) < 2.e-2)
+        self.verify_horizontal_velocity_at_centerline(
+            y = [0., 0.15, 0.35, 0.5, 0.65, 0.85, 1.],
+            ux = [val/self.Pr*self.Ra**0.5 for val in 
+                [0.0000, -0.0649, -0.0194, 0.0000, 0.0194, 0.0649, 0.0000]],
+            tolerance = 2.e-2)
     
     
 if __name__=='__main__':

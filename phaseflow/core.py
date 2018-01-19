@@ -122,8 +122,6 @@ class Model:
         
         self.old_state = State(self.function_space)
         
-        self.old_state.solution.leaf_node().vector()[:] = self.state.solution.leaf_node().vector()
-        
         self.time_step_size = time_step_size
         
         self.variational_form = None
@@ -148,6 +146,7 @@ class Model:
                 fenics.DirichletBC(self.function_space.sub(bc["subspace"]), 
                     bc["value"], 
                     bc["location"]))
+        
         
     def setup_problem(self):
         """ This must be called after setting the variational form and its derivative. """
@@ -307,7 +306,7 @@ class TimeStepper:
 
         self.old_state.solution.leaf_node().vector()[:] = self.state.solution.leaf_node().vector()
         
-        self.old_state.time = self.state.time
+        self.old_state.time = 0. + self.state.time
         
         self.solver.solve()
         
