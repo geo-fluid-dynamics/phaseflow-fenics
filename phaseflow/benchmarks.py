@@ -120,8 +120,6 @@ class LidDrivenCavity(Cavity):
                 {"subspace": 1, "location": fixed_walls, "value": (0., 0.)}],
             time_step_size = time_step_size,
             liquid_viscosity = 0.01)
-            
-        p, u, T = fenics.split(self.model.state.solution)
         
         self.output_dir = "output/benchmarks/lid_driven_cavity"
     
@@ -148,6 +146,8 @@ class AdaptiveLidDrivenCavity(LidDrivenCavity):
         self.adaptive_goal_integrand = u[0]*u[0]
         
         self.adaptive_solver_tolerance = 1.e-4
+        
+        self.output_dir = "output/benchmarks/adaptive_lid_driven_cavity"
         
     
 class HeatDrivenCavity(Cavity):
@@ -203,6 +203,8 @@ class AdaptiveHeatDrivenCavity(HeatDrivenCavity):
     def __init__(self, grid_size = 2):
     
         HeatDrivenCavity.__init__(self, grid_size)
+        
+        self.output_dir = "output/benchmarks/adaptive_heat_driven_cavity"
         
         p, u, T = fenics.split(self.model.state.solution)
         
