@@ -66,7 +66,11 @@ class Cavity(Benchmark):
             self.top_wall + " | " + self.bottom_wall + " | " + self.left_wall + " | " + self.right_wall
         
   
-    def verify_horizontal_velocity_at_centerline(self, y, ux, tolerance):
+    def verify_horizontal_velocity_at_centerline(self, 
+            y, 
+            ux, 
+            relative_tolerance,
+            absolute_tolerance):
         
         assert(len(y) == len(ux))
         
@@ -84,7 +88,17 @@ class Cavity(Benchmark):
                 
                 ux = values[1]
                 
-                assert(abs(ux - true_ux) < tolerance)
+                absolute_error = abs(ux - true_ux)
+                
+                if abs(true_ux) > absolute_tolerance:
+                
+                    relative_error = absolute_error/true_ux
+               
+                    assert(relative_error < relative_tolerance)
+                    
+                else:
+                
+                    assert(absolute_error < absolute_tolerance)
                 
   
 class LidDrivenCavity(Cavity):
@@ -119,12 +133,13 @@ class LidDrivenCavity(Cavity):
                 0.5000, 0.4531, 0.2813, 0.1719, 0.1016, 0.0703, 0.0625, 0.0547, 0.0000],
             ux = [1.0000, 0.8412, 0.7887, 0.7372, 0.6872, 0.2315, 0.0033, -0.1364, 
                 -0.2058, -0.2109, -0.1566, -0.1015, -0.0643, -0.0478, -0.0419, -0.0372, 0.0000],
-            tolerance = 2.e-2)
+            relative_tolerance = 3.e-2,
+            absolute_tolerance = 1.e-2)
     
     
 class HeatDrivenCavity(Cavity):
 
-    def __init__(self, grid_size = 40):
+    def __init__(self, grid_size = 20):
     
         Cavity.__init__(self, grid_size)
         
@@ -166,7 +181,8 @@ class HeatDrivenCavity(Cavity):
             y = [0., 0.15, 0.35, 0.5, 0.65, 0.85, 1.],
             ux = [val*self.Ra**0.5/self.Pr 
                 for val in [0.0000, -0.0649, -0.0194, 0.0000, 0.0194, 0.0649, 0.0000]],
-            tolerance = 2.e-2)
+            relative_tolerance = 2.e-2,
+            absolute_tolerance = 1.e-2)
     
     
 class AdaptiveHeatDrivenCavity(HeatDrivenCavity):
