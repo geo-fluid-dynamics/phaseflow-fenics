@@ -14,7 +14,7 @@ class SolutionFile(fenics.XDMFFile):
         self.path = filepath
     
     
-class State():
+class State:
 
     def __init__(self, function_space, time = 0.):
     
@@ -89,14 +89,13 @@ class State():
             self.time = h5["time"].value
         
     
-class Model():
+class Model:
     
     def __init__(self,
             mesh, 
             element,
-            initial_values_expressions = None,
-            velocity_boundary_conditions = None, 
-            temperature_boundary_conditions = None,
+            initial_values = None,
+            boundary_conditions = None, 
             time_step_size = 1.,
             quadrature_degree = None):
         """
@@ -113,9 +112,17 @@ class Model():
         
         self.function_space = fenics.FunctionSpace(mesh, element)
         
-        self.state = State(function_space)
+        self.state = State(self.function_space)
         
-        self.old_state = State(function_space)
+        if initial_values is not None:
+        
+            self.state.solution = fenics.interpolate(
+                fenics.Expression(initial_values, element = element), 
+                self.function_space)
+        
+        self.old_state = State(self.function_space)
+        
+        self.old_state.solution.leaf_node().vector()[:] = self.state.solution.leaf_node().vector()
         
         self.time_step_size = time_step_size
         
@@ -133,27 +140,19 @@ class Model():
         
             self.integration_metric = fenics.dx(metadata={'quadrature_degree': quadrature_degree})
         
-        boundary_conditions = []
+        self.boundary_conditions = []
         
-        for bc in velocity_boundary_conditions:
+        for bc in boundary_conditions:
         
-            boundary_conditions.append(
-                fenics.DirichletBC(model.function_space.sub(model.element.velocity_subspace), 
-                    bc.value, 
-                    bc.location))
-                    
-        for bc in temperature_boundary_conditions:
+            self.boundary_conditions.append(
+                fenics.DirichletBC(self.function_space.sub(bc["subspace"]), 
+                    bc["value"], 
+                    bc["location"]))
         
-            boundary_conditions.append(
-                fenics.DirichletBC(model.function_space.sub(model.element.temperature_subspace), 
-                    bc.value, 
-                    bc.location))
-       
-       
     def setup_problem(self):
         """ This must be called after setting the variational form and its derivative. """
         self.problem = fenics.NonlinearVariationalProblem( 
-            self.nonlinear_variational_form, 
+            self.variational_form, 
             self.state.solution, 
             self.boundary_conditions, 
             self.derivative_of_variational_form)
@@ -172,13 +171,13 @@ class Model():
         
 class Solver(fenics.AdaptiveNonlinearVariationalSolver):
 
-    def __init__(self, problem, adaptive_goal_functional, adaptive_solver_tolerance = 1.e-4):
+    def __init__(self, model, adaptive_goal_functional, adaptive_solver_tolerance = 1.e-4):
     
         fenics.AdaptiveNonlinearVariationalSolver.__init__(self, 
-            problem = problem,
+            problem = model.problem,
             goal = adaptive_goal_functional)
             
-        self.problem = problem
+        self.model = model
         
         self.adaptive_solver_tolerance = adaptive_solver_tolerance
         
@@ -188,7 +187,7 @@ class Solver(fenics.AdaptiveNonlinearVariationalSolver):
         fenics.AdaptiveNonlinearVariationalSolver.solve(self, self.adaptive_solver_tolerance)
     
     
-class TimeStepper():
+class TimeStepper:
 
     def __init__(self, 
             solver,
@@ -203,8 +202,6 @@ class TimeStepper():
         self.max_time_steps = max_time_steps
         
         self.solver = solver
-        
-        self.model = solver.problem.model
 
         self.output_dir = output_dir
         
@@ -214,80 +211,93 @@ class TimeStepper():
         
         
     def run_until(end_time):
-    
-        start_time = 0. + time
-    
-    
-        # Open a context manager for the output file.
-        solution_filepath = output_dir + "/solution.xdmf"
+        """ Optionally run inside of a file context manager.
+        Without this, exceptions are more likely to corrupt the outputs.
+        """
+        if self.output_dir is None:
         
-        with fenics.XDMFFile(solution_filepath) as solution_file:
-
+            __run_until(end_time)
         
-            # Write the initial values.
-            self.model.old_state.write_solution_to_xdmf(
-                solution_file, 
-                self.model.old_state.solution,
-                self.model.old_state.time,
-                solution_filepath) 
-
-            if start_time >= end_time - self.time_epsilon:
+        else:
         
-                phaseflow.helpers.print_once(
-                    "Start time is already too close to end time. Only writing initial values.")
-                
-                return
-                
-                
-            # Run solver for each time step until reaching end time.
-            progress = fenics.Progress("Time-stepping")
+            solution_filepath = output_dir + "/solution.xdmf"
+        
+            with SolutionFile(solution_filepath) as solution_file:
             
-            fenics.set_log_level(fenics.PROGRESS)
+                state.write_solution_to_xdmf(solution_file)
             
-            for it in range(1, self.max_time_steps):
+                __run_until(end_time)
                 
-                if(self.model.state.time > end_time - self.time_epsilon):
-                    
-                    break
-                    
-                self.run_time_step()
         
-                phaseflow.helpers.print_once("Reached time t = " + str(self.model.state.time))
-                
-                self.model.state.write_solution(solution_file)
-                
-                
-                # Write checkpoint file.
-                model.state.write_checkpoint(output_dir = self.output_dir)
-                
-                
-                # Check for steady state.
-                if self.stop_when_steady and self.steady():
-                
-                    phaseflow.helpers.print_once("Reached steady state at time t = " + str(time))
-                    
-                    break
-                
-                
-                # Report progress.
-                progress.update(time / end_time)
-                
-                if time >= (end_time - fenics.dolfin.DOLFIN_EPS):
-                
-                    phaseflow.helpers.print_once("Reached end time, t = " + str(end_time))
-                
-                    break
+    def __run_until(end_time):
+    
+        state = self.solver.model.state
         
+        old_state = self.solver.model.old_state
+        
+        start_time = 0. + state.time
+
+        if start_time >= end_time - self.time_epsilon:
+    
+            phaseflow.helpers.print_once(
+                "Start time is already too close to end time. Only writing initial values.")
+            
+            return
+            
+            
+        # Run solver for each time step until reaching end time.
+        progress = fenics.Progress("Time-stepping")
+        
+        fenics.set_log_level(fenics.PROGRESS)
+        
+        for it in range(1, self.max_time_steps):
+            
+            if(time > end_time - self.time_epsilon):
+                
+                break
+                
+            self.run_time_step()
+    
+            phaseflow.helpers.print_once("Reached time t = " + str(self.solver.model.state.time))
+            
+            if self.output_dir is not None:
+            
+                state.write_solution(solution_file)
+
+                state.write_checkpoint(output_dir = self.output_dir)
+            
+            
+            # Check for steady state.
+            if self.stop_when_steady and self.steady():
+            
+                phaseflow.helpers.print_once("Reached steady state at time t = " + str(state.time))
+                
+                break
+            
+            
+            # Report progress.
+            progress.update(state.time / end_time)
+            
+            if state.time >= (end_time - fenics.dolfin.DOLFIN_EPS):
+            
+                phaseflow.helpers.print_once("Reached end time, t = " + str(end_time))
+            
+                break
+    
     
     def run_time_step():
 
-        self.old_state.solution.leaf_node().vector()[:] = self.state.solution.leaf_node().vector()
+        state = self.solver.model.state
         
-        self.old_state.time = self.state.time
+        old_state = self.solver.model.old_state
+        
+        old_state.solution.leaf_node().vector()[:] = state.solution.leaf_node().vector()
+        
+        old_state.time = state.time
         
         self.solver.solve()
         
-        self.model.state.time += self.model.time_step_size
+        state.time += self.solver.model.time_step_size
         
         
     def steady():
@@ -311,7 +321,7 @@ class TimeStepper():
         return steady
         
 
-class ContinuousFunction():
+class ContinuousFunction:
 
     def __init__(self, function, derivative_function):
     

@@ -2,25 +2,22 @@ import fenics
 import phaseflow
 
 
-class DanailaTaylorHoodElement(fenics.MixedElement):
-
-    pressure_subspace = 0
+def make_mixed_element(mesh_ufl_cell, pressure_degree = 1, temperature_degree = 1):
+    """ 
     
-    velocity_subspace = 1
+    An attempt was made to define this as a sub-class of fenics.MixedElement,
+    instead of as a function;
+    but DOLFIN's JIT compiler was throwing an error related to its __repr attribute.
+    """
+    pressure_element = fenics.FiniteElement("P", mesh_ufl_cell, pressure_degree)
     
-    temperature_subspace = 2
+    velocity_degree = pressure_degree + 1
+    
+    velocity_element = fenics.VectorElement("P", mesh_ufl_cell, velocity_degree)
 
-    def __init__(self, mesh_ufl_cell, pressure_degree = 1, temperature_degree = 1):
-        
-        pressure_element = fenics.FiniteElement("P", mesh_ufl_cell, pressure_degree)
-        
-        velocity_degree = pressure_degree + 1
-        
-        velocity_element = fenics.VectorElement("P", mesh_ufl_cell, velocity_degree)
-
-        temperature_element = fenics.FiniteElement("P", mesh_ufl_cell, temperature_degree)
-
-        fenics.MixedElement.__init__(self, [pressure_element, velocity_element, temperature_element])
+    temperature_element = fenics.FiniteElement("P", mesh_ufl_cell, temperature_degree)
+    
+    return fenics.MixedElement([pressure_element, velocity_element, temperature_element])
 
 
 class PhaseDependentMaterialProperty(phaseflow.ContinuousFunction):
@@ -100,7 +97,7 @@ class TanhSemiPhasefieldMapping(phaseflow.ContinuousFunction):
         phaseflow.ContinuousFunction.__init__(self, function=phi, derivative_function=dphi)
         
 
-class ConstantFunctionOfTemperature(phaseflow.ContinuousFunction):
+class ConstantFunction(phaseflow.ContinuousFunction):
 
     def __init__(self, constant_value):
     
@@ -112,7 +109,7 @@ class ConstantFunctionOfTemperature(phaseflow.ContinuousFunction):
         
         def df(T):
         
-            return 0.
+            return 0.*constant
             
-        ContinuousFunction.__init__(self, function=f, derivative_function=df)
+        phaseflow.core.ContinuousFunction.__init__(self, function=f, derivative_function=df)
  

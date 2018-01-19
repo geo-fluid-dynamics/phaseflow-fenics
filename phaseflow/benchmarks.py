@@ -2,7 +2,7 @@ import phaseflow
 import fenics
 
  
-class Benchmark():
+class Benchmark:
  
     def __init__(self):
     
@@ -20,14 +20,20 @@ class Benchmark():
         
     def run(self):
     
-        solver = phaseflow.Solver(
-            problem = self.model.problem, 
+        assert(self.model is not None)
+        
+        assert(self.adaptive_goal_functional is not None)
+    
+        solver = phaseflow.core.Solver(
+            model = self.model, 
             adaptive_goal_functional = self.adaptive_goal_functional, 
             adaptive_solver_tolerance = self.adaptive_solver_tolerance)
 
-        time_stepper = phaseflow.TimeStepper(output_dir = "output/benchmarks/lid_driven_cavity")
+        time_stepper = phaseflow.core.TimeStepper(
+            solver = solver,
+            output_dir = "output/benchmarks/lid_driven_cavity")
         
-        time_stepper.run_until(self.model.problem, end_time = self.model.time_step_size)
+        time_stepper.run_until(end_time = self.model.time_step_size)
             
         self.verify()
     
@@ -55,13 +61,22 @@ class LidDrivenCavity(Cavity):
     
         Cavity.__init__(self, grid_size)
         
+        fixed_walls = self.bottom_wall + " | " + self.left_wall + " | " + self.right_wall
         self.model = phaseflow.pure_isotropic.Model(self.mesh,
-            initial_values_expressions = ("0.", self.top_wall, "0.", "1."),
-            velocity_boundary_conditions = 
-                {self.top_wall: (1., 0.),
-                self.bottom_wall + " | " + self.left_wall + " | " + self.right_wall: (0., 0.)},
+            initial_values = ("0.", self.top_wall, "0.", "1."),
+            boundary_conditions = [
+                {"subspace": 1, "location": self.top_wall, "value": (1., 0.)},
+                {"subspace": 1, "location": fixed_walls, "value": (0., 0.)}],
             time_step_size = 1.e12,
             liquid_viscosity = 0.01)
+            
+        p, u, T = fenics.split(self.model.state.solution)
+        
+        dx = self.model.integration_metric
+        
+        self.adaptive_goal_functional = u[0]**2*dx
+        
+        self.adaptive_goal_tolerance = 1.e-5
         
     
     def verify(self):

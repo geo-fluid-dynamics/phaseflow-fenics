@@ -1,3 +1,4 @@
+import fenics
 import phaseflow
 import phaseflow.pure
 
@@ -6,9 +7,8 @@ class Model(phaseflow.core.Model):
 
     def __init__(self,
             mesh,
-            initial_values_expressions = None,
-            velocity_boundary_conditions = None, 
-            temperature_boundary_conditions = None,
+            initial_values = None,
+            boundary_conditions = None, 
             buoyancy_function = None,
             semi_phasefield_mapping = None,
             time_step_size = 1.,
@@ -35,10 +35,9 @@ class Model(phaseflow.core.Model):
         """
         phaseflow.core.Model.__init__(self,
             mesh = mesh,
-            element = phaseflow.pure.DanailaTaylorHoodElement(mesh.ufl_cell()),
-            initial_values_expressions = initial_values_expressions,
-            velocity_boundary_conditions = velocity_boundary_conditions,
-            temperature_boundary_conditions = temperature_boundary_conditions,
+            element = phaseflow.pure.make_mixed_element(mesh.ufl_cell()),
+            initial_values = initial_values,
+            boundary_conditions = boundary_conditions,
             time_step_size = time_step_size,
             quadrature_degree = quadrature_degree)
             
@@ -46,11 +45,11 @@ class Model(phaseflow.core.Model):
         ## Handle default arguments.
         if buoyancy_function is None:
         
-            buoyancy_function = pure.ConstantFunctionOfTemperature(0.)
+            buoyancy_function = phaseflow.pure.ConstantFunction((0., 0.))
             
         if semi_phasefield_mapping is None:
         
-            semi_phasefield_mapping = pure.ConstantFunctionOfTemperature(0.)
+            semi_phasefield_mapping = phaseflow.pure.ConstantFunction(0.)
             
         
         ## Set the variational form.
@@ -99,17 +98,22 @@ class Model(phaseflow.core.Model):
         
         mu_S = fenics.Constant(solid_viscosity)
         
-        phase_dependent_viscosity = phaseflow.pure.PhaseDependentMaterialProperty(mu_L, mu_S)
+        phase_dependent_viscosity = phaseflow.pure.PhaseDependentMaterialProperty(
+            semi_phasefield_mapping = semi_phasefield_mapping,
+            liquid_value = mu_L,
+            solid_value = mu_S)
         
         mu = phase_dependent_viscosity.function
         
+        W = self.function_space
+        
         psi_p, psi_u, psi_T = fenics.TestFunctions(W)
         
-        w = state.solution
+        w = self.state.solution
         
         p, u, T = fenics.split(w)
         
-        w_n = old_state.solution
+        w_n = self.old_state.solution
          
         p_n, u_n, T_n = fenics.split(w_n)
         
@@ -129,7 +133,7 @@ class Model(phaseflow.core.Model):
         
         dphi = semi_phasefield_mapping.derivative_function
         
-        dmu = phase_dependent_viscosity.function_derivative
+        dmu = phase_dependent_viscosity.derivative_function
             
         delta_w = fenics.TrialFunction(W)
         
@@ -141,7 +145,7 @@ class Model(phaseflow.core.Model):
         
         self.derivative_of_variational_form = (
             b(delta_u, psi_p) - psi_p*gamma*delta_p 
-            + dot(psi_u, 1./Delta_t*delta_u + delta_T*ddT_f_B(T_k))
+            + dot(psi_u, 1./Delta_t*delta_u + delta_T*df_B(T_k))
             + c(u_k, delta_u, psi_u) + c(delta_u, u_k, psi_u) 
             + b(psi_u, delta_p) 
             + a(delta_T*dmu(T_k), u_k, psi_u) + a(mu(T_k), delta_u, psi_u) 
