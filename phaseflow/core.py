@@ -195,7 +195,7 @@ class Solver():
 
         if self.adaptive:
         
-            self.solver.solve(self, self.adaptive_solver_tolerance)
+            self.solver.solve(self.adaptive_solver_tolerance)
             
         else:
         
@@ -317,11 +317,12 @@ class TimeStepper:
         """Check if solution has reached an approximately steady state."""
         steady = False
         
-        time_residual = fenics.Function(self.state.solution.function_space())
+        time_residual = fenics.Function(self.state.solution.leaf_node().function_space())
         
-        time_residual.assign(self.state.solution - self.old_state.solution)
+        time_residual.assign(self.state.solution.leaf_node() - self.old_state.solution.leaf_node())
         
-        unsteadiness = fenics.norm(time_residual, "L2")/fenics.norm(self.old_state.solution, "L2")
+        unsteadiness = fenics.norm(time_residual, "L2")/ \
+            fenics.norm(self.old_state.solution.leaf_node(), "L2")
         
         phaseflow.helpers.print_once(
             "Unsteadiness (L2 norm of relative time residual), || w_{n+1} || / || w_n || = " + 

@@ -80,7 +80,7 @@ class Cavity(Benchmark):
             
             if bbt.collides_entity(p):
             
-                values = self.model.state.solution(p)
+                values = self.model.state.solution.leaf_node()(p)
                 
                 ux = values[1]
                 
@@ -124,7 +124,7 @@ class LidDrivenCavity(Cavity):
     
 class HeatDrivenCavity(Cavity):
 
-    def __init__(self, grid_size = 20):
+    def __init__(self, grid_size = 40):
     
         Cavity.__init__(self, grid_size)
         
@@ -159,19 +159,34 @@ class HeatDrivenCavity(Cavity):
         
         self.steady_relative_tolerance = 1.e-4
         
-    
+        
     def verify(self):
         """ Verify against the result published in \cite{wang2010comprehensive}. """
         self.verify_horizontal_velocity_at_centerline(
             y = [0., 0.15, 0.35, 0.5, 0.65, 0.85, 1.],
-            ux = [val/self.Pr*self.Ra**0.5 for val in 
-                [0.0000, -0.0649, -0.0194, 0.0000, 0.0194, 0.0649, 0.0000]],
+            ux = [val*self.Ra**0.5/self.Pr 
+                for val in [0.0000, -0.0649, -0.0194, 0.0000, 0.0194, 0.0649, 0.0000]],
             tolerance = 2.e-2)
     
+    
+class AdaptiveHeatDrivenCavity(HeatDrivenCavity):
+
+    def __init__(self, grid_size = 2):
+    
+        HeatDrivenCavity.__init__(self, grid_size)
+        
+        p, u, T = fenics.split(self.model.state.solution)
+        
+        self.adaptive_goal_integrand = u[0]*T
+        
+        self.adaptive_solver_tolerance = 1.e-2
+        
     
 if __name__=='__main__':
 
     LidDrivenCavity().run()
     
     HeatDrivenCavity().run()
+    
+    AdaptiveHeatDrivenCavity.run()
     
