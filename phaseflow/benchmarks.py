@@ -137,6 +137,19 @@ class LidDrivenCavity(Cavity):
             absolute_tolerance = 1.e-2)
     
     
+class AdaptiveLidDrivenCavity(LidDrivenCavity):
+
+    def __init__(self, grid_size = 2):
+    
+        LidDrivenCavity.__init__(self, grid_size)
+        
+        p, u, T = fenics.split(self.model.state.solution)
+        
+        self.adaptive_goal_integrand = u[0]*u[0]
+        
+        self.adaptive_solver_tolerance = 1.e-4
+        
+    
 class HeatDrivenCavity(Cavity):
 
     def __init__(self, grid_size = 20):
@@ -201,6 +214,8 @@ class AdaptiveHeatDrivenCavity(HeatDrivenCavity):
 if __name__=='__main__':
 
     LidDrivenCavity().run()
+    
+    AdaptiveLidDrivenCavity().run()
     
     HeatDrivenCavity().run()
     
