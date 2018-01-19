@@ -9,7 +9,7 @@ class Model(phaseflow.core.Model):
             mesh,
             initial_values = None,
             boundary_conditions = None, 
-            buoyancy_function = None,
+            buoyancy = None,
             semi_phasefield_mapping = None,
             time_step_size = 1.,
             rayleigh_number = 1.,
@@ -29,7 +29,7 @@ class Model(phaseflow.core.Model):
         
         boundary_conditions : [fenics.DirichletBoundaryCondition,]
         
-        buoyancy_function : phaseflow.ContinuousFunctionOfTemperature
+        buoyancy : phaseflow.ContinuousFunctionOfTemperature
         
         semi_phasefield_mapping : phaseflow.ContinuousFunctionOfTemperature
         """
@@ -43,9 +43,9 @@ class Model(phaseflow.core.Model):
             
             
         ## Handle default arguments.
-        if buoyancy_function is None:
+        if buoyancy is None:
         
-            buoyancy_function = phaseflow.pure.ConstantFunction((0., 0.))
+            buoyancy = phaseflow.pure.ConstantFunction((0., 0.))
             
         if semi_phasefield_mapping is None:
         
@@ -88,7 +88,7 @@ class Model(phaseflow.core.Model):
         
         g = fenics.Constant(gravity)
         
-        f_B = buoyancy_function.function
+        f_B = buoyancy.function
         
         phi = semi_phasefield_mapping.function
         
@@ -129,7 +129,7 @@ class Model(phaseflow.core.Model):
 
             
         # Set the Gateaux derivative in variational form.
-        df_B = buoyancy_function.derivative_function
+        df_B = buoyancy.derivative_function
         
         dphi = semi_phasefield_mapping.derivative_function
         

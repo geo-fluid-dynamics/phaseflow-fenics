@@ -169,22 +169,38 @@ class Model:
             file.close()
         
         
-class Solver(fenics.AdaptiveNonlinearVariationalSolver):
+class Solver():
 
-    def __init__(self, model, adaptive_goal_functional, adaptive_solver_tolerance = 1.e-4):
+    def __init__(self, model, adaptive_goal_integrand, adaptive_solver_tolerance = 1.e-4):
     
-        fenics.AdaptiveNonlinearVariationalSolver.__init__(self, 
-            problem = model.problem,
-            goal = adaptive_goal_functional)
-            
         self.model = model
         
-        self.adaptive_solver_tolerance = adaptive_solver_tolerance
+        self.adaptive = adaptive_goal_integrand is not None
+
+        if self.adaptive:
+    
+            self.adaptive_solver_tolerance = adaptive_solver_tolerance
+            
+            dx = model.integration_metric
+            
+            self.solver = fenics.AdaptiveNonlinearVariationalSolver(
+                problem = model.problem,
+                goal = adaptive_goal_integrand*dx)
+        
+        else:
+        
+            self.solver = fenics.NonlinearVariationalSolver(problem = model.problem)
         
         
     def solve(self):
 
-        fenics.AdaptiveNonlinearVariationalSolver.solve(self, self.adaptive_solver_tolerance)
+        if self.adaptive:
+        
+            self.solver.solve(self, self.adaptive_solver_tolerance)
+            
+        else:
+        
+            self.solver.solve()
     
     
 class TimeStepper:
@@ -202,6 +218,10 @@ class TimeStepper:
         self.max_time_steps = max_time_steps
         
         self.solver = solver
+        
+        self.state = solver.model.state
+        
+        self.old_state = solver.model.old_state
 
         self.output_dir = output_dir
         
@@ -232,12 +252,8 @@ class TimeStepper:
                 
         
     def __run_until(self, end_time):
-    
-        state = self.solver.model.state
-        
-        old_state = self.solver.model.old_state
-        
-        start_time = 0. + state.time
+
+        start_time = 0. + self.state.time
 
         if start_time >= end_time - self.time_epsilon:
     
@@ -254,33 +270,33 @@ class TimeStepper:
         
         for it in range(1, self.max_time_steps):
             
-            if(state.time > end_time - self.time_epsilon):
+            if(self.state.time > end_time - self.time_epsilon):
                 
                 break
                 
             self.run_time_step()
     
-            phaseflow.helpers.print_once("Reached time t = " + str(self.solver.model.state.time))
+            phaseflow.helpers.print_once("Reached time t = " + str(self.state.time))
             
             if self.output_dir is not None:
             
-                state.write_solution_to_xdmf(self.solution_file)
+                self.state.write_solution_to_xdmf(self.solution_file)
 
-                state.write_checkpoint(output_dir = self.output_dir)
+                self.state.write_checkpoint(output_dir = self.output_dir)
             
             
             # Check for steady state.
             if self.stop_when_steady and self.steady():
             
-                phaseflow.helpers.print_once("Reached steady state at time t = " + str(state.time))
+                phaseflow.helpers.print_once("Reached steady state at time t = " + str(self.state.time))
                 
                 break
             
             
             # Report progress.
-            progress.update(state.time / end_time)
+            progress.update(self.state.time / end_time)
             
-            if state.time >= (end_time - fenics.dolfin.DOLFIN_EPS):
+            if self.state.time >= (end_time - fenics.dolfin.DOLFIN_EPS):
             
                 phaseflow.helpers.print_once("Reached end time, t = " + str(end_time))
             
@@ -289,28 +305,24 @@ class TimeStepper:
     
     def run_time_step(self):
 
-        state = self.solver.model.state
+        self.old_state.solution.leaf_node().vector()[:] = self.state.solution.leaf_node().vector()
         
-        old_state = self.solver.model.old_state
-        
-        old_state.solution.leaf_node().vector()[:] = state.solution.leaf_node().vector()
-        
-        old_state.time = state.time
+        self.old_state.time = self.state.time
         
         self.solver.solve()
         
-        state.time += self.solver.model.time_step_size
+        self.state.time += self.solver.model.time_step_size
         
         
     def steady(self):
         """Check if solution has reached an approximately steady state."""
         steady = False
         
-        time_residual = fenics.Function(self.model.state.solution.function_space())
+        time_residual = fenics.Function(self.state.solution.function_space())
         
-        time_residual.assign(self.model.state.solution - self.model.old_state.solution)
+        time_residual.assign(self.state.solution - self.old_state.solution)
         
-        unsteadiness = fenics.norm(time_residual, "L2")/fenics.norm(self.model.old_state.solution, "L2")
+        unsteadiness = fenics.norm(time_residual, "L2")/fenics.norm(self.old_state.solution, "L2")
         
         phaseflow.helpers.print_once(
             "Unsteadiness (L2 norm of relative time residual), || w_{n+1} || / || w_n || = " + 
