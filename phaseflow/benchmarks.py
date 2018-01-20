@@ -48,23 +48,38 @@ class Benchmark:
  
 class Cavity(Benchmark):
 
-    def __init__(self, grid_size = 20):
+    def __init__(self, mesh_size = [20, 20], xmin = 0., ymin = 0., xmax = 1., ymax = 1.):
     
         Benchmark.__init__(self)
         
-        self.mesh = fenics.UnitSquareMesh(fenics.mpi_comm_world(), grid_size, grid_size, "crossed")
-    
-        self.left_wall = "near(x[0],  0.)"
+        if type(mesh_size) is type(20):
         
-        self.right_wall = "near(x[0],  1.)"
+            mesh_size = [mesh_size, mesh_size]
         
-        self.bottom_wall = "near(x[1],  0.)"
+        if [xmin, ymin, xmax, ymax] == [0., 0., 1., 1.]:
         
-        self.top_wall = "near(x[1],  1.)"
+            self.mesh = fenics.UnitSquareMesh(fenics.mpi_comm_world(), 
+                mesh_size[0], mesh_size[1], "crossed")
+            
+        else:
+        
+            self.mesh = fenics.RectangleMesh(fenics.mpi_comm_world(), 
+                fenics.Point(xmin, ymin), fenics.Point(xmax, ymax),
+                mesh_size[0], mesh_size[1], "crossed")
+        
+        
+        self.left_wall = "near(x[0],  xmin)".replace("xmin", str(xmin))
+        
+        self.right_wall = "near(x[0],  xmax)".replace("xmax", str(xmax))
+        
+        self.bottom_wall = "near(x[1],  ymin)".replace("ymin",  str(ymin))
+        
+        self.top_wall = "near(x[1],  ymax)".replace("ymax", str(ymax))
         
         self.walls = \
             self.top_wall + " | " + self.bottom_wall + " | " + self.left_wall + " | " + self.right_wall
         
+        self.xmin, self.ymin, self.xmax, self.ymax = xmin, ymin, xmax, ymax
   
     def verify_horizontal_velocity_at_centerline(self, 
             y, 
@@ -74,7 +89,7 @@ class Cavity(Benchmark):
         
         assert(len(y) == len(ux))
         
-        x = 0.5
+        x = (self.xmin + self.xmax)/2.
         
         bbt = self.model.mesh.bounding_box_tree()
         
@@ -103,13 +118,13 @@ class Cavity(Benchmark):
   
 class LidDrivenCavity(Cavity):
 
-    def __init__(self, grid_size = 20):
+    def __init__(self, mesh_size = 20, ymin = 0., time_step_size = 1.e12):
     
-        Cavity.__init__(self, grid_size)
+        Cavity.__init__(self, mesh_size = mesh_size, ymin = ymin)
         
-        fixed_walls = self.bottom_wall + " | " + self.left_wall + " | " + self.right_wall
+        self.fixed_walls = self.bottom_wall + " | " + self.left_wall + " | " + self.right_wall
         
-        time_step_size = 1.e12
+        self.time_step_size = time_step_size
         
         self.end_time = time_step_size
         
@@ -117,7 +132,7 @@ class LidDrivenCavity(Cavity):
             initial_values = ("0.", self.top_wall, "0.", "1."),
             boundary_conditions = [
                 {"subspace": 1, "location": self.top_wall, "value": (1., 0.)},
-                {"subspace": 1, "location": fixed_walls, "value": (0., 0.)}],
+                {"subspace": 1, "location": self.fixed_walls, "value": (0., 0.)}],
             time_step_size = time_step_size,
             liquid_viscosity = 0.01)
         
@@ -137,9 +152,9 @@ class LidDrivenCavity(Cavity):
     
 class AdaptiveLidDrivenCavity(LidDrivenCavity):
 
-    def __init__(self, grid_size = 2):
+    def __init__(self, mesh_size = 2):
     
-        LidDrivenCavity.__init__(self, grid_size)
+        LidDrivenCavity.__init__(self, mesh_size)
         
         p, u, T = fenics.split(self.model.state.solution)
         
@@ -148,13 +163,65 @@ class AdaptiveLidDrivenCavity(LidDrivenCavity):
         self.adaptive_solver_tolerance = 1.e-4
         
         self.output_dir = "output/benchmarks/adaptive_lid_driven_cavity"
+     
+
+class LidDrivenCavityWithSolidSubdomain(LidDrivenCavity):
+
+    def __init__(self, mesh_size = [20, 25], pci_refinement_cycles = 4, time_step_size = 20.):
+    
+        LidDrivenCavity.__init__(self, mesh_size = mesh_size, ymin = -0.25, time_step_size = time_step_size)
         
+        
+        # Refine near the prescribed phase interface.
+        y_pci = 0.
+        
+        class PhaseInterface(fenics.SubDomain):
+            
+            def inside(self, x, on_boundary):
+            
+                return fenics.near(x[1], y_pci)
+
+                
+        phase_interface = PhaseInterface()
+        
+        for i in range(pci_refinement_cycles):
+            
+            edge_markers = fenics.EdgeFunction("bool", self.mesh)
+            
+            phase_interface.mark(edge_markers, True)
+
+            fenics.adapt(self.mesh, edge_markers)
+            
+            self.mesh = self.mesh.child()
+        
+        
+        #
+        self.model = phaseflow.pure_isotropic.Model(self.mesh,
+            initial_values = (
+                "0.", 
+                self.top_wall, 
+                "0.", 
+                "1. - 2.*(x[1] <= y_pci)".replace("y_pci", str(y_pci))),
+            boundary_conditions = [
+                {"subspace": 1, "location": self.top_wall, "value": (1., 0.)},
+                {"subspace": 1, "location": self.fixed_walls, "value": (0., 0.)}],
+            prandtl_number = 1.e16,
+            liquid_viscosity = 0.01,
+            solid_viscosity = 1.e6,
+            stefan_number = 1.e16,
+            semi_phasefield_mapping = phaseflow.pure.TanhSemiPhasefieldMapping(
+                regularization_central_temperature = -0.01,
+                regularization_smoothing_parameter = 0.01),
+            time_step_size = time_step_size)
+        
+        self.output_dir = "output/benchmarks/lid_driven_cavity_with_solid_subdomain"
+     
     
 class HeatDrivenCavity(Cavity):
 
-    def __init__(self, grid_size = 20):
+    def __init__(self, mesh_size = 20):
     
-        Cavity.__init__(self, grid_size)
+        Cavity.__init__(self, mesh_size = mesh_size)
         
         T_hot = 0.5
     
@@ -200,9 +267,9 @@ class HeatDrivenCavity(Cavity):
     
 class AdaptiveHeatDrivenCavity(HeatDrivenCavity):
 
-    def __init__(self, grid_size = 2):
+    def __init__(self, mesh_size = 2):
     
-        HeatDrivenCavity.__init__(self, grid_size)
+        HeatDrivenCavity.__init__(self, mesh_size = mesh_size)
         
         self.output_dir = "output/benchmarks/adaptive_heat_driven_cavity"
         
@@ -218,6 +285,8 @@ if __name__=='__main__':
     LidDrivenCavity().run()
     
     AdaptiveLidDrivenCavity().run()
+    
+    LidDrivenCavityWithSolidSubdomain().run()
     
     HeatDrivenCavity().run()
     

@@ -11,6 +11,11 @@ def test_adaptive_lid_driven_cavity_benchmark():
     phaseflow.benchmarks.AdaptiveLidDrivenCavity().run()
     
 
+def test_lid_driven_cavity_with_solid_subdomain_benchmark():
+    
+    phaseflow.benchmarks.LidDrivenCavityWithSolidSubdomain().run()
+    
+    
 def test_heat_driven_cavity_benchmark():
     
     phaseflow.benchmarks.HeatDrivenCavity().run()    
@@ -26,6 +31,8 @@ if __name__=='__main__':
     test_lid_driven_cavity_benchmark()
     
     test_adaptive_lid_driven_cavity_benchmark()
+    
+    test_lid_driven_cavity_with_solid_subdomain_benchmark()
     
     test_heat_driven_cavity_benchmark()
     
