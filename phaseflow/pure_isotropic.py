@@ -39,8 +39,8 @@ class Model(phaseflow.core.Model):
             boundary_conditions = boundary_conditions,
             time_step_size = time_step_size,
             quadrature_degree = quadrature_degree)
-            
-            
+        
+        
         ## Handle default arguments.
         if buoyancy is None:
         
