@@ -228,7 +228,8 @@ class LidDrivenCavityWithSolidSubdomain(LidDrivenCavity):
             semi_phasefield_mapping = phaseflow.pure.TanhSemiPhasefieldMapping(
                 regularization_central_temperature = -0.01,
                 regularization_smoothing_parameter = 0.01),
-            time_step_size = time_step_size)
+            time_step_size = time_step_size,
+            quadrature_degree = 3)
         
         self.output_dir = "output/benchmarks/lid_driven_cavity_with_solid_subdomain"
         
