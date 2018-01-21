@@ -16,7 +16,7 @@ class Model(phaseflow.core.Model):
             stefan_number = 1.,
             liquid_viscosity = 1.,
             solid_viscosity = 1.e8,
-            gravity = (0., -1.),
+            gravity = None,
             penalty_parameter = 1.e-7,
             quadrature_degree = None):
         """
@@ -41,15 +41,19 @@ class Model(phaseflow.core.Model):
             quadrature_degree = quadrature_degree)
         
         
-        ## Handle default arguments.
-        if buoyancy is None:
-        
-            buoyancy = phaseflow.pure.ConstantFunction((0., 0.))
-            
+        ## Handle default arguments.    
         if semi_phasefield_mapping is None:
         
             semi_phasefield_mapping = phaseflow.pure.ConstantFunction(0.)
             
+        if buoyancy is None:
+        
+            buoyancy = phaseflow.pure.ConstantFunction((0.,)*mesh.type().dim())
+        
+        self.semi_phasefield_mapping = semi_phasefield_mapping
+        
+        self.buoyancy = buoyancy
+        
         
         ## Set the variational form.
         """Set local names for math operators to improve readability."""
@@ -84,8 +88,6 @@ class Model(phaseflow.core.Model):
         Pr = fenics.Constant(prandtl_number)
         
         Ste = fenics.Constant(stefan_number)
-        
-        g = fenics.Constant(gravity)
         
         f_B = buoyancy.function
         

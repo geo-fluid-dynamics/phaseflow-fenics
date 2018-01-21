@@ -26,14 +26,14 @@ class Benchmark:
         assert(False)
         
     
-    def verify_scalar_solution_component(self, component, x, y, verified_values, 
+    def verify_scalar_solution_component(self, component, points, verified_values, 
         relative_tolerance, absolute_tolerance):
     
-        assert(len(verified_values) == len(x) == len(y))
+        assert(len(verified_values) == len(points))
         
         for i, verified_value in enumerate(verified_values):
         
-            p = fenics.Point(x[i], y[i])
+            p = phaseflow.core.Point(points[i])
             
             if self.model.mesh.bounding_box_tree().collides_entity(p):
             
@@ -142,13 +142,11 @@ class LidDrivenCavity(Cavity):
     
     def verify(self):
         """ Verify against \cite{ghia1982}. """
-        y = [1.0000, 0.9766, 0.9688, 0.9609, 0.9531, 0.8516, 0.7344, 0.6172, 
-            0.5000, 0.4531, 0.2813, 0.1719, 0.1016, 0.0703, 0.0625, 0.0547, 0.0000]
-            
         self.verify_scalar_solution_component(
             component = 1,
-            x = [(self.xmin + self.xmax)/2.]*len(y),
-            y = y,
+            points = [((self.xmin + self.xmax)/2., y) 
+                for y in [1.0000, 0.9766, 0.9688, 0.9609, 0.9531, 0.8516, 0.7344, 0.6172, 
+                    0.5000, 0.4531, 0.2813, 0.1719, 0.1016, 0.0703, 0.0625, 0.0547, 0.0000]],
             verified_values = [1.0000, 0.8412, 0.7887, 0.7372, 0.6872, 0.2315, 0.0033, -0.1364, 
                 -0.2058, -0.2109, -0.1566, -0.1015, -0.0643, -0.0478, -0.0419, -0.0372, 0.0000],
             relative_tolerance = self.relative_tolerance,
@@ -288,12 +286,9 @@ class HeatDrivenCavity(Cavity):
         
     def verify(self):
         """ Verify against the result published in \cite{wang2010comprehensive}. """
-        y = [0., 0.15, 0.35, 0.5, 0.65, 0.85, 1.]
-
         self.verify_scalar_solution_component(
             component = 1,
-            x = [(self.xmin + self.xmax)/2.]*len(y),
-            y = y,
+            points = [((self.xmin + self.xmax)/2., y) for y in [0., 0.15, 0.35, 0.5, 0.65, 0.85, 1.]],
             verified_values = [val*self.Ra**0.5/self.Pr 
                 for val in [0.0000, -0.0649, -0.0194, 0.0000, 0.0194, 0.0649, 0.0000]],
             relative_tolerance = 2.e-2,
@@ -364,14 +359,10 @@ class HeatDrivenCavityWithWater(Cavity):
         
     def verify(self):
         """Verify against steady-state solution from michalek2003."""
-        p, u, T = self.model.state.solution.split()
-        
-        x = [0.00, 0.05, 0.12, 0.23, 0.40, 0.59, 0.80, 0.88, 1.00]
-
         self.verify_scalar_solution_component(
             component = 3,
-            x = x,
-            y = [(self.ymin + self.ymax)/2.]*len(x),
+            points = [(x, (self.ymin + self.ymax)/2.) 
+                for x in [0.00, 0.05, 0.12, 0.23, 0.40, 0.59, 0.80, 0.88, 1.00]],
             verified_values = [1.00, 0.66, 0.56, 0.58, 0.59, 0.62, 0.20, 0.22, 0.00],
             relative_tolerance = 5.e-2,
             absolute_tolerance = 1.e-2)
@@ -437,6 +428,138 @@ class AdaptiveHeatDrivenCavityWithWater(HeatDrivenCavityWithWater):
         Benchmark.run(self)
             
             
+class StefanProblem(Benchmark):
+
+    def refine_near_left_boundary(mesh, cycles):
+        """ Refine mesh near the left boundary.
+        The usual approach of using SubDomain and EdgeFunction isn't appearing to work
+        in 1D, so I'm going to just loop through the cells of the mesh and set markers manually.
+        """
+        for i in range(cycles):
+            
+            cell_markers = fenics.CellFunction("bool", mesh)
+            
+            cell_markers.set_all(False)
+            
+            for cell in fenics.cells(mesh):
+                
+                found_left_boundary = False
+                
+                for vertex in fenics.vertices(cell):
+                    
+                    if fenics.near(vertex.x(0), 0.):
+                        
+                        found_left_boundary = True
+                        
+                        break
+                        
+                if found_left_boundary:
+                    
+                    cell_markers[cell] = True
+                    
+                    break # There should only be one such point in 1D.
+                    
+            mesh = fenics.refine(mesh, cell_markers)
+            
+        return mesh
+            
+
+    def __init__(self,
+            T_hot = 1.,
+            T_cold = -0.01,
+            regularization_smoothing_parameter = 0.005,
+            time_step_size = 1.e-3,
+            initial_uniform_cell_count = 311,
+            initial_hot_wall_refinement_cycles = 0,
+            end_time = 0.1,
+            quadrature_degree = None):
+    
+        Benchmark.__init__(self)
+        
+        initial_pci_position = \
+            1./float(initial_uniform_cell_count)/2.**(initial_hot_wall_refinement_cycles - 1)
+        
+        initial_temperature = "(T_hot - T_cold)*(x[0] < initial_pci_position) + T_cold"
+        
+        initial_temperature = initial_temperature.replace("initial_pci_position", str(initial_pci_position))
+        
+        initial_temperature = initial_temperature.replace("T_hot", str(T_hot))
+        
+        initial_temperature = initial_temperature.replace("T_cold", str(T_cold))
+        
+        mesh = fenics.UnitIntervalMesh(initial_uniform_cell_count)
+
+        mesh = StefanProblem.refine_near_left_boundary(mesh, initial_hot_wall_refinement_cycles)
+        
+        self.model = phaseflow.pure_isotropic.Model(
+            mesh = mesh,
+            initial_values = ("0.", "0.", initial_temperature),
+            boundary_conditions = [
+                {"subspace": 2, "location": "near(x[0],  0.)", "value": T_hot},
+                {"subspace": 2, "location": "near(x[0],  1.)", "value": T_cold}],
+            stefan_number = 0.045,
+            semi_phasefield_mapping = phaseflow.pure.TanhSemiPhasefieldMapping(
+                regularization_central_temperature = 0.,
+                regularization_smoothing_parameter = regularization_smoothing_parameter),
+            time_step_size = time_step_size,
+            quadrature_degree = quadrature_degree)
+
+        self.end_time = end_time
+        
+        self.output_dir = "output/benchmarks/stefan_problem/"
+    
+    
+    def verify(self):
+        """ Verify against \cite{ghia1982}. """
+        self.verify_scalar_solution_component(
+            component = 2,
+            points = [0.00, 0.025, 0.050, 0.075, 0.10, 0.5, 1.],
+            verified_values = [1.0, 0.73, 0.47, 0.20, 0.00, -0.01, -0.01],
+            relative_tolerance = 2.e-2,
+            absolute_tolerance = 1.e-2)
+           
+
+class AdaptiveStefanProblem(StefanProblem):
+
+    def __init__(self):
+    
+        StefanProblem.__init__(self,
+            initial_uniform_cell_count = 4,
+            initial_hot_wall_refinement_cycles = 6)
+        
+        p, u, T = fenics.split(self.model.state.solution)
+        
+        phi = self.model.semi_phasefield_mapping.function
+        
+        self.adaptive_goal_integrand = phi(T)
+        
+        self.adaptive_solver_tolerance = 1.e-6
+        
+        self.output_dir = "output/benchmarks/adaptive_stefan_problem/"
+        
+        
+    def run(self):
+        """ This test fails with our usual approach of setting the initial guess to the initial values.
+        It works with an initial guess of zero (the default fenics.Function value).
+        """
+    
+        solver = phaseflow.core.Solver(
+            model = self.model, 
+            adaptive_goal_integrand = self.adaptive_goal_integrand, 
+            adaptive_solver_tolerance = self.adaptive_solver_tolerance,
+            initial_guess = fenics.Function(self.model.state.solution.function_space()))
+            
+        time_stepper = phaseflow.core.TimeStepper(
+            solver = solver,
+            output_dir = self.output_dir,
+            stop_when_steady = self.stop_when_steady,
+            steady_relative_tolerance = self.steady_relative_tolerance)
+        
+        time_stepper.run_until(self.end_time)
+            
+        self.verify()
+           
+            
 if __name__=='__main__':
 
     LidDrivenCavity().run()
@@ -454,4 +577,8 @@ if __name__=='__main__':
     HeatDrivenCavityWithWater().run()
     
     AdaptiveHeatDrivenCavityWithWater().run()
+    
+    StefanProblem.run()
+    
+    AdaptiveStefanProblem.run()
     

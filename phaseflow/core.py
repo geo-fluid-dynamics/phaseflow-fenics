@@ -170,7 +170,8 @@ class Model:
         
 class Solver():
 
-    def __init__(self, model, adaptive_goal_integrand, adaptive_solver_tolerance = 1.e-4):
+    def __init__(self, model, adaptive_goal_integrand, adaptive_solver_tolerance = 1.e-4,
+            initial_guess = None):
     
         self.model = model
         
@@ -190,6 +191,14 @@ class Solver():
         
             self.solver = fenics.NonlinearVariationalSolver(problem = model.problem)
         
+        if initial_guess is not None:
+        
+            self.model.old_state.solution.leaf_node().vector()[:] = \
+                self.model.state.solution.leaf_node().vector()
+            
+            self.model.state.solution.leaf_node().vector()[:] = \
+                initial_guess.leaf_node().vector()
+                
         
     def solve(self):
 
@@ -343,7 +352,28 @@ class ContinuousFunction:
         
         self.derivative_function = derivative_function
       
-                
+        
+class Point(fenics.Point):
+
+    def __init__(self, coordinates):
+    
+        if type(coordinates) is type(0.):
+        
+            coordinates = (coordinates,)
+        
+        if len(coordinates) == 1:
+        
+            fenics.Point.__init__(self, coordinates[0])
+            
+        elif len(coordinates) == 2:
+        
+            fenics.Point.__init__(self, coordinates[0], coordinates[1])
+            
+        elif len(coordinates) == 3:
+        
+            fenics.Point.__init__(self, coordinates[0], coordinates[1], coordinates[2])
+            
+            
 if __name__=="__main__":
 
     pass
