@@ -36,7 +36,17 @@ def test_heat_driven_cavity_benchmark():
     
 def test_adaptive_heat_driven_cavity_benchmark():
     
-    phaseflow.benchmarks.AdaptiveHeatDrivenCavity().run()    
+    phaseflow.benchmarks.AdaptiveHeatDrivenCavity().run()
+    
+    
+def test_heat_driven_cavity_with_water_benchmark():
+    
+    phaseflow.benchmarks.HeatDrivenCavityWithWater().run()    
+
+
+def test_adaptive_heat_driven_cavity_with_water_benchmark():
+    
+    phaseflow.benchmarks.AdaptiveHeatDrivenCavityWithWater().run()    
     
     
 if __name__=='__main__':
@@ -50,3 +60,7 @@ if __name__=='__main__':
     test_heat_driven_cavity_benchmark()
     
     test_adaptive_heat_driven_cavity_benchmark()
+    
+    test_heat_driven_cavity_with_water_benchmark()
+    
+    test_adaptive_heat_driven_cavity_with_water_benchmark()

@@ -25,7 +25,35 @@ class Benchmark:
     
         assert(False)
         
+    
+    def verify_scalar_solution_component(self, component, x, y, verified_values, 
+        relative_tolerance, absolute_tolerance):
+    
+        assert(len(verified_values) == len(x) == len(y))
         
+        for i, verified_value in enumerate(verified_values):
+        
+            p = fenics.Point(x[i], y[i])
+            
+            if self.model.mesh.bounding_box_tree().collides_entity(p):
+            
+                values = self.model.state.solution.leaf_node()(p)
+                
+                value = values[component]
+                
+                absolute_error = abs(value - verified_value)
+                
+                if abs(verified_value) > absolute_tolerance:
+                
+                    relative_error = absolute_error/verified_value
+               
+                    assert(relative_error < relative_tolerance)
+                    
+                else:
+                
+                    assert(absolute_error < absolute_tolerance)
+                
+                
     def run(self):
     
         assert(self.model is not None)
@@ -45,7 +73,8 @@ class Benchmark:
             
         self.verify()
     
- 
+    
+    
 class Cavity(Benchmark):
 
     def __init__(self, mesh_size = [20, 20], xmin = 0., ymin = 0., xmax = 1., ymax = 1.):
@@ -80,41 +109,7 @@ class Cavity(Benchmark):
             self.top_wall + " | " + self.bottom_wall + " | " + self.left_wall + " | " + self.right_wall
         
         self.xmin, self.ymin, self.xmax, self.ymax = xmin, ymin, xmax, ymax
-  
-    def verify_horizontal_velocity_at_centerline(self, 
-            y, 
-            ux, 
-            relative_tolerance,
-            absolute_tolerance):
-        
-        assert(len(y) == len(ux))
-        
-        x = (self.xmin + self.xmax)/2.
-        
-        bbt = self.model.mesh.bounding_box_tree()
-        
-        for i, true_ux in enumerate(ux):
-        
-            p = fenics.Point(x, y[i])
-            
-            if bbt.collides_entity(p):
-            
-                values = self.model.state.solution.leaf_node()(p)
-                
-                ux = values[1]
-                
-                absolute_error = abs(ux - true_ux)
-                
-                if abs(true_ux) > absolute_tolerance:
-                
-                    relative_error = absolute_error/true_ux
-               
-                    assert(relative_error < relative_tolerance)
-                    
-                else:
-                
-                    assert(absolute_error < absolute_tolerance)
-                
+    
   
 class LidDrivenCavity(Cavity):
 
@@ -142,15 +137,19 @@ class LidDrivenCavity(Cavity):
             time_step_size = time_step_size,
             liquid_viscosity = 0.01)
         
-        self.output_dir = "output/benchmarks/lid_driven_cavity"
+        self.output_dir = "output/benchmarks/lid_driven_cavity/"
     
     
     def verify(self):
-        """ Verify against ghia1982. """
-        self.verify_horizontal_velocity_at_centerline(
-            y = [1.0000, 0.9766, 0.9688, 0.9609, 0.9531, 0.8516, 0.7344, 0.6172, 
-                0.5000, 0.4531, 0.2813, 0.1719, 0.1016, 0.0703, 0.0625, 0.0547, 0.0000],
-            ux = [1.0000, 0.8412, 0.7887, 0.7372, 0.6872, 0.2315, 0.0033, -0.1364, 
+        """ Verify against \cite{ghia1982}. """
+        y = [1.0000, 0.9766, 0.9688, 0.9609, 0.9531, 0.8516, 0.7344, 0.6172, 
+            0.5000, 0.4531, 0.2813, 0.1719, 0.1016, 0.0703, 0.0625, 0.0547, 0.0000]
+            
+        self.verify_scalar_solution_component(
+            component = 1,
+            x = [(self.xmin + self.xmax)/2.]*len(y),
+            y = y,
+            verified_values = [1.0000, 0.8412, 0.7887, 0.7372, 0.6872, 0.2315, 0.0033, -0.1364, 
                 -0.2058, -0.2109, -0.1566, -0.1015, -0.0643, -0.0478, -0.0419, -0.0372, 0.0000],
             relative_tolerance = self.relative_tolerance,
             absolute_tolerance = self.absolute_tolerance)
@@ -168,7 +167,7 @@ class AdaptiveLidDrivenCavity(LidDrivenCavity):
         
         self.adaptive_solver_tolerance = 1.e-4
         
-        self.output_dir = "output/benchmarks/adaptive_lid_driven_cavity"
+        self.output_dir = "output/benchmarks/adaptive_lid_driven_cavity/"
 
         
 class LidDrivenCavityWithSolidSubdomain(LidDrivenCavity):
@@ -231,7 +230,7 @@ class LidDrivenCavityWithSolidSubdomain(LidDrivenCavity):
             time_step_size = time_step_size,
             quadrature_degree = 3)
         
-        self.output_dir = "output/benchmarks/lid_driven_cavity_with_solid_subdomain"
+        self.output_dir = "output/benchmarks/lid_driven_cavity_with_solid_subdomain/"
         
         
 class AdaptiveLidDrivenCavityWithSolidSubdomain(AdaptiveLidDrivenCavity):
@@ -246,7 +245,7 @@ class AdaptiveLidDrivenCavityWithSolidSubdomain(AdaptiveLidDrivenCavity):
         
         LidDrivenCavityWithSolidSubdomain.setup_model(self, time_step_size = time_step_size)
         
-        self.output_dir = "output/benchmarks/adaptive_lid_driven_cavity_with_solid_subdomain"
+        self.output_dir = "output/benchmarks/adaptive_lid_driven_cavity_with_solid_subdomain/"
      
     
 class HeatDrivenCavity(Cavity):
@@ -278,7 +277,7 @@ class HeatDrivenCavity(Cavity):
                 prandtl_number = self.Pr),
             time_step_size = 1.e-3)
             
-        self.output_dir = "output/benchmarks/heat_driven_cavity"
+        self.output_dir = "output/benchmarks/heat_driven_cavity/"
         
         self.end_time = 10.
 
@@ -289,9 +288,13 @@ class HeatDrivenCavity(Cavity):
         
     def verify(self):
         """ Verify against the result published in \cite{wang2010comprehensive}. """
-        self.verify_horizontal_velocity_at_centerline(
-            y = [0., 0.15, 0.35, 0.5, 0.65, 0.85, 1.],
-            ux = [val*self.Ra**0.5/self.Pr 
+        y = [0., 0.15, 0.35, 0.5, 0.65, 0.85, 1.]
+
+        self.verify_scalar_solution_component(
+            component = 1,
+            x = [(self.xmin + self.xmax)/2.]*len(y),
+            y = y,
+            verified_values = [val*self.Ra**0.5/self.Pr 
                 for val in [0.0000, -0.0649, -0.0194, 0.0000, 0.0194, 0.0649, 0.0000]],
             relative_tolerance = 2.e-2,
             absolute_tolerance = 1.e-2*0.0649*self.Ra**0.5/self.Pr)
@@ -303,7 +306,7 @@ class AdaptiveHeatDrivenCavity(HeatDrivenCavity):
     
         HeatDrivenCavity.__init__(self, mesh_size = mesh_size)
         
-        self.output_dir = "output/benchmarks/adaptive_heat_driven_cavity"
+        self.output_dir = "output/benchmarks/adaptive_heat_driven_cavity/"
         
         p, u, T = fenics.split(self.model.state.solution)
         
@@ -311,7 +314,129 @@ class AdaptiveHeatDrivenCavity(HeatDrivenCavity):
         
         self.adaptive_solver_tolerance = 1.e-2
         
+        
+class HeatDrivenCavityWithWater(Cavity):
+
+    def __init__(self, mesh_size = 40):
     
+        Cavity.__init__(self, mesh_size = mesh_size)
+        
+        self.Ra = 2.52e6
+        
+        self.Pr = 6.99
+        
+        T_hot = 10.  # [deg C]
+    
+        T_cold = 0.  # [deg C]
+        
+        scaled_T_hot = 1.
+        
+        scaled_T_cold = 0.
+        
+        initial_temperature = "scaled_T_hot + x[0]*(scaled_T_cold - scaled_T_hot)"
+        
+        initial_temperature = initial_temperature.replace("scaled_T_hot", str(scaled_T_hot))
+        
+        initial_temperature = initial_temperature.replace("scaled_T_cold", str(scaled_T_cold))
+        
+        self.model = phaseflow.pure_isotropic.Model(self.mesh,
+            initial_values = ("0.", "0.", "0.", initial_temperature),
+            boundary_conditions = [
+                {"subspace": 1, "location": self.walls, "value": (0., 0.)},
+                {"subspace": 2, "location": self.left_wall, "value": scaled_T_hot},
+                {"subspace": 2, "location": self.right_wall, "value": scaled_T_cold}],
+            prandtl_number = self.Pr,
+            buoyancy = phaseflow.pure.GebhartWaterBuoyancy(
+                hot_temperature = T_hot,
+                cold_temperature = T_cold,
+                rayleigh_numer = self.Ra, 
+                prandtl_number = self.Pr),
+            time_step_size = 1.e-3)
+            
+        self.output_dir = "output/benchmarks/heat_driven_cavity_with_water/"
+        
+        self.end_time = 10.
+
+        self.stop_when_steady = True
+        
+        self.steady_relative_tolerance = 1.e-3
+        
+        
+    def verify(self):
+        """Verify against steady-state solution from michalek2003."""
+        p, u, T = self.model.state.solution.split()
+        
+        x = [0.00, 0.05, 0.12, 0.23, 0.40, 0.59, 0.80, 0.88, 1.00]
+
+        self.verify_scalar_solution_component(
+            component = 3,
+            x = x,
+            y = [(self.ymin + self.ymax)/2.]*len(x),
+            verified_values = [1.00, 0.66, 0.56, 0.58, 0.59, 0.62, 0.20, 0.22, 0.00],
+            relative_tolerance = 5.e-2,
+            absolute_tolerance = 1.e-2)
+            
+            
+    def run(self):
+    
+        solver = phaseflow.core.Solver(
+            model = self.model, 
+            adaptive_goal_integrand = self.adaptive_goal_integrand, 
+            adaptive_solver_tolerance = self.adaptive_solver_tolerance)
+
+        time_stepper = phaseflow.core.TimeStepper(
+            solver = solver,
+            output_dir = self.output_dir,
+            stop_when_steady = self.stop_when_steady,
+            steady_relative_tolerance = self.steady_relative_tolerance)
+        
+        self.end_time = 0.001
+        
+        time_stepper.run_until(self.end_time)
+        
+        root_output_dir = self.output_dir
+        
+        self.output_dir = root_output_dir + "/restart_t0.001/"
+        
+        self.model.time_step_size = 0.002
+        
+        self.end_time = 0.003
+        
+        time_stepper.run_until(self.end_time)
+        
+        self.output_dir = root_output_dir + "/restart_t0.003/"
+        
+        self.model.time_step_size = 0.004
+        
+        self.end_time = 10.
+        
+        time_stepper.run_until(self.end_time)
+            
+        self.verify()
+            
+            
+class AdaptiveHeatDrivenCavityWithWater(HeatDrivenCavityWithWater):
+    
+    def __init__(self, mesh_size = 4):
+    
+        HeatDrivenCavityWithWater.__init__(self, mesh_size = mesh_size)
+        
+        self.output_dir = "output/benchmarks/adaptive_heat_driven_cavity_with_water/"
+        
+        p, u, T = fenics.split(self.model.state.solution)
+        
+        self.adaptive_goal_integrand = u[0]*T
+        
+        self.adaptive_solver_tolerance = 1.e-3
+        
+        self.steady_relative_tolerance = 1.e-4
+        
+        
+    def run(self):
+    
+        Benchmark.run(self)
+            
+            
 if __name__=='__main__':
 
     LidDrivenCavity().run()
@@ -325,4 +450,8 @@ if __name__=='__main__':
     HeatDrivenCavity().run()
     
     AdaptiveHeatDrivenCavity.run()
+    
+    HeatDrivenCavityWithWater().run()
+    
+    AdaptiveHeatDrivenCavityWithWater().run()
     
