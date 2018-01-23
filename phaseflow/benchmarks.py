@@ -1,5 +1,6 @@
 import phaseflow
 import fenics
+import scipy.optimize as opt
 
  
 class Benchmark:
@@ -494,7 +495,6 @@ class StefanProblem(Benchmark):
         self.model = phaseflow.pure_isotropic.Model(
             mesh = mesh,
             initial_values = ("0.", "0.", initial_temperature),
-            initial_guess = ("0.", "0.", "0."),
             boundary_conditions = [
                 {"subspace": 2, "location": "near(x[0],  0.)", "value": T_hot},
                 {"subspace": 2, "location": "near(x[0],  1.)", "value": T_cold}],
@@ -537,7 +537,153 @@ class AdaptiveStefanProblem(StefanProblem):
         self.adaptive_solver_tolerance = 1.e-6
         
         self.output_dir = "output/benchmarks/adaptive_stefan_problem/"
+        
+        
+    def run(self):
+        """ This test fails with the usual initial guess of w^0 = w_n,
+            but passes with w^0 = 0.
+        """
+        solver = phaseflow.core.Solver(
+            model = self.model, 
+            initial_guess = ("0.", "0.", "0."),
+            adaptive_goal_integrand = self.adaptive_goal_integrand, 
+            adaptive_solver_tolerance = self.adaptive_solver_tolerance)
+
+        time_stepper = phaseflow.core.TimeStepper(
+            solver = solver,
+            output_dir = self.output_dir,
+            stop_when_steady = self.stop_when_steady,
+            steady_relative_tolerance = self.steady_relative_tolerance)
+        
+        time_stepper.run_until(self.end_time)
+            
+        self.verify()
            
+            
+class AdaptiveConvectionCoupledMeltingPCM(Cavity):
+
+    def __init__(self, 
+            T_hot = 1.,
+            T_cold = -0.1,
+            stefan_number = 1.,
+            rayleigh_number = 1.e6,
+            prandtl_number = 0.71,
+            solid_viscosity = 1.e4,
+            liquid_viscosity = 1.,
+            time_step_size = 1.e-3,
+            initial_mesh_size = 1,
+            initial_hot_wall_refinement_cycles = 6,
+            initial_pci_position = None,
+            regularization_central_temperature = 0.1,
+            regularization_smoothing_parameter = 0.025,
+            end_time = 0.02):
+    
+        Cavity.__init__(self, mesh_size = initial_mesh_size)
+        
+        
+        # Make the mesh with initial refinements near the hot wall.
+        class HotWall(fenics.SubDomain):
+        
+            def inside(self, x, on_boundary):
+            
+                return on_boundary and fenics.near(x[0], 0.)
+
+            
+        hot_wall = HotWall()
+        
+        for i in range(initial_hot_wall_refinement_cycles):
+            
+            edge_markers = fenics.EdgeFunction("bool", self.mesh)
+            
+            hot_wall.mark(edge_markers, True)
+
+            fenics.adapt(self.mesh, edge_markers)
+            
+            self.mesh = self.mesh.child()
+
+            
+        # Set up the model.
+        if initial_pci_position == None:
+        
+            initial_pci_position = \
+                1./float(initial_uniform_cell_count)/2.**(initial_hot_wall_refinement_cycles - 1)
+        
+        initial_temperature = "(T_hot - T_cold)*(x[0] < initial_pci_position) + T_cold"
+        
+        initial_temperature = initial_temperature.replace("initial_pci_position", str(initial_pci_position))
+        
+        initial_temperature = initial_temperature.replace("T_hot", str(T_hot))
+        
+        initial_temperature = initial_temperature.replace("T_cold", str(T_cold))
+        
+        self.model = phaseflow.pure_isotropic.Model(
+            mesh = self.mesh,
+            initial_values = ("0.", "0.", "0.", initial_temperature),
+            boundary_conditions = [
+                {"subspace": 1, "location": self.walls, "value": (0., 0.)},
+                {"subspace": 2, "location": self.left_wall, "value": T_hot},
+                {"subspace": 2, "location": self.right_wall, "value": T_cold}],
+            stefan_number = stefan_number,
+            prandtl_number = prandtl_number,
+            buoyancy = phaseflow.pure.IdealizedLinearBoussinesqBuoyancy(
+                rayleigh_numer = rayleigh_number, 
+                prandtl_number = prandtl_number),
+            semi_phasefield_mapping = phaseflow.pure.TanhSemiPhasefieldMapping(
+                regularization_central_temperature = regularization_central_temperature,
+                regularization_smoothing_parameter = regularization_smoothing_parameter),
+            time_step_size = time_step_size)
+        
+        phi = self.model.semi_phasefield_mapping.function
+        
+        p, u, T = fenics.split(self.model.state.solution)
+        
+        self.adaptive_goal_integrand = phi(T)
+        
+        self.end_time = end_time
+        
+        self.output_dir = "output/benchmarks/adaptive_convection_coupled_melting_toy_pcm/"
+            
+            
+class AdaptiveConvectionCoupledMeltingToyPCM(AdaptiveConvectionCoupledMeltingPCM):
+
+    def __init__(self):
+    
+        self.regularization_central_temperature = 0.1
+        
+        AdaptiveConvectionCoupledMeltingPCM.__init__(self, 
+            initial_mesh_size = 1, 
+            initial_hot_wall_refinement_cycles = 6,
+            initial_pci_position = 0.001,
+            stefan_number = 1.,
+            rayleigh_number = 1.e6,
+            prandtl_number = 0.71,
+            solid_viscosity = 1.e4,
+            liquid_viscosity = 1.,
+            time_step_size = 1.e-3,
+            regularization_central_temperature = self.regularization_central_temperature,
+            regularization_smoothing_parameter = 0.025,
+            end_time = 0.02)
+    
+        self.adaptive_solver_tolerance = 1.e-4
+        
+        
+    def verify(self):
+        """ Test regression based on a previous solution from Phaseflow. """
+        pci_y_position_to_check =  0.875
+        
+        reference_pci_x_position = 0.226
+        
+        def T_minus_T_r(x):
+        
+            values = self.model.solution.leaf_node()(fenics.Point(x, pci_y_position_to_check))
+            
+            return values[3] - self.regularization_central_temperature
+
+            
+        pci_x_position = opt.newton(T_minus_T_r, 0.01)
+        
+        assert(abs(pci_x_position - reference_pci_x_position) < 1.e-2)
+        
             
 if __name__=='__main__':
 
@@ -546,8 +692,6 @@ if __name__=='__main__':
     AdaptiveLidDrivenCavity().run()
     
     LidDrivenCavityWithSolidSubdomain().run()
-    
-    AdaptiveLidDrivenCavityWithSolidSubdomain().run()
     
     HeatDrivenCavity().run()
     
@@ -560,4 +704,6 @@ if __name__=='__main__':
     StefanProblem.run()
     
     AdaptiveStefanProblem.run()
+    
+    AdaptiveConvectionCoupledMeltingToyPCM.run()
     

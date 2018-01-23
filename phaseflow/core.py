@@ -95,7 +95,6 @@ class Model:
             mesh, 
             element,
             initial_values,
-            initial_guess = None,
             boundary_conditions = None, 
             time_step_size = 1.,
             quadrature_degree = None):
@@ -120,18 +119,6 @@ class Model:
         self.old_state.solution = fenics.interpolate(
             fenics.Expression(initial_values, element = element), 
             self.function_space)
-            
-        self.state.solution = fenics.Function(self.function_space)
-        
-        if initial_guess is None:
-        
-            self.state.solution.leaf_node().vector()[:] = self.old_state.solution.leaf_node().vector()
-        
-        else:
-        
-            self.state.solution = fenics.interpolate(
-                fenics.Expression(initial_guess, element = element), 
-                self.function_space)
         
         self.time_step_size = time_step_size
         
@@ -181,7 +168,10 @@ class Model:
         
 class Solver():
 
-    def __init__(self, model, adaptive_goal_integrand, adaptive_solver_tolerance = 1.e-4,
+    def __init__(self, 
+            model, 
+            adaptive_goal_integrand, 
+            adaptive_solver_tolerance = 1.e-4,
             initial_guess = None):
     
         self.model = model
@@ -202,13 +192,19 @@ class Solver():
         
             self.solver = fenics.NonlinearVariationalSolver(problem = model.problem)
         
-        if initial_guess is not None:
+        if initial_guess is None:
         
-            self.model.old_state.solution.leaf_node().vector()[:] = \
-                self.model.state.solution.leaf_node().vector()
-            
             self.model.state.solution.leaf_node().vector()[:] = \
-                initial_guess.leaf_node().vector()
+                self.model.old_state.solution.leaf_node().vector()
+        
+        else:
+        
+            initial_values_function = fenics.interpolate(
+                fenics.Expression(initial_guess, element = self.model.element), 
+                self.model.function_space.leaf_node())
+                
+            self.model.state.solution.leaf_node().vector()[:] = \
+                initial_values_function.leaf_node().vector()
                 
         
     def solve(self):
@@ -293,7 +289,9 @@ class TimeStepper:
                 
                 break
             
-            self.run_time_step()
+            self.solver.solve()
+        
+            self.state.time += self.solver.model.time_step_size
     
             phaseflow.helpers.print_once("Reached time t = " + str(self.state.time))
             
@@ -311,7 +309,7 @@ class TimeStepper:
                 
                 break
             
-            
+        
             # Report progress.
             progress.update(self.state.time / end_time)
             
@@ -320,18 +318,13 @@ class TimeStepper:
                 phaseflow.helpers.print_once("Reached end time, t = " + str(end_time))
             
                 break
+                
+                
+            # Set initial values for next time step.
+            self.old_state.solution.leaf_node().vector()[:] = self.state.solution.leaf_node().vector()
+            
+            self.old_state.time = 0. + self.state.time
     
-    
-    def run_time_step(self):
-
-        self.solver.solve()
-        
-        self.old_state.solution.leaf_node().vector()[:] = self.state.solution.leaf_node().vector()
-        
-        self.old_state.time = 0. + self.state.time
-        
-        self.state.time += self.solver.model.time_step_size
-        
         
     def steady(self):
         """Check if solution has reached an approximately steady state."""

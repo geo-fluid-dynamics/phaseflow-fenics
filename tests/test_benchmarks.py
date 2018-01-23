@@ -59,13 +59,16 @@ def test_adaptive_stefan_problem_benchmark():
     phaseflow.benchmarks.AdaptiveStefanProblem().run()
     
     
+def test_adaptive_convection_coupled_melting_toy_pcm_benchmark():
+
+    phaseflow.benchmarks.AdaptiveConvectionCoupledMeltingToyPCM().run()
+    
+    
 if __name__=='__main__':
 
     test_lid_driven_cavity_benchmark()
     
     test_adaptive_lid_driven_cavity_benchmark()
-    
-    test__failing__adaptive_lid_driven_cavity_with_solid_subdomain_benchmark()
     
     test_heat_driven_cavity_benchmark()
     
@@ -78,3 +81,5 @@ if __name__=='__main__':
     test_stefan_problem_benchmark()
     
     test_adaptive_stefan_problem_benchmark()
+    
+    test_adaptive_convection_coupled_melting_toy_pcm_benchmark()

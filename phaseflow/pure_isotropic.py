@@ -8,7 +8,6 @@ class Model(phaseflow.core.Model):
     def __init__(self,
             mesh,
             initial_values,
-            initial_guess = None,
             boundary_conditions = None, 
             buoyancy = None,
             semi_phasefield_mapping = None,
@@ -37,7 +36,6 @@ class Model(phaseflow.core.Model):
             mesh = mesh,
             element = phaseflow.pure.make_mixed_element(mesh.ufl_cell()),
             initial_values = initial_values,
-            initial_guess = initial_guess,
             boundary_conditions = boundary_conditions,
             time_step_size = time_step_size,
             quadrature_degree = quadrature_degree)
