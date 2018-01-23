@@ -235,7 +235,7 @@ class AdaptiveLidDrivenCavityWithSolidSubdomain(AdaptiveLidDrivenCavity):
     """ Ideally we should be able to use AMR instead of manually refining the prescribed PCI.
     Unfortunately, the adaptive solver computes an error estimate of exactly 0,
     which seems to be a bug in FEniCS.
-    We'll want to make a MWE and investigate. For now let's leave this failing test here."""
+    We'll want to make a MWE and investigate. For now let's leave this failing benchmark here."""
     def __init__(self, mesh_size = 2, time_step_size = 20.):
     
         AdaptiveLidDrivenCavity.__init__(self, 
