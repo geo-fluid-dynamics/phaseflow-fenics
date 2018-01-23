@@ -94,7 +94,8 @@ class Model:
     def __init__(self,
             mesh, 
             element,
-            initial_values = None,
+            initial_values,
+            initial_guess = None,
             boundary_conditions = None, 
             time_step_size = 1.,
             quadrature_degree = None):
@@ -113,14 +114,24 @@ class Model:
         self.function_space = fenics.FunctionSpace(mesh, element)
         
         self.state = State(self.function_space)
+
+        self.old_state = State(self.function_space)
         
-        if initial_values is not None:
+        self.old_state.solution = fenics.interpolate(
+            fenics.Expression(initial_values, element = element), 
+            self.function_space)
+            
+        self.state.solution = fenics.Function(self.function_space)
+        
+        if initial_guess is None:
+        
+            self.state.solution.leaf_node().vector()[:] = self.old_state.solution.leaf_node().vector()
+        
+        else:
         
             self.state.solution = fenics.interpolate(
-                fenics.Expression(initial_values, element = element), 
+                fenics.Expression(initial_guess, element = element), 
                 self.function_space)
-        
-        self.old_state = State(self.function_space)
         
         self.time_step_size = time_step_size
         
@@ -254,7 +265,7 @@ class TimeStepper:
         
             with SolutionFile(solution_filepath) as self.solution_file:
             
-                self.solver.model.state.write_solution_to_xdmf(self.solution_file)
+                self.solver.model.old_state.write_solution_to_xdmf(self.solution_file)
             
                 self.__run_until(end_time)
                 
@@ -313,11 +324,11 @@ class TimeStepper:
     
     def run_time_step(self):
 
+        self.solver.solve()
+        
         self.old_state.solution.leaf_node().vector()[:] = self.state.solution.leaf_node().vector()
         
         self.old_state.time = 0. + self.state.time
-        
-        self.solver.solve()
         
         self.state.time += self.solver.model.time_step_size
         

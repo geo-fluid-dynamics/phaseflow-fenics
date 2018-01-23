@@ -494,6 +494,7 @@ class StefanProblem(Benchmark):
         self.model = phaseflow.pure_isotropic.Model(
             mesh = mesh,
             initial_values = ("0.", "0.", initial_temperature),
+            initial_guess = ("0.", "0.", "0."),
             boundary_conditions = [
                 {"subspace": 2, "location": "near(x[0],  0.)", "value": T_hot},
                 {"subspace": 2, "location": "near(x[0],  1.)", "value": T_cold}],
@@ -525,7 +526,7 @@ class AdaptiveStefanProblem(StefanProblem):
     
         StefanProblem.__init__(self,
             initial_uniform_cell_count = 4,
-            initial_hot_wall_refinement_cycles = 6)
+            initial_hot_wall_refinement_cycles = 8)
         
         p, u, T = fenics.split(self.model.state.solution)
         
@@ -536,28 +537,6 @@ class AdaptiveStefanProblem(StefanProblem):
         self.adaptive_solver_tolerance = 1.e-6
         
         self.output_dir = "output/benchmarks/adaptive_stefan_problem/"
-        
-        
-    def run(self):
-        """ This test fails with our usual approach of setting the initial guess to the initial values.
-        It works with an initial guess of zero (the default fenics.Function value).
-        """
-    
-        solver = phaseflow.core.Solver(
-            model = self.model, 
-            adaptive_goal_integrand = self.adaptive_goal_integrand, 
-            adaptive_solver_tolerance = self.adaptive_solver_tolerance,
-            initial_guess = fenics.Function(self.model.state.solution.function_space()))
-            
-        time_stepper = phaseflow.core.TimeStepper(
-            solver = solver,
-            output_dir = self.output_dir,
-            stop_when_steady = self.stop_when_steady,
-            steady_relative_tolerance = self.steady_relative_tolerance)
-        
-        time_stepper.run_until(self.end_time)
-            
-        self.verify()
            
             
 if __name__=='__main__':
