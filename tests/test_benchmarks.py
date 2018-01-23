@@ -65,7 +65,7 @@ if __name__=='__main__':
     
     test_adaptive_lid_driven_cavity_benchmark()
     
-    test_adaptive_lid_driven_cavity_with_solid_subdomain_benchmark()
+    test__failing__adaptive_lid_driven_cavity_with_solid_subdomain_benchmark()
     
     test_heat_driven_cavity_benchmark()
     
