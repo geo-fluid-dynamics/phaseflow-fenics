@@ -11,6 +11,8 @@ class SolutionFile(fenics.XDMFFile):
     
         fenics.XDMFFile.__init__(self, filepath)
         
+        self.parameters["functions_share_mesh"] = True  
+        
         self.path = filepath
     
     
