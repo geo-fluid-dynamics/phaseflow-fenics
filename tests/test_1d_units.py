@@ -7,25 +7,22 @@ import fenics
         
 def test_1d_output():
 
-    mesh = fenics.UnitIntervalMesh(10)
+    mesh = fenics.UnitIntervalMesh(5)
     
-    mixed_element = phaseflow.make_mixed_fe(mesh.ufl_cell())
+    mixed_element = phaseflow.pure.make_mixed_element(mesh.ufl_cell())
         
     function_space = fenics.FunctionSpace(mesh, mixed_element)
     
-    boundaries = "near(x[0],  0.) | near(x[0],  1.)"
+    state = phaseflow.core.State(function_space)
     
-    phaseflow.run(solution = fenics.Function(function_space),
-        initial_values = fenics.Function(function_space),
-        boundary_conditions = None,
-        output_dir = "output/test_1D_output/",
-        gravity = [0.],
-        end_time = 0.)
-
+    with phaseflow.core.SolutionFile("output/test_1D_output/solution.xdmf") as solution_file:
+     
+        state.write_solution_to_xdmf(solution_file)
+    
         
 def test_1d_velocity():
 
-    mesh = fenics.UnitIntervalMesh(fenics.dolfin.mpi_comm_world(), 5)
+    mesh = fenics.UnitIntervalMesh(5)
 
     V = fenics.VectorFunctionSpace(mesh, "P", 1)
 
