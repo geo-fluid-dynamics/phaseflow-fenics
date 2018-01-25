@@ -126,7 +126,7 @@ class Model:
         
             timestep_bounds = (timestep_bounds, timestep_bounds, timestep_bounds)
             
-        self.timestep_size = BoundedValue(
+        self.timestep_size = TimeStepSize(
             min = timestep_bounds[0], 
             value = timestep_bounds[1], 
             max = timestep_bounds[2])
@@ -166,9 +166,9 @@ class Model:
             self.derivative_of_variational_form)
         
         
-    def set_timestep_size_value(self, new_timestep_size):
+    def set_timestep_size_value(self, value):
     
-        self.timestep_size.set(new_timestep_size)
+        self.timestep_size.set(value)
                         
         self.Delta_t.assign(self.timestep_size.value)
         
@@ -236,10 +236,12 @@ class Solver():
     
 class TimeStepper:
 
+    time_epsilon = 1.e-8
+    
     def __init__(self,
             model,
             solver,
-            time_epsilon = 1.e-8,
+            time_epsilon = time_epsilon,
             max_timesteps = 1000000000000,
             output_dir = None,
             stop_when_steady = False,
@@ -445,16 +447,15 @@ class BoundedValue(object):
 class TimeStepSize(BoundedValue):
     """This class implements a bounded adaptive time step size."""
     def set(self, value):
-    
-        assert(value > TimeStepper.time_epsilon)
 
         old_value = 0. + self.value
         
         BoundedValue.set(self, value)
         
-        if abs(self.value - old_value) > TimeStepSize.time_epsilon:
+        if abs(self.value - old_value) > TimeStepper.time_epsilon:
         
-            helpers.print_once("Changed time step size from " + str(old_value) + " to " + str(self.value))
+            phaseflow.helpers.print_once("Changed time step size from " + str(old_value) +
+                " to " + str(self.value))
             
             
 if __name__=="__main__":
