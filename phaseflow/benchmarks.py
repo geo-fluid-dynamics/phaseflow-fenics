@@ -27,6 +27,8 @@ class Benchmark:
         
         self.adapt_timestep_to_unsteadiness = True
         
+        self.adaptive_time_power = 1.
+        
         
     def verify(self):
         
@@ -75,7 +77,8 @@ class Benchmark:
             end_time = self.end_time,
             stop_when_steady = self.stop_when_steady,
             steady_relative_tolerance = self.steady_relative_tolerance,
-            adapt_timestep_to_unsteadiness = self.adapt_timestep_to_unsteadiness)
+            adapt_timestep_to_unsteadiness = self.adapt_timestep_to_unsteadiness,
+            adaptive_time_power = self.adaptive_time_power)
         
         self.timestepper.run_until_end_time()
             
@@ -366,6 +369,8 @@ class HeatDrivenCavityWithWater(Cavity):
         
         self.adapt_timestep_to_unsteadiness = True
         
+        self.adaptive_time_power = 0.5
+        
         
     def verify(self):
         """Verify against steady-state solution from michalek2003."""
@@ -391,8 +396,6 @@ class AdaptiveHeatDrivenCavityWithWater(HeatDrivenCavityWithWater):
         self.adaptive_goal_integrand = u[0]*T
         
         self.adaptive_solver_tolerance = 1.e-3
-        
-        self.steady_relative_tolerance = 1.e-4
         
         
     def run(self):

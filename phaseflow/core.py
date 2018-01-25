@@ -247,7 +247,7 @@ class TimeStepper:
             stop_when_steady = False,
             steady_relative_tolerance = 1.e-4,
             adapt_timestep_to_unsteadiness = False,
-            adaptive_time_factor = 1.,
+            adaptive_time_power = 1.,
             end_time = None): 
     
         self.time_epsilon = time_epsilon
@@ -274,7 +274,7 @@ class TimeStepper:
         
         self.adapt_timestep_to_unsteadiness = adapt_timestep_to_unsteadiness
         
-        self.adaptive_time_factor = adaptive_time_factor
+        self.adaptive_time_power = adaptive_time_power
         
         self.end_time = end_time
         
@@ -354,7 +354,7 @@ class TimeStepper:
                 if self.adapt_timestep_to_unsteadiness:
 
                     new_timestep_size = \
-                        self.timestep_size.value/self.unsteadiness**self.adaptive_time_factor
+                        self.timestep_size.value/self.unsteadiness**self.adaptive_time_power
                     
                     self.model.set_timestep_size_value(new_timestep_size)
                         
