@@ -98,7 +98,7 @@ class Model:
             element,
             initial_values,
             boundary_conditions = None, 
-            time_step_size = 1.,
+            timestep_bounds = (1.e-4, 1., 1.e12),
             quadrature_degree = None):
         """
         Parameters
@@ -106,7 +106,7 @@ class Model:
         model : phaseflow.Model
         velocity_boundary_conditions : {str: (float,),}
         temperature_boundary_conditions : {str: float,}
-        time_step_size : float
+        timestep_bounds : float or (float, float, float)
         """
         self.mesh = mesh
         
@@ -122,7 +122,16 @@ class Model:
             fenics.Expression(initial_values, element = element), 
             self.function_space)
         
-        self.time_step_size = time_step_size
+        if type(timestep_bounds) == type(1.):
+        
+            timestep_bounds = (timestep_bounds, timestep_bounds, timestep_bounds)
+            
+        self.timestep_size = BoundedValue(
+            min = timestep_bounds[0], 
+            value = timestep_bounds[1], 
+            max = timestep_bounds[2])
+            
+        self.Delta_t = fenics.Constant(self.timestep_size.value)
         
         self.variational_form = None
         
@@ -157,6 +166,13 @@ class Model:
             self.derivative_of_variational_form)
         
         
+    def set_timestep_size_value(self, new_timestep_size):
+    
+        self.timestep_size.set(new_timestep_size)
+                        
+        self.Delta_t.assign(self.timestep_size.value)
+        
+        
     def write_dict(self):
     
         if fenics.MPI.rank(fenics.mpi_comm_world()) is 0:
@@ -172,60 +188,59 @@ class Solver():
 
     def __init__(self, 
             model, 
-            adaptive_goal_integrand, 
+            adaptive_goal_integrand = None, 
             adaptive_solver_tolerance = 1.e-4,
             initial_guess = None):
     
-        self.model = model
+        self.adaptive_goal_integrand = adaptive_goal_integrand
         
-        self.adaptive = adaptive_goal_integrand is not None
-
-        if self.adaptive:
-    
+        if adaptive_goal_integrand is not None:
+        
             self.adaptive_solver_tolerance = adaptive_solver_tolerance
-            
+    
             dx = model.integration_metric
-            
-            self.solver = fenics.AdaptiveNonlinearVariationalSolver(
+        
+            self.fenics_solver = fenics.AdaptiveNonlinearVariationalSolver(
                 problem = model.problem,
                 goal = adaptive_goal_integrand*dx)
         
         else:
         
-            self.solver = fenics.NonlinearVariationalSolver(problem = model.problem)
-        
+            self.fenics_solver = fenics.NonlinearVariationalSolver(problem = model.problem)
+            
         if initial_guess is None:
         
-            self.model.state.solution.leaf_node().vector()[:] = \
-                self.model.old_state.solution.leaf_node().vector()
+            model.state.solution.leaf_node().vector()[:] = \
+                model.old_state.solution.leaf_node().vector()
         
         else:
         
             initial_values_function = fenics.interpolate(
-                fenics.Expression(initial_guess, element = self.model.element), 
-                self.model.function_space.leaf_node())
+                fenics.Expression(initial_guess, element = model.element), 
+                model.function_space.leaf_node())
                 
-            self.model.state.solution.leaf_node().vector()[:] = \
+            model.state.solution.leaf_node().vector()[:] = \
                 initial_values_function.leaf_node().vector()
-                
-        
+    
+    
     def solve(self):
-
-        if self.adaptive:
-        
-            self.solver.solve(self.adaptive_solver_tolerance)
+    
+        if self.adaptive_goal_integrand is not None:
+    
+            self.fenics_solver.solve(self.adaptive_solver_tolerance)
             
         else:
         
-            self.solver.solve()
+            self.fenics_solver.solve()
     
     
 class TimeStepper:
 
-    def __init__(self, 
+    def __init__(self,
+            model,
             solver,
             time_epsilon = 1.e-8,
-            max_time_steps = 1000000000000,
+            max_timesteps = 1000000000000,
             output_dir = None,
             stop_when_steady = False,
             steady_relative_tolerance = 1.e-4,
@@ -235,13 +250,17 @@ class TimeStepper:
     
         self.time_epsilon = time_epsilon
 
-        self.max_time_steps = max_time_steps
+        self.max_timesteps = max_timesteps
         
         self.solver = solver
         
-        self.state = solver.model.state
+        self.model = model
         
-        self.old_state = solver.model.old_state
+        self.state = model.state
+        
+        self.old_state = model.old_state
+        
+        self.timestep_size = model.timestep_size
 
         self.output_dir = output_dir
         
@@ -272,7 +291,7 @@ class TimeStepper:
         
             with SolutionFile(solution_filepath) as self.solution_file:
             
-                self.solver.model.old_state.write_solution_to_xdmf(self.solution_file)
+                self.old_state.write_solution_to_xdmf(self.solution_file)
             
                 self.__run_until_end_time()
                 
@@ -296,7 +315,7 @@ class TimeStepper:
         
         fenics.set_log_level(fenics.PROGRESS)
         
-        for it in range(1, self.max_time_steps):
+        for it in range(1, self.max_timesteps):
             
             if self.end_time is not None:
             
@@ -306,7 +325,7 @@ class TimeStepper:
             
             self.solver.solve()
         
-            self.state.time += self.solver.model.time_step_size
+            self.state.time += self.timestep_size.value
     
             phaseflow.helpers.print_once("Reached time t = " + str(self.state.time))
             
@@ -331,27 +350,12 @@ class TimeStepper:
                     break
                     
                 if self.adapt_timestep_to_unsteadiness:
-                    
-                    timestep_size_bounds = [1.e-4, 1.e12]
-                    
-                    new_timestep_size = \
-                        self.solver.model.time_step_size/self.unsteadiness**self.adaptive_time_factor
-                        
-                    if new_timestep_size < timestep_size_bounds[0]:
 
-                        self.solver.model.time_step_size = timestep_size_bounds[0]
-                        
-                    elif new_timestep_size > timestep_size_bounds[1]:
+                    new_timestep_size = \
+                        self.timestep_size.value/self.unsteadiness**self.adaptive_time_factor
                     
-                        self.solver.model.time_step_size = timestep_size_bounds[1]
+                    self.model.set_timestep_size_value(new_timestep_size)
                         
-                    else:
-                    
-                        self.solver.model.time_step_size = new_timestep_size
-                        
-                    phaseflow.helpers.print_once("Set time step size to $Delta_t = " + 
-                        str(self.solver.model.time_step_size) + "$.")
-            
             if self.end_time is not None:
             
                 progress.update(self.state.time / self.end_time)
@@ -411,6 +415,46 @@ class Point(fenics.Point):
         elif len(coordinates) == 3:
         
             fenics.Point.__init__(self, coordinates[0], coordinates[1], coordinates[2])
+            
+            
+
+class BoundedValue(object):
+
+    def __init__(self, min=0., value=0., max=0.):
+    
+        self.min = min
+        
+        self.value = value
+        
+        self.max = max
+        
+    
+    def set(self, value):
+    
+        if value > self.max:
+        
+            value = self.max
+            
+        elif value < self.min:
+        
+            value = self.min
+            
+        self.value = value
+        
+        
+class TimeStepSize(BoundedValue):
+    """This class implements a bounded adaptive time step size."""
+    def set(self, value):
+    
+        assert(value > TimeStepper.time_epsilon)
+
+        old_value = 0. + self.value
+        
+        BoundedValue.set(self, value)
+        
+        if abs(self.value - old_value) > TimeStepSize.time_epsilon:
+        
+            helpers.print_once("Changed time step size from " + str(old_value) + " to " + str(self.value))
             
             
 if __name__=="__main__":

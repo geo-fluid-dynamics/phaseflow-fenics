@@ -9,21 +9,27 @@ class Benchmark:
     
         self.model = None
         
+        self.solver = None
+        
+        self.timestepper = None
+        
         self.adaptive_goal_integrand = None
         
         self.adaptive_solver_tolerance = 1.e-4
-    
-        self.output_dir = None
+        
+        self.output_dir = "output/benchmarks/"
         
         self.end_time = None
         
-        self.stop_when_steady = False
+        self.stop_when_steady = True
         
         self.steady_relative_tolerance = 1.e-4
         
+        self.adapt_timestep_to_unsteadiness = True
+        
         
     def verify(self):
-    
+        
         assert(False)
         
     
@@ -55,36 +61,26 @@ class Benchmark:
                     assert(absolute_error < absolute_tolerance)
     
     
-    def setup_timestepper(self,
-            output_dir = "output/benchmarks/",
-            end_time = None,
-            stop_when_steady = False,
-            steady_relative_tolerance = 1.e-4,
-            adapt_timestep_to_unsteadiness = False):
+    def run(self):
     
-        solver = phaseflow.core.Solver(
+        self.solver = phaseflow.core.Solver(
             model = self.model, 
             adaptive_goal_integrand = self.adaptive_goal_integrand, 
             adaptive_solver_tolerance = self.adaptive_solver_tolerance)
-            
-        self.time_stepper = phaseflow.core.TimeStepper(
-            solver = solver,
-            output_dir = output_dir,
-            end_time = end_time,
-            stop_when_steady = stop_when_steady,
-            steady_relative_tolerance = steady_relative_tolerance,
-            adapt_timestep_to_unsteadiness = adapt_timestep_to_unsteadiness)
-            
-                
-    def run(self):
-    
-        assert(self.model is not None)
         
-        self.time_stepper.run_until_end_time()
+        self.timestepper = phaseflow.core.TimeStepper(
+            model = self.model,
+            solver = self.solver,
+            output_dir = self.output_dir,
+            end_time = self.end_time,
+            stop_when_steady = self.stop_when_steady,
+            steady_relative_tolerance = self.steady_relative_tolerance,
+            adapt_timestep_to_unsteadiness = self.adapt_timestep_to_unsteadiness)
+        
+        self.timestepper.run_until_end_time()
             
         self.verify()
-    
-    
+        
     
 class Cavity(Benchmark):
 
@@ -124,7 +120,10 @@ class Cavity(Benchmark):
   
 class LidDrivenCavity(Cavity):
 
-    def __init__(self, mesh_size = 20, ymin = 0., time_step_size = 1.e12,
+    def __init__(self, 
+            mesh_size = 20, 
+            ymin = 0., 
+            timestep_size = 1.e12,
             relative_tolerance = 3.e-2,
             absolute_tolerance = 1.e-2):
     
@@ -136,19 +135,17 @@ class LidDrivenCavity(Cavity):
         
         self.fixed_walls = self.bottom_wall + " | " + self.left_wall + " | " + self.right_wall
         
-        self.time_step_size = time_step_size
-        
-        self.end_time = time_step_size
+        self.timestep_size = timestep_size
         
         self.model = phaseflow.pure_isotropic.Model(self.mesh,
             initial_values = ("0.", self.top_wall, "0.", "1."),
             boundary_conditions = [
                 {"subspace": 1, "location": self.top_wall, "value": (1., 0.)},
                 {"subspace": 1, "location": self.fixed_walls, "value": (0., 0.)}],
-            time_step_size = time_step_size,
+            timestep_bounds = timestep_size,
             liquid_viscosity = 0.01)
         
-        self.setup_timestepper()
+        self.end_time = timestep_size
         
         self.output_dir = "output/benchmarks/lid_driven_cavity/"
     
@@ -168,9 +165,9 @@ class LidDrivenCavity(Cavity):
     
 class AdaptiveLidDrivenCavity(LidDrivenCavity):
 
-    def __init__(self, mesh_size = 2, ymin = 0., time_step_size = 1.e12):
+    def __init__(self, mesh_size = 2, ymin = 0., timestep_size = 1.e12):
     
-        LidDrivenCavity.__init__(self, mesh_size = mesh_size, ymin = ymin, time_step_size = time_step_size)
+        LidDrivenCavity.__init__(self, mesh_size = mesh_size, ymin = ymin, timestep_size = timestep_size)
         
         p, u, T = fenics.split(self.model.state.solution)
         
@@ -185,9 +182,9 @@ class LidDrivenCavityWithSolidSubdomain(LidDrivenCavity):
 
     y_pci = 0.
     
-    def __init__(self, mesh_size = [20, 25], pci_refinement_cycles = 4, time_step_size = 20.):
+    def __init__(self, mesh_size = [20, 25], pci_refinement_cycles = 4, timestep_size = 20.):
     
-        LidDrivenCavity.__init__(self, mesh_size = mesh_size, ymin = -0.25, time_step_size = time_step_size)
+        LidDrivenCavity.__init__(self, mesh_size = mesh_size, ymin = -0.25, timestep_size = timestep_size)
         
         self.relative_tolerance = 8.e-2  # @todo This is quite large.
         
@@ -195,7 +192,7 @@ class LidDrivenCavityWithSolidSubdomain(LidDrivenCavity):
         
         self.refine_near_y_pci(pci_refinement_cycles = pci_refinement_cycles)
         
-        self.setup_model(time_step_size = time_step_size)
+        self.setup_model(timestep_size = timestep_size)
         
         
     def refine_near_y_pci(self, pci_refinement_cycles = 4):   
@@ -220,7 +217,7 @@ class LidDrivenCavityWithSolidSubdomain(LidDrivenCavity):
             self.mesh = self.mesh.child()
         
         
-    def setup_model(self, time_step_size = 20.):
+    def setup_model(self, timestep_size = 20.):
     
         self.model = phaseflow.pure_isotropic.Model(self.mesh,
             initial_values = (
@@ -238,7 +235,7 @@ class LidDrivenCavityWithSolidSubdomain(LidDrivenCavity):
             semi_phasefield_mapping = phaseflow.pure.TanhSemiPhasefieldMapping(
                 regularization_central_temperature = -0.01,
                 regularization_smoothing_parameter = 0.01),
-            time_step_size = time_step_size,
+            timestep_bounds = timestep_size,
             quadrature_degree = 3)
         
         self.output_dir = "output/benchmarks/lid_driven_cavity_with_solid_subdomain/"
@@ -249,12 +246,12 @@ class AdaptiveLidDrivenCavityWithSolidSubdomain(AdaptiveLidDrivenCavity):
     Unfortunately, the adaptive solver computes an error estimate of exactly 0,
     which seems to be a bug in FEniCS.
     We'll want to make a MWE and investigate. For now let's leave this failing benchmark here."""
-    def __init__(self, mesh_size = 2, time_step_size = 20.):
+    def __init__(self, mesh_size = 2, timestep_size = 20.):
     
         AdaptiveLidDrivenCavity.__init__(self, 
-            mesh_size = mesh_size, ymin = -0.25, time_step_size = time_step_size)
+            mesh_size = mesh_size, ymin = -0.25, timestep_size = timestep_size)
         
-        LidDrivenCavityWithSolidSubdomain.setup_model(self, time_step_size = time_step_size)
+        LidDrivenCavityWithSolidSubdomain.setup_model(self, timestep_size = timestep_size)
         
         self.output_dir = "output/benchmarks/adaptive_lid_driven_cavity_with_solid_subdomain/"
      
@@ -286,12 +283,15 @@ class HeatDrivenCavity(Cavity):
             buoyancy = phaseflow.pure.IdealizedLinearBoussinesqBuoyancy(
                 rayleigh_numer = self.Ra, 
                 prandtl_number = self.Pr),
-            time_step_size = 1.e-3)
+            timestep_bounds = (1.e-4, 1.e-3, 1.e12))
             
-        self.setup_timestepper(output_dir = "output/benchmarks/heat_driven_cavity/",
-            stop_when_steady = True,
-            steady_relative_tolerance = 1.e-4,
-            adapt_timestep_to_unsteadiness = True)
+        self.stop_when_steady = True
+        
+        self.steady_relative_tolerance = 1.e-4
+        
+        self.adapt_timestep_to_unsteadiness = True
+        
+        self.output_dir = "output/benchmarks/heat_driven_cavity/"
         
         
     def verify(self):
@@ -356,15 +356,15 @@ class HeatDrivenCavityWithWater(Cavity):
                 cold_temperature = T_cold,
                 rayleigh_numer = self.Ra, 
                 prandtl_number = self.Pr),
-            time_step_size = 1.e-3)
+            timestep_bounds = (1.e-4, 1.e-3, 1.e12))
             
         self.output_dir = "output/benchmarks/heat_driven_cavity_with_water/"
-        
-        self.end_time = 10.
 
         self.stop_when_steady = True
         
         self.steady_relative_tolerance = 1.e-3
+        
+        self.adapt_timestep_to_unsteadiness = True
         
         
     def verify(self):
@@ -376,39 +376,6 @@ class HeatDrivenCavityWithWater(Cavity):
             verified_values = [1.00, 0.66, 0.56, 0.58, 0.59, 0.62, 0.20, 0.22, 0.00],
             relative_tolerance = 5.e-2,
             absolute_tolerance = 1.e-2)
-            
-            
-    def run(self):
-
-        time_stepper = phaseflow.core.TimeStepper(
-            solver = self.solver,
-            output_dir = self.output_dir,
-            stop_when_steady = self.stop_when_steady,
-            steady_relative_tolerance = self.steady_relative_tolerance)
-        
-        self.end_time = 0.001
-        
-        time_stepper.run_until(self.end_time)
-        
-        root_output_dir = self.output_dir
-        
-        self.output_dir = root_output_dir + "/restart_t0.001/"
-        
-        self.model.time_step_size = 0.002
-        
-        self.end_time = 0.003
-        
-        time_stepper.run_until(self.end_time)
-        
-        self.output_dir = root_output_dir + "/restart_t0.003/"
-        
-        self.model.time_step_size = 0.004
-        
-        self.end_time = 10.
-        
-        time_stepper.run_until(self.end_time)
-            
-        self.verify()
             
             
 class AdaptiveHeatDrivenCavityWithWater(HeatDrivenCavityWithWater):
@@ -473,7 +440,7 @@ class StefanProblem(Benchmark):
             T_hot = 1.,
             T_cold = -0.01,
             regularization_smoothing_parameter = 0.005,
-            time_step_size = 1.e-3,
+            timestep_size = 1.e-3,
             initial_uniform_cell_count = 311,
             initial_hot_wall_refinement_cycles = 0,
             end_time = 0.1,
@@ -506,7 +473,7 @@ class StefanProblem(Benchmark):
             semi_phasefield_mapping = phaseflow.pure.TanhSemiPhasefieldMapping(
                 regularization_central_temperature = 0.,
                 regularization_smoothing_parameter = regularization_smoothing_parameter),
-            time_step_size = time_step_size,
+            timestep_bounds = timestep_size,
             quadrature_degree = quadrature_degree)
 
         self.end_time = end_time
@@ -562,7 +529,7 @@ class AdaptiveConvectionCoupledMeltingPCM(Cavity):
             prandtl_number = 0.71,
             solid_viscosity = 1.e4,
             liquid_viscosity = 1.,
-            time_step_size = 1.e-3,
+            timestep_size = 1.e-3,
             initial_mesh_size = 1,
             initial_hot_wall_refinement_cycles = 6,
             initial_pci_position = None,
@@ -623,7 +590,7 @@ class AdaptiveConvectionCoupledMeltingPCM(Cavity):
             semi_phasefield_mapping = phaseflow.pure.TanhSemiPhasefieldMapping(
                 regularization_central_temperature = regularization_central_temperature,
                 regularization_smoothing_parameter = regularization_smoothing_parameter),
-            time_step_size = time_step_size)
+            timestep_bounds = timestep_size)
         
         phi = self.model.semi_phasefield_mapping.function
         
@@ -651,7 +618,7 @@ class AdaptiveConvectionCoupledMeltingToyPCM(AdaptiveConvectionCoupledMeltingPCM
             prandtl_number = 0.71,
             solid_viscosity = 1.e4,
             liquid_viscosity = 1.,
-            time_step_size = 1.e-3,
+            timestep_size = 1.e-3,
             regularization_central_temperature = self.regularization_central_temperature,
             regularization_smoothing_parameter = 0.025,
             end_time = 0.02)

@@ -11,7 +11,7 @@ class Model(phaseflow.core.Model):
             boundary_conditions = None, 
             buoyancy = None,
             semi_phasefield_mapping = None,
-            time_step_size = 1.,
+            timestep_bounds = (1.e-4, 1., 1.e12),
             prandtl_number = 1.,
             stefan_number = 1.,
             liquid_viscosity = 1.,
@@ -24,7 +24,7 @@ class Model(phaseflow.core.Model):
         ----------
         state : phaseflow.State
         
-        time_step_size : float
+        timestep_size : float
         
         boundary_conditions : [fenics.DirichletBoundaryCondition,]
         
@@ -37,7 +37,7 @@ class Model(phaseflow.core.Model):
             element = phaseflow.pure.make_mixed_element(mesh.ufl_cell()),
             initial_values = initial_values,
             boundary_conditions = boundary_conditions,
-            time_step_size = time_step_size,
+            timestep_bounds = timestep_bounds,
             quadrature_degree = quadrature_degree)
         
         
@@ -82,8 +82,7 @@ class Model(phaseflow.core.Model):
             
             return dot(dot(grad(z), u), v)  # Convection of the velocity field
         
-        
-        Delta_t = fenics.Constant(time_step_size)
+        Delta_t = self.Delta_t
         
         Pr = fenics.Constant(prandtl_number)
         
