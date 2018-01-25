@@ -228,7 +228,10 @@ class TimeStepper:
             max_time_steps = 1000000000000,
             output_dir = None,
             stop_when_steady = False,
-            steady_relative_tolerance = 1.e-4): 
+            steady_relative_tolerance = 1.e-4,
+            adapt_timestep_to_unsteadiness = False,
+            adaptive_time_factor = 1.,
+            end_time = None): 
     
         self.time_epsilon = time_epsilon
 
@@ -248,14 +251,20 @@ class TimeStepper:
         
         self.steady_relative_tolerance = steady_relative_tolerance
         
+        self.adapt_timestep_to_unsteadiness = adapt_timestep_to_unsteadiness
         
-    def run_until(self, end_time):
+        self.adaptive_time_factor = adaptive_time_factor
+        
+        self.end_time = end_time
+        
+        
+    def run_until_end_time(self):
         """ Optionally run inside of a file context manager.
         Without this, exceptions are more likely to corrupt the outputs.
         """
         if self.output_dir is None:
         
-            self.__run_until(end_time)
+            self.__run_until_end_time()
         
         else:
         
@@ -265,19 +274,21 @@ class TimeStepper:
             
                 self.solver.model.old_state.write_solution_to_xdmf(self.solution_file)
             
-                self.__run_until(end_time)
+                self.__run_until_end_time()
                 
         
-    def __run_until(self, end_time):
+    def __run_until_end_time(self):
 
         start_time = 0. + self.state.time
 
-        if start_time >= end_time - self.time_epsilon:
-    
-            phaseflow.helpers.print_once(
-                "Start time is already too close to end time. Only writing initial values.")
-            
-            return
+        if self.end_time is not None:
+        
+            if start_time >= self.end_time - self.time_epsilon:
+        
+                phaseflow.helpers.print_once(
+                    "Start time is already too close to end time. Only writing initial values.")
+                
+                return
             
             
         # Run solver for each time step until reaching end time.
@@ -287,9 +298,11 @@ class TimeStepper:
         
         for it in range(1, self.max_time_steps):
             
-            if(self.state.time > end_time - self.time_epsilon):
-                
-                break
+            if self.end_time is not None:
+            
+                if(self.state.time > self.end_time - self.time_epsilon):
+                    
+                    break
             
             self.solver.solve()
         
@@ -305,21 +318,49 @@ class TimeStepper:
             
             
             # Check for steady state.
-            if self.stop_when_steady and self.steady():
+            if self.stop_when_steady:
             
-                phaseflow.helpers.print_once("Reached steady state at time t = " + str(self.state.time))
+                self.set_unsteadiness()
                 
-                break
+                if (self.unsteadiness < self.steady_relative_tolerance):
             
-        
-            # Report progress.
-            progress.update(self.state.time / end_time)
+                    steady = True
+                    
+                    phaseflow.helpers.print_once("Reached steady state at time t = " + str(self.state.time))
+                    
+                    break
+                    
+                if self.adapt_timestep_to_unsteadiness:
+                    
+                    timestep_size_bounds = [1.e-4, 1.e12]
+                    
+                    new_timestep_size = \
+                        self.solver.model.time_step_size/self.unsteadiness**self.adaptive_time_factor
+                        
+                    if new_timestep_size < timestep_size_bounds[0]:
+
+                        self.solver.model.time_step_size = timestep_size_bounds[0]
+                        
+                    elif new_timestep_size > timestep_size_bounds[1]:
+                    
+                        self.solver.model.time_step_size = timestep_size_bounds[1]
+                        
+                    else:
+                    
+                        self.solver.model.time_step_size = new_timestep_size
+                        
+                    phaseflow.helpers.print_once("Set time step size to $Delta_t = " + 
+                        str(self.solver.model.time_step_size) + "$.")
             
-            if self.state.time >= (end_time - fenics.dolfin.DOLFIN_EPS):
+            if self.end_time is not None:
             
-                phaseflow.helpers.print_once("Reached end time, t = " + str(end_time))
-            
-                break
+                progress.update(self.state.time / self.end_time)
+                
+                if self.state.time >= (self.end_time - fenics.dolfin.DOLFIN_EPS):
+                
+                    phaseflow.helpers.print_once("Reached end time, t = " + str(self.end_time))
+                
+                    break
                 
                 
             # Set initial values for next time step.
@@ -328,26 +369,18 @@ class TimeStepper:
             self.old_state.time = 0. + self.state.time
     
         
-    def steady(self):
-        """Check if solution has reached an approximately steady state."""
-        steady = False
-        
+    def set_unsteadiness(self):
+    
         time_residual = fenics.Function(self.state.solution.leaf_node().function_space())
         
         time_residual.assign(self.state.solution.leaf_node() - self.old_state.solution.leaf_node())
         
-        unsteadiness = fenics.norm(time_residual, "L2")/ \
+        self.unsteadiness = fenics.norm(time_residual, "L2")/ \
             fenics.norm(self.old_state.solution.leaf_node(), "L2")
         
         phaseflow.helpers.print_once(
             "Unsteadiness (L2 norm of relative time residual), || w_{n+1} || / || w_n || = " + 
-                str(unsteadiness))
-
-        if (unsteadiness < self.steady_relative_tolerance):
-            
-            steady = True
-        
-        return steady
+                str(self.unsteadiness))
         
 
 class ContinuousFunction:

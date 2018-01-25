@@ -53,24 +53,34 @@ class Benchmark:
                 else:
                 
                     assert(absolute_error < absolute_tolerance)
-                
+    
+    
+    def setup_timestepper(self,
+            output_dir = "output/benchmarks/",
+            end_time = None,
+            stop_when_steady = False,
+            steady_relative_tolerance = 1.e-4,
+            adapt_timestep_to_unsteadiness = False):
+    
+        solver = phaseflow.core.Solver(
+            model = self.model, 
+            adaptive_goal_integrand = self.adaptive_goal_integrand, 
+            adaptive_solver_tolerance = self.adaptive_solver_tolerance)
+            
+        self.time_stepper = phaseflow.core.TimeStepper(
+            solver = solver,
+            output_dir = output_dir,
+            end_time = end_time,
+            stop_when_steady = stop_when_steady,
+            steady_relative_tolerance = steady_relative_tolerance,
+            adapt_timestep_to_unsteadiness = adapt_timestep_to_unsteadiness)
+            
                 
     def run(self):
     
         assert(self.model is not None)
         
-        solver = phaseflow.core.Solver(
-            model = self.model, 
-            adaptive_goal_integrand = self.adaptive_goal_integrand, 
-            adaptive_solver_tolerance = self.adaptive_solver_tolerance)
-
-        time_stepper = phaseflow.core.TimeStepper(
-            solver = solver,
-            output_dir = self.output_dir,
-            stop_when_steady = self.stop_when_steady,
-            steady_relative_tolerance = self.steady_relative_tolerance)
-        
-        time_stepper.run_until(self.end_time)
+        self.time_stepper.run_until_end_time()
             
         self.verify()
     
@@ -137,6 +147,8 @@ class LidDrivenCavity(Cavity):
                 {"subspace": 1, "location": self.fixed_walls, "value": (0., 0.)}],
             time_step_size = time_step_size,
             liquid_viscosity = 0.01)
+        
+        self.setup_timestepper()
         
         self.output_dir = "output/benchmarks/lid_driven_cavity/"
     
@@ -276,13 +288,10 @@ class HeatDrivenCavity(Cavity):
                 prandtl_number = self.Pr),
             time_step_size = 1.e-3)
             
-        self.output_dir = "output/benchmarks/heat_driven_cavity/"
-        
-        self.end_time = 10.
-
-        self.stop_when_steady = True
-        
-        self.steady_relative_tolerance = 1.e-4
+        self.setup_timestepper(output_dir = "output/benchmarks/heat_driven_cavity/",
+            stop_when_steady = True,
+            steady_relative_tolerance = 1.e-4,
+            adapt_timestep_to_unsteadiness = True)
         
         
     def verify(self):
@@ -370,14 +379,9 @@ class HeatDrivenCavityWithWater(Cavity):
             
             
     def run(self):
-    
-        solver = phaseflow.core.Solver(
-            model = self.model, 
-            adaptive_goal_integrand = self.adaptive_goal_integrand, 
-            adaptive_solver_tolerance = self.adaptive_solver_tolerance)
 
         time_stepper = phaseflow.core.TimeStepper(
-            solver = solver,
+            solver = self.solver,
             output_dir = self.output_dir,
             stop_when_steady = self.stop_when_steady,
             steady_relative_tolerance = self.steady_relative_tolerance)
@@ -538,27 +542,15 @@ class AdaptiveStefanProblem(StefanProblem):
         
         self.output_dir = "output/benchmarks/adaptive_stefan_problem/"
         
-        
-    def run(self):
         """ This test fails with the usual initial guess of w^0 = w_n,
             but passes with w^0 = 0.
         """
-        solver = phaseflow.core.Solver(
+        self.solver = phaseflow.core.Solver(
             model = self.model, 
             initial_guess = ("0.", "0.", "0."),
             adaptive_goal_integrand = self.adaptive_goal_integrand, 
             adaptive_solver_tolerance = self.adaptive_solver_tolerance)
-
-        time_stepper = phaseflow.core.TimeStepper(
-            solver = solver,
-            output_dir = self.output_dir,
-            stop_when_steady = self.stop_when_steady,
-            steady_relative_tolerance = self.steady_relative_tolerance)
         
-        time_stepper.run_until(self.end_time)
-            
-        self.verify()
-           
             
 class AdaptiveConvectionCoupledMeltingPCM(Cavity):
 
