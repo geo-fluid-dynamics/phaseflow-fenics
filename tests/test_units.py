@@ -1,11 +1,11 @@
+""" This module runs the unit test suite. """
 from __future__ import print_function
 from builtins import str
 from .context import phaseflow
-
 import fenics
-        
-        
-def test_1d_output():
+
+
+def test_1d_output_unit():
 
     mesh = fenics.UnitIntervalMesh(5)
     
@@ -20,7 +20,7 @@ def test_1d_output():
         state.write_solution_to_xdmf(solution_file)
     
         
-def test_1d_velocity():
+def test_1d_velocity_unit():
 
     mesh = fenics.UnitIntervalMesh(5)
 
@@ -32,9 +32,28 @@ def test_1d_velocity():
 
     print(bc.get_boundary_values())
     
+    
+def test_xdmf_unit():
+
+    solution_file = fenics.XDMFFile("test.xdmf")
+
+
+'''This test seems to fail with fenics-2016.2.0. 
+I vaguely recall seeing an issue on their Bitbucket which mentions having
+not always used the proper context manager style with some of their file classes.'''
+def test_xdmf_context_unit():
+
+    with fenics.XDMFFile("test.xdmf") as solution_file:
+
+        return
+        
 
 if __name__=="__main__":
     
-    test_1d_output()
+    test_1d_output_unit()
     
-    test_1d_velocity()
+    test_1d_velocity_unit()
+    
+    test_xdmf_unit()
+
+    test_xdmf_context_unit()
