@@ -415,7 +415,7 @@ class AdaptiveHeatDrivenCavityWithWater(HeatDrivenCavityWithWater):
         
         self.adaptive_goal_integrand = u[0]*T
         
-        self.adaptive_solver_tolerance = 1.e-3
+        self.adaptive_solver_tolerance = 1.e-2
         
         
     def run(self):
