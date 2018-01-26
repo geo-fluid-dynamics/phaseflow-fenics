@@ -517,6 +517,8 @@ class AdaptiveStefanProblem(StefanProblem):
         
         self.output_dir = "output/benchmarks/adaptive_stefan_problem/"
         
+        
+    def run(self):
         """ This test fails with the usual initial guess of w^0 = w_n,
             but passes with w^0 = 0.
         """
@@ -525,6 +527,20 @@ class AdaptiveStefanProblem(StefanProblem):
             initial_guess = ("0.", "0.", "0."),
             adaptive_goal_integrand = self.adaptive_goal_integrand, 
             adaptive_solver_tolerance = self.adaptive_solver_tolerance)
+        
+        self.timestepper = phaseflow.core.TimeStepper(
+            model = self.model,
+            solver = self.solver,
+            output_dir = self.output_dir,
+            end_time = self.end_time,
+            stop_when_steady = self.stop_when_steady,
+            steady_relative_tolerance = self.steady_relative_tolerance,
+            adapt_timestep_to_unsteadiness = self.adapt_timestep_to_unsteadiness,
+            adaptive_time_power = self.adaptive_time_power)
+        
+        self.timestepper.run_until_end_time()
+            
+        self.verify()
         
             
 class AdaptiveConvectionCoupledMeltingPCM(Cavity):

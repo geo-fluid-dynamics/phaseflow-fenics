@@ -239,12 +239,12 @@ class Solver():
         
         else:
         
-            initial_values_function = fenics.interpolate(
+            initial_guess_function = fenics.interpolate(
                 fenics.Expression(initial_guess, element = model.element), 
                 model.function_space.leaf_node())
                 
             model.state.solution.leaf_node().vector()[:] = \
-                initial_values_function.leaf_node().vector()
+                initial_guess_function.leaf_node().vector()
     
     
     def solve(self):
