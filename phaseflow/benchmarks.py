@@ -29,6 +29,8 @@ class Benchmark:
         
         self.adaptive_time_power = 1.
         
+        self.nlp_max_iterations = 50
+        
         
     def verify(self):
         
@@ -68,7 +70,8 @@ class Benchmark:
         self.solver = phaseflow.core.Solver(
             model = self.model, 
             adaptive_goal_integrand = self.adaptive_goal_integrand, 
-            adaptive_solver_tolerance = self.adaptive_solver_tolerance)
+            adaptive_solver_tolerance = self.adaptive_solver_tolerance,
+            nlp_max_iterations = self.nlp_max_iterations)
         
         self.timestepper = phaseflow.core.TimeStepper(
             model = self.model,
@@ -359,17 +362,19 @@ class HeatDrivenCavityWithWater(Cavity):
                 cold_temperature = T_cold,
                 rayleigh_numer = self.Ra, 
                 prandtl_number = self.Pr),
-            timestep_bounds = (1.e-4, 1.e-3, 1.e12))
+            timestep_bounds = (1.e-4, 1.e-3, 1.e-2))
             
         self.output_dir = "output/benchmarks/heat_driven_cavity_with_water/"
 
         self.stop_when_steady = True
         
-        self.steady_relative_tolerance = 1.e-3
+        self.steady_relative_tolerance = 1.e-4
         
         self.adapt_timestep_to_unsteadiness = True
         
-        self.adaptive_time_power = 0.5
+        self.adaptive_time_power = 0.2
+        
+        self.nlp_max_iterations = 12
         
         
     def verify(self):

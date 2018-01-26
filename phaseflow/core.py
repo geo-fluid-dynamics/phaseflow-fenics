@@ -190,7 +190,11 @@ class Solver():
             model, 
             adaptive_goal_integrand = None, 
             adaptive_solver_tolerance = 1.e-4,
-            initial_guess = None):
+            initial_guess = None,
+            nlp_max_iterations = 50,
+            nlp_absolute_tolerance = 1.e-10,
+            nlp_relative_tolerance = 1.e-9,
+            nlp_relaxation = 1.):
     
         self.adaptive_goal_integrand = adaptive_goal_integrand
         
@@ -203,10 +207,30 @@ class Solver():
             self.fenics_solver = fenics.AdaptiveNonlinearVariationalSolver(
                 problem = model.problem,
                 goal = adaptive_goal_integrand*dx)
+                
+            self.fenics_solver.parameters["nonlinear_variational_solver"]["newton_solver"]\
+                ["maximum_iterations"] = nlp_max_iterations
+        
+            self.fenics_solver.parameters["nonlinear_variational_solver"]["newton_solver"]\
+                ["absolute_tolerance"] = nlp_absolute_tolerance
+            
+            self.fenics_solver.parameters["nonlinear_variational_solver"]["newton_solver"]\
+                ["relative_tolerance"] = nlp_relative_tolerance
+            
+            self.fenics_solver.parameters["nonlinear_variational_solver"]["newton_solver"]\
+                ["relaxation_parameter"] = nlp_relaxation
         
         else:
         
             self.fenics_solver = fenics.NonlinearVariationalSolver(problem = model.problem)
+            
+            self.fenics_solver.parameters["newton_solver"]["maximum_iterations"] = nlp_max_iterations
+        
+            self.fenics_solver.parameters["newton_solver"]["absolute_tolerance"] = nlp_absolute_tolerance
+            
+            self.fenics_solver.parameters["newton_solver"]["relative_tolerance"] = nlp_relative_tolerance
+            
+            self.fenics_solver.parameters["newton_solver"]["relaxation_parameter"] = nlp_relaxation
             
         if initial_guess is None:
         
