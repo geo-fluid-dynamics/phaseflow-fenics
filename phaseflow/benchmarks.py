@@ -33,6 +33,10 @@ class Benchmark:
         
         self.nlp_relaxation = 1.
         
+        self.nlp_absolute_tolerance = 1.e-10
+        
+        self.nlp_relative_tolerance = 1.e-9
+        
         
     def verify(self):
         
@@ -74,7 +78,9 @@ class Benchmark:
             adaptive_goal_integrand = self.adaptive_goal_integrand, 
             adaptive_solver_tolerance = self.adaptive_solver_tolerance,
             nlp_max_iterations = self.nlp_max_iterations,
-            nlp_relaxation = self.nlp_relaxation)
+            nlp_relaxation = self.nlp_relaxation,
+            nlp_absolute_tolerance = self.nlp_absolute_tolerance,
+            nlp_relative_tolerance = self.nlp_relative_tolerance)
         
         self.timestepper = phaseflow.core.TimeStepper(
             model = self.model,
@@ -498,6 +504,8 @@ class StefanProblem(Benchmark):
         
         self.output_dir = "output/benchmarks/stefan_problem/"
     
+        self.stop_when_steady = False
+        
     
     def verify(self):
         """ Verify against analytical solution. """
@@ -569,7 +577,8 @@ class AdaptiveConvectionCoupledMeltingPCM(Cavity):
             initial_pci_position = None,
             regularization_central_temperature = 0.1,
             regularization_smoothing_parameter = 0.025,
-            end_time = 0.02):
+            end_time = 0.02,
+            quadrature_degree = 3):
     
         Cavity.__init__(self, mesh_size = initial_mesh_size)
         
@@ -624,13 +633,16 @@ class AdaptiveConvectionCoupledMeltingPCM(Cavity):
             semi_phasefield_mapping = phaseflow.pure.TanhSemiPhasefieldMapping(
                 regularization_central_temperature = regularization_central_temperature,
                 regularization_smoothing_parameter = regularization_smoothing_parameter),
-            timestep_bounds = timestep_size)
+            timestep_bounds = timestep_size,
+            quadrature_degree = quadrature_degree)
         
         phi = self.model.semi_phasefield_mapping.function
         
         p, u, T = fenics.split(self.model.state.solution)
         
         self.adaptive_goal_integrand = phi(T)
+        
+        self.adaptive_solver_tolerance = 1.e-4
         
         self.end_time = end_time
         
@@ -647,6 +659,8 @@ class AdaptiveConvectionCoupledMeltingToyPCM(AdaptiveConvectionCoupledMeltingPCM
             initial_mesh_size = 1, 
             initial_hot_wall_refinement_cycles = 6,
             initial_pci_position = 0.001,
+            T_hot = 1.,
+            T_cold = -0.1,
             stefan_number = 1.,
             rayleigh_number = 1.e6,
             prandtl_number = 0.71,
@@ -659,6 +673,12 @@ class AdaptiveConvectionCoupledMeltingToyPCM(AdaptiveConvectionCoupledMeltingPCM
     
         self.adaptive_solver_tolerance = 1.e-4
         
+        self.nlp_absolute_tolerance = 1.e-8
+        
+        self.nlp_relative_tolerance = 1.e-8
+        
+        self.stop_when_steady = False
+        
         
     def verify(self):
         """ Test regression based on a previous solution from Phaseflow. """
@@ -668,7 +688,7 @@ class AdaptiveConvectionCoupledMeltingToyPCM(AdaptiveConvectionCoupledMeltingPCM
         
         def T_minus_T_r(x):
         
-            values = self.model.solution.leaf_node()(fenics.Point(x, pci_y_position_to_check))
+            values = self.model.state.solution.leaf_node()(fenics.Point(x, pci_y_position_to_check))
             
             return values[3] - self.regularization_central_temperature
 
