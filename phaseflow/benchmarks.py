@@ -259,7 +259,7 @@ class AdaptiveLidDrivenCavityWithSolidSubdomain(LidDrivenCavityWithSolidSubdomai
     
         LidDrivenCavityWithSolidSubdomain.__init__(self, 
             mesh_size = (4, 5),
-            pci_refinement_cycles = 6)
+            pci_refinement_cycles = 4)
         
         self.end_time = 2.*self.timestep_size
         
