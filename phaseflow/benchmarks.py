@@ -560,24 +560,26 @@ class AdaptiveStefanProblem(StefanProblem):
         self.verify()
         
             
-class AdaptiveConvectionCoupledMeltingPCM(Cavity):
+class AdaptiveConvectionCoupledMeltingOctadecanePCM(Cavity):
 
     def __init__(self, 
             T_hot = 1.,
-            T_cold = -0.1,
-            stefan_number = 1.,
-            rayleigh_number = 1.e6,
-            prandtl_number = 0.71,
-            solid_viscosity = 1.e4,
+            T_cold = -0.01,
+            stefan_number = 0.045,
+            rayleigh_number = 3.27e5,
+            prandtl_number = 56.2,
+            solid_viscosity = 1.e8,
             liquid_viscosity = 1.,
-            timestep_size = 1.e-3,
+            timestep_size = 1.,
             initial_mesh_size = 1,
             initial_hot_wall_refinement_cycles = 6,
             initial_pci_position = None,
-            regularization_central_temperature = 0.1,
+            regularization_central_temperature = 0.01,
             regularization_smoothing_parameter = 0.025,
-            end_time = 0.02,
-            quadrature_degree = None):
+            end_time = 80.,
+            adaptive_solver_tolerance = 1.e-5,
+            quadrature_degree = 8,
+            nlp_max_iterations = 100):
     
         Cavity.__init__(self, mesh_size = initial_mesh_size)
         
@@ -607,7 +609,7 @@ class AdaptiveConvectionCoupledMeltingPCM(Cavity):
         if initial_pci_position == None:
         
             initial_pci_position = \
-                1./float(initial_uniform_cell_count)/2.**(initial_hot_wall_refinement_cycles - 1)
+                1./float(initial_mesh_size)/2.**(initial_hot_wall_refinement_cycles - 1)
         
         initial_temperature = "(T_hot - T_cold)*(x[0] < initial_pci_position) + T_cold"
         
@@ -641,11 +643,11 @@ class AdaptiveConvectionCoupledMeltingPCM(Cavity):
         
         self.adaptive_goal_integrand = phi(T)
         
-        self.adaptive_solver_tolerance = 1.e-4
+        self.adaptive_solver_tolerance = adaptive_solver_tolerance
         
         self.end_time = end_time
         
-        self.output_dir = "output/benchmarks/adaptive_convection_coupled_melting_toy_pcm/"
+        self.output_dir = "output/benchmarks/adaptive_convection_coupled_melting_octadecane_pcm/"
             
             
 
@@ -671,5 +673,5 @@ if __name__=='__main__':
     
     AdaptiveStefanProblem.run()
     
-    AdaptiveConvectionCoupledMeltingToyPCM.run()
+    AdaptiveConvectionCoupledMeltingOctadecanePCM.run()
     

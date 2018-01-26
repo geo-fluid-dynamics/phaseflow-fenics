@@ -3,7 +3,8 @@ from .context import phaseflow
 import scipy.optimize
 
 
-class AdaptiveConvectionCoupledMeltingToyPCM(phaseflow.benchmarks.AdaptiveConvectionCoupledMeltingPCM):
+class AdaptiveConvectionCoupledMeltingToyPCM(
+        phaseflow.benchmarks.AdaptiveConvectionCoupledMeltingOctadecanePCM):
 
     def __init__(self):
     
@@ -32,6 +33,8 @@ class AdaptiveConvectionCoupledMeltingToyPCM(phaseflow.benchmarks.AdaptiveConvec
         self.nlp_relative_tolerance = 1.e-8
         
         self.stop_when_steady = False
+        
+        self.output_dir = "output/benchmarks/adaptive_convection_coupled_melting_toy_pcm_regression/"
         
         
     def verify(self):
