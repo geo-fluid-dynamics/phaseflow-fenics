@@ -372,7 +372,7 @@ class HeatDrivenCavityWithWater(Cavity):
         
         self.adapt_timestep_to_unsteadiness = True
         
-        self.adaptive_time_power = 0.2
+        self.adaptive_time_power = 0.5
         
         self.nlp_max_iterations = 12
         
