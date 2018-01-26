@@ -490,7 +490,7 @@ class StefanProblem(Benchmark):
     
     
     def verify(self):
-        """ Verify against \cite{ghia1982}. """
+        """ Verify against analytical solution. """
         self.verify_scalar_solution_component(
             component = 2,
             points = [0.00, 0.025, 0.050, 0.075, 0.10, 0.5, 1.],
