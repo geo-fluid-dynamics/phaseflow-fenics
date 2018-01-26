@@ -31,6 +31,8 @@ class Benchmark:
         
         self.nlp_max_iterations = 50
         
+        self.nlp_relaxation = 1.
+        
         
     def verify(self):
         
@@ -71,7 +73,8 @@ class Benchmark:
             model = self.model, 
             adaptive_goal_integrand = self.adaptive_goal_integrand, 
             adaptive_solver_tolerance = self.adaptive_solver_tolerance,
-            nlp_max_iterations = self.nlp_max_iterations)
+            nlp_max_iterations = self.nlp_max_iterations,
+            nlp_relaxation = self.nlp_relaxation)
         
         self.timestepper = phaseflow.core.TimeStepper(
             model = self.model,
@@ -247,20 +250,27 @@ class LidDrivenCavityWithSolidSubdomain(LidDrivenCavity):
         self.output_dir = "output/benchmarks/lid_driven_cavity_with_solid_subdomain/"
         
         
-class AdaptiveLidDrivenCavityWithSolidSubdomain(AdaptiveLidDrivenCavity):
+class AdaptiveLidDrivenCavityWithSolidSubdomain(LidDrivenCavityWithSolidSubdomain):
     """ Ideally we should be able to use AMR instead of manually refining the prescribed PCI.
     Unfortunately, the adaptive solver computes an error estimate of exactly 0,
     which seems to be a bug in FEniCS.
     We'll want to make a MWE and investigate. For now let's leave this failing benchmark here."""
-    def __init__(self, mesh_size = 2, timestep_size = 20.):
+    def __init__(self):
     
-        AdaptiveLidDrivenCavity.__init__(self, 
-            mesh_size = mesh_size, ymin = -0.25, timestep_size = timestep_size)
+        LidDrivenCavityWithSolidSubdomain.__init__(self, 
+            mesh_size = (4, 5),
+            pci_refinement_cycles = 6)
         
-        LidDrivenCavityWithSolidSubdomain.setup_model(self, timestep_size = timestep_size)
+        self.end_time = 2.*self.timestep_size
+        
+        p, u, T = fenics.split(self.model.state.solution)
+        
+        self.adaptive_goal_integrand = u[0]*u[0]
+        
+        self.adaptive_solver_tolerance = 1.e-5
         
         self.output_dir = "output/benchmarks/adaptive_lid_driven_cavity_with_solid_subdomain/"
-     
+    
     
 class HeatDrivenCavity(Cavity):
 
