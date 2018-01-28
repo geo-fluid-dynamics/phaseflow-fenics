@@ -4,7 +4,6 @@ import h5py
 import numpy
 import phaseflow.helpers
 
-
 class SolutionFile(fenics.XDMFFile):
 
     def __init__(self, filepath):
@@ -171,19 +170,8 @@ class Model:
         self.timestep_size.set(value)
                         
         self.Delta_t.assign(self.timestep_size.value)
-        
-        
-    def write_dict(self):
-    
-        if fenics.MPI.rank(fenics.mpi_comm_world()) is 0:
-        
-            file = open(output_dir + "/problem_dict.txt", "w")
-            
-            file.write(self.__dict__)
+ 
 
-            file.close()
-        
-        
 class Solver():
 
     def __init__(self, 
@@ -443,7 +431,6 @@ class Point(fenics.Point):
             fenics.Point.__init__(self, coordinates[0], coordinates[1], coordinates[2])
             
             
-
 class BoundedValue(object):
 
     def __init__(self, min=0., value=0., max=0.):
