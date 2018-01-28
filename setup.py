@@ -21,6 +21,6 @@ setuptools.setup(
     license = license,
     packages = setuptools.find_packages(exclude=("tests", "docs", "examples")),
     classifiers=[
-        "Programming Language :: Python :: 3.X",
+        "Programming Language :: Python :: >=3",
     ],
 )
