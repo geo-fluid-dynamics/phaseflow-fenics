@@ -1,4 +1,4 @@
-fenics==2017.1.0
+fenics>=2017.1.0
 h5py
 pytest
 pytest-dependency
