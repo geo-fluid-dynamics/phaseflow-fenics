@@ -8,10 +8,6 @@ class Benchmark:
     
         self.model = None
         
-        self.solver = None
-        
-        self.timestepper = None
-        
         self.adaptive_goal_integrand = None
         
         self.adaptive_solver_tolerance = 1.e-4
@@ -20,21 +16,13 @@ class Benchmark:
         
         self.end_time = None
         
-        self.stop_when_steady = True
+        self.stop_when_steady = False
         
         self.steady_relative_tolerance = 1.e-4
         
-        self.adapt_timestep_to_unsteadiness = True
+        self.adapt_timestep_to_unsteadiness = False
         
         self.adaptive_time_power = 1.
-        
-        self.nlp_max_iterations = 50
-        
-        self.nlp_relaxation = 1.
-        
-        self.nlp_absolute_tolerance = 1.e-10
-        
-        self.nlp_relative_tolerance = 1.e-9
         
         self.initial_guess = None
         
@@ -74,19 +62,15 @@ class Benchmark:
     
     def run(self):
     
-        self.solver = phaseflow.core.Solver(
+        solver = phaseflow.core.Solver(
             model = self.model, 
             adaptive_goal_integrand = self.adaptive_goal_integrand, 
             adaptive_solver_tolerance = self.adaptive_solver_tolerance,
-            nlp_max_iterations = self.nlp_max_iterations,
-            nlp_relaxation = self.nlp_relaxation,
-            nlp_absolute_tolerance = self.nlp_absolute_tolerance,
-            nlp_relative_tolerance = self.nlp_relative_tolerance,
             initial_guess = self.initial_guess)
         
-        self.timestepper = phaseflow.core.TimeStepper(
+        timestepper = phaseflow.core.TimeStepper(
             model = self.model,
-            solver = self.solver,
+            solver = solver,
             output_dir = self.output_dir,
             end_time = self.end_time,
             stop_when_steady = self.stop_when_steady,
@@ -94,7 +78,7 @@ class Benchmark:
             adapt_timestep_to_unsteadiness = self.adapt_timestep_to_unsteadiness,
             adaptive_time_power = self.adaptive_time_power)
         
-        self.timestepper.run_until_end_time()
+        timestepper.run_until_end_time()
             
         self.verify()
         
@@ -140,15 +124,13 @@ class LidDrivenCavity(Cavity):
     def __init__(self, 
             mesh_size = 20, 
             ymin = 0., 
-            timestep_size = 1.e12,
-            relative_tolerance = 3.e-2,
-            absolute_tolerance = 1.e-2):
+            timestep_size = 1.e12):
     
         Cavity.__init__(self, mesh_size = mesh_size, ymin = ymin)
         
-        self.relative_tolerance = relative_tolerance
+        self.relative_tolerance = 3.e-2
         
-        self.absolute_tolerance = absolute_tolerance
+        self.absolute_tolerance = 1.e-2
         
         self.fixed_walls = self.bottom_wall + " | " + self.left_wall + " | " + self.right_wall
         
@@ -171,11 +153,9 @@ class LidDrivenCavity(Cavity):
         """ Verify against \cite{ghia1982}. """
         self.verify_scalar_solution_component(
             component = 1,
-            points = [((self.xmin + self.xmax)/2., y) 
-                for y in [1.0000, 0.9766, 0.9688, 0.9609, 0.9531, 0.8516, 0.7344, 0.6172, 
-                    0.5000, 0.4531, 0.2813, 0.1719, 0.1016, 0.0703, 0.0625, 0.0547, 0.0000]],
-            verified_values = [1.0000, 0.8412, 0.7887, 0.7372, 0.6872, 0.2315, 0.0033, -0.1364, 
-                -0.2058, -0.2109, -0.1566, -0.1015, -0.0643, -0.0478, -0.0419, -0.0372, 0.0000],
+            points = [(0.5, y) 
+                for y in [1.0000, 0.9766, 0.1016, 0.0547, 0.0000]],
+            verified_values = [1.0000, 0.8412, -0.0643, -0.0372, 0.0000],
             relative_tolerance = self.relative_tolerance,
             absolute_tolerance = self.absolute_tolerance)
     
@@ -392,8 +372,6 @@ class HeatDrivenCavityWithWater(Cavity):
         
         self.adaptive_time_power = 0.5
         
-        self.nlp_max_iterations = 12
-        
         
     def verify(self):
         """Verify against steady-state solution from michalek2003."""
@@ -559,8 +537,7 @@ class AdaptiveConvectionCoupledMeltingOctadecanePCM(Cavity):
             regularization_smoothing_parameter = 0.025,
             end_time = 80.,
             adaptive_solver_tolerance = 1.e-5,
-            quadrature_degree = 8,
-            nlp_max_iterations = 100):
+            quadrature_degree = 8):
     
         Cavity.__init__(self, mesh_size = initial_mesh_size)
         
