@@ -18,9 +18,9 @@ class AdaptiveConvectionCoupledMeltingOctadecanePCM_Regression(
         
     def verify(self):
         """ Test regression based on a previous solution from Phaseflow. """
-        pci_y_position_to_check =  0.875
+        pci_y_position_to_check =  0.88
         
-        reference_pci_x_position = 0.226
+        reference_pci_x_position = 0.28
         
         def T_minus_T_r(x):
         
