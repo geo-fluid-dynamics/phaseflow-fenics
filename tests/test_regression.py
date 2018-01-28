@@ -41,12 +41,12 @@ class AdaptiveConvectionCoupledMeltingOctadecanePCM_Regression(
         
 
 
-def test__failing__adaptive_convection_coupled_melting_octadecane_pcm_regression():
+def test_adaptive_convection_coupled_melting_octadecane_pcm_regression():
 
     AdaptiveConvectionCoupledMeltingOctadecanePCM_Regression().run()
     
     
 if __name__=='__main__':
     
-    test__failing__adaptive_convection_coupled_melting_octadecane_pcm_regression()
+    test_adaptive_convection_coupled_melting_octadecane_pcm_regression()
         
