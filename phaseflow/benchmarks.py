@@ -579,8 +579,7 @@ class AdaptiveConvectionCoupledMeltingOctadecanePCM(Cavity):
             end_time = 80.,
             adaptive_solver_tolerance = 1.e-5,
             quadrature_degree = 8,
-            nlp_max_iterations = 100,
-            nlp_relative_tolerance = 1.e-9):
+            nlp_max_iterations = 100):
     
         Cavity.__init__(self, mesh_size = initial_mesh_size)
         
@@ -651,8 +650,6 @@ class AdaptiveConvectionCoupledMeltingOctadecanePCM(Cavity):
         self.stop_when_steady = False
         
         self.output_dir = "output/benchmarks/adaptive_convection_coupled_melting_octadecane_pcm/"
-        
-        self.nlp_relative_tolerance = nlp_relative_tolerance
         
         self.regularization_central_temperature = regularization_central_temperature
         
