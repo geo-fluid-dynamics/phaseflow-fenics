@@ -10,7 +10,7 @@ class AdaptiveConvectionCoupledMeltingOctadecanePCM_Regression(
     def __init__(self):
     
         phaseflow.benchmarks.AdaptiveConvectionCoupledMeltingOctadecanePCM.__init__(self, 
-            solid_viscosity = 1.e4,
+            solid_viscosity = 1.e8,
             stefan_number = 0.045,
             regularization_smoothing_parameter = 0.025,
             timestep_size = 10.,
