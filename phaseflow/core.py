@@ -4,12 +4,15 @@ import h5py
 import numpy
 import phaseflow.helpers
 import os
+import tempfile
 
 class SolutionFile(fenics.XDMFFile):
 
     def __init__(self, filepath):
 
-        phaseflow.helpers.mkdir_p(os.path.dirname(filepath))
+        tempdir = tempfile.mkdtemp()
+        
+        filepath = tempdir + "/phaseflow/output/" + filepath
         
         fenics.XDMFFile.__init__(self, filepath)
         
@@ -53,7 +56,9 @@ class State:
     
     def write_checkpoint(self, output_dir):
         """Write the checkpoint file (with solution and time)."""
-        phaseflow.helpers.makedir_p(output_dir)
+        tempdir = tempfile.mkdtemp()
+        
+        output_dir = tempdir + "/phaseflow/output/"  + output_dir
         
         filepath = output_dir + "/checkpoint_t" + str(self.time) + ".h5"
          

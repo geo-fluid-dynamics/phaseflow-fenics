@@ -13,7 +13,7 @@ class AdaptiveConvectionCoupledMeltingOctadecanePCM_Regression(
             timestep_size = 10.,
             end_time = 30.)
     
-        self.output_dir = "output/benchmarks/adaptive_convection_coupled_melting_octadecane_pcm_regression/"
+        self.output_dir += "regression/"
         
         
     def verify(self):
