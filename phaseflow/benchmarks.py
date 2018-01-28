@@ -85,25 +85,33 @@ class Benchmark:
     
 class Cavity(Benchmark):
 
-    def __init__(self, mesh_size = [20, 20], xmin = 0., ymin = 0., xmax = 1., ymax = 1.):
+    def __init__(self, mesh_size = (20, 20), 
+            xmin = 0., ymin = 0., zmin = None, xmax = 1., ymax = 1., zmax = None):
     
         Benchmark.__init__(self)
         
         if type(mesh_size) is type(20):
         
             mesh_size = [mesh_size, mesh_size]
+    
+        if len(mesh_size) == 2:
+    
+            if (xmin, ymin, xmax, ymax) == (0., 0., 1., 1.):
+    
+                self.mesh = fenics.UnitSquareMesh(fenics.mpi_comm_world(), 
+                    mesh_size[0], mesh_size[1], "crossed")
         
-        if [xmin, ymin, xmax, ymax] == [0., 0., 1., 1.]:
-        
-            self.mesh = fenics.UnitSquareMesh(fenics.mpi_comm_world(), 
-                mesh_size[0], mesh_size[1], "crossed")
+            else:
             
-        else:
+                self.mesh = fenics.RectangleMesh(fenics.mpi_comm_world(), 
+                    fenics.Point(xmin, ymin), fenics.Point(xmax, ymax),
+                    mesh_size[0], mesh_size[1], "crossed")
+    
+        elif len(mesh_size) == 3:
         
-            self.mesh = fenics.RectangleMesh(fenics.mpi_comm_world(), 
-                fenics.Point(xmin, ymin), fenics.Point(xmax, ymax),
-                mesh_size[0], mesh_size[1], "crossed")
-        
+            self.mesh = fenics.BoxMesh(fenics.mpi_comm_world(), 
+                fenics.Point(xmin, ymin, zmin), fenics.Point(xmax, ymax, zmax),
+                mesh_size[0], mesh_size[1], mesh_size[2])
         
         self.left_wall = "near(x[0],  xmin)".replace("xmin", str(xmin))
         
@@ -114,9 +122,18 @@ class Cavity(Benchmark):
         self.top_wall = "near(x[1],  ymax)".replace("ymax", str(ymax))
         
         self.walls = \
-            self.top_wall + " | " + self.bottom_wall + " | " + self.left_wall + " | " + self.right_wall
+                self.top_wall + " | " + self.bottom_wall + " | " + self.left_wall + " | " + self.right_wall
         
-        self.xmin, self.ymin, self.xmax, self.ymax = xmin, ymin, xmax, ymax
+        if len(mesh_size) == 3:
+        
+            self.back_wall = "near(x[2],  zmin)".replace("zmin",  str(zmin))
+        
+            self.front_wall = "near(x[2],  zmax)".replace("zmax", str(zmax))
+        
+            self.walls += " | " + self.back_wall + " | " + self.front_wall
+            
+        self.xmin, self.ymin, self.zmin, self.xmax, self.ymax, self.zmax = \
+            xmin, ymin, zmin, xmax, ymax, zmax
     
   
 class LidDrivenCavity(Cavity):
@@ -530,44 +547,77 @@ class AdaptiveConvectionCoupledMeltingOctadecanePCM(Cavity):
             solid_viscosity = 1.e8,
             liquid_viscosity = 1.,
             timestep_size = 1.,
-            initial_mesh_size = 1,
+            initial_mesh_size = (1, 1),
             initial_hot_wall_refinement_cycles = 6,
             initial_pci_position = None,
             regularization_central_temperature = 0.01,
             regularization_smoothing_parameter = 0.025,
             end_time = 80.,
             adaptive_solver_tolerance = 1.e-5,
-            quadrature_degree = 8):
+            quadrature_degree = 8,
+            depth_3d = None):
     
-        Cavity.__init__(self, mesh_size = initial_mesh_size)
-        
         
         # Make the mesh with initial refinements near the hot wall.
-        class HotWall(fenics.SubDomain):
+        if depth_3d is None:
+            
+            self.spatial_dimensionality = 2
+            
+            Cavity.__init__(self, mesh_size = initial_mesh_size)
+            
+            class HotWall(fenics.SubDomain):
         
-            def inside(self, x, on_boundary):
-            
-                return on_boundary and fenics.near(x[0], 0.)
+                def inside(self, x, on_boundary):
+                
+                    return on_boundary and fenics.near(x[0], 0.)
 
-            
-        hot_wall = HotWall()
         
-        for i in range(initial_hot_wall_refinement_cycles):
+            hot_wall = HotWall()
             
-            edge_markers = fenics.EdgeFunction("bool", self.mesh)
-            
-            hot_wall.mark(edge_markers, True)
+            for i in range(initial_hot_wall_refinement_cycles):
+                
+                edge_markers = fenics.EdgeFunction("bool", self.mesh)
+                
+                hot_wall.mark(edge_markers, True)
 
-            fenics.adapt(self.mesh, edge_markers)
+                fenics.adapt(self.mesh, edge_markers)
             
-            self.mesh = self.mesh.child()
+                self.mesh = self.mesh.child()
+            
+        else:
 
+            self.spatial_dimensionality = 3
+            
+            Cavity.__init__(self, mesh_size = initial_mesh_size, zmin = -depth_3d/2., zmax = depth_3d/2.)
+            
+            for i in range(initial_hot_wall_refinement_cycles):
+            
+                cell_markers = fenics.CellFunction("bool", self.mesh, False)
+                
+                for cell in fenics.cells(self.mesh):
+                    
+                    found_left_boundary = False
+                    
+                    for vertex in fenics.vertices(cell):
+                        
+                        if fenics.near(vertex.x(0), 0.):
+                            
+                            found_left_boundary = True
+                            
+                            break
+                            
+                    if found_left_boundary:
+                        
+                        cell_markers[cell] = True
+                
+                self.mesh = fenics.refine(self.mesh, cell_markers)
+        
             
         # Set up the model.
         if initial_pci_position == None:
         
             initial_pci_position = \
-                1./float(initial_mesh_size)/2.**(initial_hot_wall_refinement_cycles - 1)
+                1./float(initial_mesh_size[0])/2.**(initial_hot_wall_refinement_cycles - 1)
         
         initial_temperature = "(T_hot - T_cold)*(x[0] < initial_pci_position) + T_cold"
         
@@ -576,19 +626,20 @@ class AdaptiveConvectionCoupledMeltingOctadecanePCM(Cavity):
         initial_temperature = initial_temperature.replace("T_hot", str(T_hot))
         
         initial_temperature = initial_temperature.replace("T_cold", str(T_cold))
-        
+
         self.model = phaseflow.pure_with_constant_properties.Model(
             mesh = self.mesh,
-            initial_values = ("0.", "0.", "0.", initial_temperature),
+            initial_values = ["0.",] + ["0.",]*self.spatial_dimensionality + [initial_temperature,],
             boundary_conditions = [
-                {"subspace": 1, "location": self.walls, "value": (0., 0.)},
+                {"subspace": 1, "location": self.walls, "value": (0.,)*self.spatial_dimensionality},
                 {"subspace": 2, "location": self.left_wall, "value": T_hot},
                 {"subspace": 2, "location": self.right_wall, "value": T_cold}],
             stefan_number = stefan_number,
             prandtl_number = prandtl_number,
             buoyancy = phaseflow.pure.IdealizedLinearBoussinesqBuoyancy(
                 rayleigh_numer = rayleigh_number, 
-                prandtl_number = prandtl_number),
+                prandtl_number = prandtl_number,
+                gravity = [0., -1.] + [0.,]*(self.spatial_dimensionality == 3)),
             semi_phasefield_mapping = phaseflow.pure.TanhSemiPhasefieldMapping(
                 regularization_central_temperature = regularization_central_temperature,
                 regularization_smoothing_parameter = regularization_smoothing_parameter),
@@ -611,26 +662,4 @@ class AdaptiveConvectionCoupledMeltingOctadecanePCM(Cavity):
         
         self.regularization_central_temperature = regularization_central_temperature
         
-        
-if __name__=='__main__':
-
-    LidDrivenCavity().run()
-    
-    AdaptiveLidDrivenCavity().run()
-    
-    LidDrivenCavityWithSolidSubdomain().run()
-    
-    HeatDrivenCavity().run()
-    
-    AdaptiveHeatDrivenCavity.run()
-    
-    HeatDrivenCavityWithWater().run()
-    
-    AdaptiveHeatDrivenCavityWithWater().run()
-    
-    StefanProblem.run()
-    
-    AdaptiveStefanProblem.run()
-    
-    AdaptiveConvectionCoupledMeltingOctadecanePCM.run()
     

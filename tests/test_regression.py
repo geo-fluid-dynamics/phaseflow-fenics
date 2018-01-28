@@ -7,11 +7,22 @@ import fenics
 class AdaptiveConvectionCoupledMeltingOctadecanePCM_Regression(
         phaseflow.benchmarks.AdaptiveConvectionCoupledMeltingOctadecanePCM):
 
-    def __init__(self):
+    def __init__(self, 
+            depth_3d = None, 
+            initial_mesh_size = (1, 1),
+            initial_hot_wall_refinement_cycles = 6,
+            end_time = 30.,
+            quadrature_degree = 8,
+            adaptive_solver_tolerance = 1.e-5):
     
         phaseflow.benchmarks.AdaptiveConvectionCoupledMeltingOctadecanePCM.__init__(self, 
-            timestep_size = 10.,
-            end_time = 30.)
+            timestep_size = 10., 
+            end_time = end_time, 
+            quadrature_degree = quadrature_degree,
+            depth_3d = depth_3d, 
+            initial_mesh_size = initial_mesh_size, 
+            initial_hot_wall_refinement_cycles = initial_hot_wall_refinement_cycles,
+            adaptive_solver_tolerance = adaptive_solver_tolerance)
     
         self.output_dir += "regression/"
         
@@ -29,7 +40,7 @@ class AdaptiveConvectionCoupledMeltingOctadecanePCM_Regression(
         reference_pci_x_position = 0.28
         
         def T_minus_T_r(x):
-        
+            
             values = self.model.state.solution.leaf_node()(fenics.Point(x, pci_y_position_to_check))
             
             return values[3] - self.regularization_central_temperature
@@ -39,14 +50,46 @@ class AdaptiveConvectionCoupledMeltingOctadecanePCM_Regression(
         
         assert(abs(pci_x_position - reference_pci_x_position) < 1.e-2)
         
+        
+class AdaptiveConvectionCoupledMeltingOctadecanePCM_3D_Regression(
+        AdaptiveConvectionCoupledMeltingOctadecanePCM_Regression):
 
+    def __init__(self):
+    
+        AdaptiveConvectionCoupledMeltingOctadecanePCM_Regression.__init__(self, 
+            end_time = 10., 
+            quadrature_degree = 7,
+            depth_3d = 0.5, 
+            initial_mesh_size = (1, 1, 1), 
+            initial_hot_wall_refinement_cycles = 4,
+            adaptive_solver_tolerance = 5.e-4)
+    
+        self.output_dir += "3d/"
+        
+        
+    def verify(self):
+
+        pci_y_position_to_check =  0.88
+        
+        reference_pci_x_position = 0.19
+        
+        def T_minus_T_r(x):
+            
+            values = self.model.state.solution.leaf_node()(fenics.Point(x, pci_y_position_to_check, 0.))
+            
+            return values[4] - self.regularization_central_temperature
+
+            
+        pci_x_position = scipy.optimize.newton(T_minus_T_r, 0.01)
+        
+        assert(abs(pci_x_position - reference_pci_x_position) < 1.e-2)
+        
 
 def test_adaptive_convection_coupled_melting_octadecane_pcm_regression():
 
     AdaptiveConvectionCoupledMeltingOctadecanePCM_Regression().run()
-    
-    
-if __name__=='__main__':
-    
-    test_adaptive_convection_coupled_melting_octadecane_pcm_regression()
-        
+
+
+def test_adaptive_convection_coupled_melting_octadecane_pcm_threed_regression():
+
+    AdaptiveConvectionCoupledMeltingOctadecanePCM_3D_Regression().run()    

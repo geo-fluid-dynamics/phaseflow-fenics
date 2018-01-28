@@ -46,14 +46,3 @@ def test_xdmf_context_unit():
     with fenics.XDMFFile("test.xdmf") as solution_file:
 
         return
-        
-
-if __name__=="__main__":
-    
-    test_1d_output_unit()
-    
-    test_1d_velocity_unit()
-    
-    test_xdmf_unit()
-
-    test_xdmf_context_unit()

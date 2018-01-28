@@ -25,17 +25,3 @@ def test_adaptive_heat_driven_cavity_with_water_benchmark():
 def test_adaptive_stefan_problem_benchmark():
 
     phaseflow.benchmarks.AdaptiveStefanProblem().run()
-    
-    
-if __name__=='__main__':
-    
-    test_adaptive_lid_driven_cavity_benchmark()
-    
-    test_adaptive_lid_driven_cavity_with_solid_subdomain_benchmark()
-    
-    test_adaptive_heat_driven_cavity_benchmark()
-    
-    test_adaptive_heat_driven_cavity_with_water_benchmark()
-    
-    test_adaptive_stefan_problem_benchmark()
-    
