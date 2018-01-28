@@ -36,6 +36,8 @@ class Benchmark:
         
         self.nlp_relative_tolerance = 1.e-9
         
+        self.initial_guess = None
+        
         
     def verify(self):
         
@@ -79,7 +81,8 @@ class Benchmark:
             nlp_max_iterations = self.nlp_max_iterations,
             nlp_relaxation = self.nlp_relaxation,
             nlp_absolute_tolerance = self.nlp_absolute_tolerance,
-            nlp_relative_tolerance = self.nlp_relative_tolerance)
+            nlp_relative_tolerance = self.nlp_relative_tolerance,
+            initial_guess = self.initial_guess)
         
         self.timestepper = phaseflow.core.TimeStepper(
             model = self.model,
@@ -534,30 +537,8 @@ class AdaptiveStefanProblem(StefanProblem):
         
         self.output_dir += "adaptive/"
         
-        
-    def run(self):
-        """ This test fails with the usual initial guess of w^0 = w_n,
-            but passes with w^0 = 0.
-        """
-        self.solver = phaseflow.core.Solver(
-            model = self.model, 
-            initial_guess = ("0.", "0.", "0."),
-            adaptive_goal_integrand = self.adaptive_goal_integrand, 
-            adaptive_solver_tolerance = self.adaptive_solver_tolerance)
-        
-        self.timestepper = phaseflow.core.TimeStepper(
-            model = self.model,
-            solver = self.solver,
-            output_dir = self.output_dir,
-            end_time = self.end_time,
-            stop_when_steady = self.stop_when_steady,
-            steady_relative_tolerance = self.steady_relative_tolerance,
-            adapt_timestep_to_unsteadiness = self.adapt_timestep_to_unsteadiness,
-            adaptive_time_power = self.adaptive_time_power)
-        
-        self.timestepper.run_until_end_time()
-            
-        self.verify()
+        """ This test fails with the usual initial guess of w^0 = w_n, but passes with w^0 = 0. """
+        self.initial_guess = ("0.", "0.", "0.")
         
             
 class AdaptiveConvectionCoupledMeltingOctadecanePCM(Cavity):
