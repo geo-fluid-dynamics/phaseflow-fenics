@@ -54,6 +54,8 @@ class State:
     
     def write_checkpoint(self, output_dir):
         """Write the checkpoint file (with solution and time)."""
+        phaseflow.helpers.makedir_p(output_dir)
+        
         filepath = output_dir + "/checkpoint_t" + str(self.time) + ".h5"
          
         phaseflow.helpers.print_once("Writing checkpoint file to " + filepath)
