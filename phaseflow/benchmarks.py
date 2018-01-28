@@ -151,7 +151,7 @@ class LidDrivenCavity(Cavity):
         
         self.timestep_size = timestep_size
         
-        self.model = phaseflow.pure_isotropic.Model(self.mesh,
+        self.model = phaseflow.pure_with_constant_properties.Model(self.mesh,
             initial_values = ("0.", self.top_wall, "0.", "1."),
             boundary_conditions = [
                 {"subspace": 1, "location": self.top_wall, "value": (1., 0.)},
@@ -233,7 +233,7 @@ class LidDrivenCavityWithSolidSubdomain(LidDrivenCavity):
         
     def setup_model(self, timestep_size = 20.):
     
-        self.model = phaseflow.pure_isotropic.Model(self.mesh,
+        self.model = phaseflow.pure_with_constant_properties.Model(self.mesh,
             initial_values = (
                 "0.", 
                 self.top_wall, 
@@ -294,7 +294,7 @@ class HeatDrivenCavity(Cavity):
         initial_values = ("0.", "0.", "0.",
             "T_hot + x[0]*(T_cold - T_hot)".replace("T_hot", str(T_hot)).replace("T_cold", str(T_cold)))
         
-        self.model = phaseflow.pure_isotropic.Model(self.mesh,
+        self.model = phaseflow.pure_with_constant_properties.Model(self.mesh,
             initial_values = initial_values,
             boundary_conditions = [
                 {"subspace": 1, "location": self.walls, "value": (0., 0.)},
@@ -365,7 +365,7 @@ class HeatDrivenCavityWithWater(Cavity):
         
         initial_temperature = initial_temperature.replace("scaled_T_cold", str(scaled_T_cold))
         
-        self.model = phaseflow.pure_isotropic.Model(self.mesh,
+        self.model = phaseflow.pure_with_constant_properties.Model(self.mesh,
             initial_values = ("0.", "0.", "0.", initial_temperature),
             boundary_conditions = [
                 {"subspace": 1, "location": self.walls, "value": (0., 0.)},
@@ -486,7 +486,7 @@ class StefanProblem(Benchmark):
 
         mesh = StefanProblem.refine_near_left_boundary(mesh, initial_hot_wall_refinement_cycles)
         
-        self.model = phaseflow.pure_isotropic.Model(
+        self.model = phaseflow.pure_with_constant_properties.Model(
             mesh = mesh,
             initial_values = ("0.", "0.", initial_temperature),
             boundary_conditions = [
@@ -619,7 +619,7 @@ class AdaptiveConvectionCoupledMeltingOctadecanePCM(Cavity):
         
         initial_temperature = initial_temperature.replace("T_cold", str(T_cold))
         
-        self.model = phaseflow.pure_isotropic.Model(
+        self.model = phaseflow.pure_with_constant_properties.Model(
             mesh = self.mesh,
             initial_values = ("0.", "0.", "0.", initial_temperature),
             boundary_conditions = [

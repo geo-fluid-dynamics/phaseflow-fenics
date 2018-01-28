@@ -20,7 +20,7 @@ def make_mixed_element(mesh_ufl_cell, pressure_degree = 1, temperature_degree = 
     return fenics.MixedElement([pressure_element, velocity_element, temperature_element])
 
 
-class PhaseDependentMaterialProperty(phaseflow.ContinuousFunction):
+class PhaseDependentMaterialProperty(phaseflow.core.ContinuousFunction):
 
     def __init__(self, semi_phasefield_mapping, liquid_value, solid_value):
     
@@ -41,10 +41,10 @@ class PhaseDependentMaterialProperty(phaseflow.ContinuousFunction):
         
             return (P_S - P_L)*dphi(T)
             
-        phaseflow.ContinuousFunction.__init__(self, function = P, derivative_function = dP)
+        phaseflow.core.ContinuousFunction.__init__(self, function = P, derivative_function = dP)
             
             
-class IdealizedLinearBoussinesqBuoyancy(phaseflow.ContinuousFunction):
+class IdealizedLinearBoussinesqBuoyancy(phaseflow.core.ContinuousFunction):
     
     def __init__(self, rayleigh_numer, prandtl_number, gravity = [0., -1.]):
     
@@ -69,10 +69,10 @@ class IdealizedLinearBoussinesqBuoyancy(phaseflow.ContinuousFunction):
 
             return Ra/(Pr*Re**2)*g
     
-        phaseflow.ContinuousFunction.__init__(self, function=f_B, derivative_function=df_B)
+        phaseflow.core.ContinuousFunction.__init__(self, function=f_B, derivative_function=df_B)
         
         
-class GebhartWaterBuoyancy(phaseflow.ContinuousFunction):
+class GebhartWaterBuoyancy(phaseflow.core.ContinuousFunction):
     """ Water buoyancy model centered around the density anomaly, published in \cite{gebhart1977}. """
     def __init__(self, hot_temperature, cold_temperature, rayleigh_numer, prandtl_number, 
             gravity = [0., -1.]):
@@ -127,10 +127,10 @@ class GebhartWaterBuoyancy(phaseflow.ContinuousFunction):
             return -Ra/(Pr*Re*Re)/(beta*(T_hot - T_cold))*(drho(T))/rho(scaled_T_fusion)*g
         
         
-        phaseflow.ContinuousFunction.__init__(self, function=f_B, derivative_function=df_B)
+        phaseflow.core.ContinuousFunction.__init__(self, function=f_B, derivative_function=df_B)
         
         
-class TanhSemiPhasefieldMapping(phaseflow.ContinuousFunction):
+class TanhSemiPhasefieldMapping(phaseflow.core.ContinuousFunction):
 
     def __init__(self, regularization_smoothing_parameter, regularization_central_temperature = 0.):
     
@@ -152,10 +152,10 @@ class TanhSemiPhasefieldMapping(phaseflow.ContinuousFunction):
         
             return -sech((T_r - T)/r)**2/(2.*r)
             
-        phaseflow.ContinuousFunction.__init__(self, function=phi, derivative_function=dphi)
+        phaseflow.core.ContinuousFunction.__init__(self, function=phi, derivative_function=dphi)
         
 
-class ConstantFunction(phaseflow.ContinuousFunction):
+class ConstantFunction(phaseflow.core.ContinuousFunction):
 
     def __init__(self, constant_value):
     
