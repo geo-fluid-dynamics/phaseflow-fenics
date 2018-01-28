@@ -3,12 +3,15 @@ import fenics
 import h5py
 import numpy
 import phaseflow.helpers
+import os
 
 
 class SolutionFile(fenics.XDMFFile):
 
     def __init__(self, filepath):
-    
+
+        phaseflow.helpers.mkdir_p(os.path.dirname(filepath))
+        
         fenics.XDMFFile.__init__(self, filepath)
         
         self.parameters["functions_share_mesh"] = True  
