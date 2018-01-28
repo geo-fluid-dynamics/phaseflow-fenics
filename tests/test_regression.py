@@ -17,7 +17,13 @@ class AdaptiveConvectionCoupledMeltingOctadecanePCM_Regression(
         
         
     def verify(self):
-        """ Test regression based on a previous solution from Phaseflow. """
+        """ Test regression based on a previous solution from Phaseflow.
+        In Paraview, the $T = 0.01$ (i.e. the regularization_central_temperature) contour was drawn
+        at time $t = 30.$ (i.e. the end_time).
+        A point from this contour in the upper portion of the domain, 
+        where the PCI has advanced more quickly, was recorded to be (0.278, 0.875).
+        This was checked for commit a8a8a039e5b89d71b6cceaef519dfbf136322639.
+        """
         pci_y_position_to_check =  0.88
         
         reference_pci_x_position = 0.28
