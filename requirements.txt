@@ -1,7 +1,6 @@
 fenics>=2017.1.0
 h5py
 pytest
-pytest-dependency
 scipy
 setuptools
 numpy
