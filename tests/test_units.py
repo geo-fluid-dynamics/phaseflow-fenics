@@ -63,10 +63,11 @@ def test_checkpoint_and_restart():
     
     assert(benchmark.model.state.time == benchmark2.model.state.time)
     
-    error = fenics.errornorm(benchmark.model.state.solution.leaf_node(),
-        benchmark2.model.state.solution.leaf_node())
+    solution = benchmark.model.state.solution.leaf_node()
     
-    print("Restart L2 errornorm =  " + str(error))
+    solution2 = benchmark2.model.state.solution.leaf_node()
     
-    assert(abs(error) < 1.e-15)
+    assert(fenics.errornorm(solution, solution2) < 1.e-15)
+    
+    assert(all(solution.vector() == solution2.vector()))
     
