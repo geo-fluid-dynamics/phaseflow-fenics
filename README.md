@@ -22,7 +22,7 @@ Author: Alexander G. Zimmerman <zimmerman@aices.rwth-aachen.de>
 
 - Thermal convection
 
-    Benchmarks: Heat-driven cavity (left), natural convection of water (right)
+    Benchmarks: Heat-driven cavity with linear Boussinesq buoyancy (left) and with nonlinear density anomaly of water (right)
     
     <img src="./docs/images/NaturalConvectionAir.png" width="360"> <img src="./docs/images/NaturalConvectionWater.png" width="360">
     
