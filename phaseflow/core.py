@@ -299,9 +299,11 @@ class TimeStepper:
         
         self.timestep_size = model.timestep_size
 
-        tempdir = tempfile.mkdtemp()
+        self.output_dir = "phaseflow/output/" + output_dir_suffix
         
-        self.output_dir = tempdir + "/phaseflow/output/" + output_dir_suffix
+        if prefix_output_dir_with_tempdir:
+        
+            self.output_dir = tempfile.mkdtemp() + "/" + self.output_dir
         
         self.solution_file = None
         
