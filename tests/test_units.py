@@ -1,6 +1,4 @@
 """ This module runs the unit test suite. """
-from __future__ import print_function
-from builtins import str
 from .context import phaseflow
 import fenics
 import tempfile

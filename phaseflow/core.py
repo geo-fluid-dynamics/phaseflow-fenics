@@ -3,7 +3,6 @@ import fenics
 import h5py
 import numpy
 import phaseflow.helpers
-import os
 import tempfile
 
 
