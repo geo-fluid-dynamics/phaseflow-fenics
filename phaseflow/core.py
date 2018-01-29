@@ -272,12 +272,19 @@ class TimeStepper:
             time_epsilon = time_epsilon,
             max_timesteps = 1000000000000,
             output_dir_suffix = None,
+            prefix_output_dir_with_tempdir = False,
             stop_when_steady = False,
             steady_relative_tolerance = 1.e-4,
             adapt_timestep_to_unsteadiness = False,
             adaptive_time_power = 1.,
             end_time = None): 
-    
+        """
+        Parameters
+        ----------
+        prefix_output_dir_with_tempdir : bool
+        
+            Sometimes it's necessary to write to a safe temporary directory, e.g. for Travis-CI.
+        """
         self.time_epsilon = time_epsilon
 
         self.max_timesteps = max_timesteps

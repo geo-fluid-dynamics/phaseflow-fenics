@@ -28,6 +28,8 @@ class Benchmark:
         
         self.initial_guess = None
         
+        self.prefix_output_dir_with_tempdir = False
+        
         
     def verify(self):
         
@@ -74,6 +76,7 @@ class Benchmark:
             model = self.model,
             solver = solver,
             output_dir_suffix = self.output_dir_suffix,
+            prefix_output_dir_with_tempdir = self.prefix_output_dir_with_tempdir,
             end_time = self.end_time,
             stop_when_steady = self.stop_when_steady,
             steady_relative_tolerance = self.steady_relative_tolerance,

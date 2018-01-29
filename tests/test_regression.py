@@ -26,6 +26,8 @@ class AdaptiveConvectionCoupledMeltingOctadecanePCM_Regression(
     
         self.output_dir += "regression/"
         
+        self.prefix_output_dir_with_tempdir = True
+        
         
     def verify(self):
         """ Test regression based on a previous solution from Phaseflow.

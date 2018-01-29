@@ -54,9 +54,13 @@ def test_checkpoint_and_restart():
 
     benchmark = phaseflow.benchmarks.AdaptiveLidDrivenCavity()
     
+    benchmark.prefix_output_dir_with_tempdir = True
+    
     benchmark.run()
     
     benchmark2 = phaseflow.benchmarks.AdaptiveLidDrivenCavity()
+    
+    benchmark2.prefix_output_dir_with_tempdir = True
     
     benchmark2.model.state.read_checkpoint(
         benchmark.output_dir + "/checkpoint_t" + str(benchmark.end_time) + ".h5")
