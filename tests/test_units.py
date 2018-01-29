@@ -3,6 +3,7 @@ from __future__ import print_function
 from builtins import str
 from .context import phaseflow
 import fenics
+import tempfile
 
 
 def test_1d_output_unit():
@@ -13,9 +14,10 @@ def test_1d_output_unit():
         
     function_space = fenics.FunctionSpace(mesh, mixed_element)
     
-    state = phaseflow.core.State(function_space)
+    state = phaseflow.core.State(function_space, mixed_element)
     
-    with phaseflow.core.SolutionFile("output/test_1D_output/solution.xdmf") as solution_file:
+    with phaseflow.core.SolutionFile(tempfile.mkdtemp() + "/output/test_1D_output/solution.xdmf") \
+            as solution_file:
      
         state.write_solution_to_xdmf(solution_file)
     
