@@ -24,7 +24,7 @@ class AdaptiveConvectionCoupledMeltingOctadecanePCM_Regression(
             initial_hot_wall_refinement_cycles = initial_hot_wall_refinement_cycles,
             adaptive_solver_tolerance = adaptive_solver_tolerance)
     
-        self.output_dir += "regression/"
+        self.output_dir_suffix += "regression/"
         
         self.prefix_output_dir_with_tempdir = True
         
@@ -66,7 +66,7 @@ class AdaptiveConvectionCoupledMeltingOctadecanePCM_3D_Regression(
             initial_hot_wall_refinement_cycles = 4,
             adaptive_solver_tolerance = 5.e-4)
     
-        self.output_dir += "3d/"
+        self.output_dir_suffix += "3d/"
         
         
     def verify(self):
