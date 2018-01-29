@@ -12,7 +12,9 @@ class Benchmark:
         
         self.adaptive_solver_tolerance = 1.e-4
         
-        self.output_dir = "benchmarks/"
+        self.output_dir_suffix = "benchmarks/"
+        
+        self.output_dir = None
         
         self.end_time = None
         
@@ -71,12 +73,14 @@ class Benchmark:
         timestepper = phaseflow.core.TimeStepper(
             model = self.model,
             solver = solver,
-            output_dir = self.output_dir,
+            output_dir_suffix = self.output_dir_suffix,
             end_time = self.end_time,
             stop_when_steady = self.stop_when_steady,
             steady_relative_tolerance = self.steady_relative_tolerance,
             adapt_timestep_to_unsteadiness = self.adapt_timestep_to_unsteadiness,
             adaptive_time_power = self.adaptive_time_power)
+        
+        self.output_dir = timestepper.output_dir
         
         timestepper.run_until_end_time()
             
@@ -163,7 +167,7 @@ class LidDrivenCavity(Cavity):
         
         self.end_time = timestep_size
         
-        self.output_dir += "lid_driven_cavity/"
+        self.output_dir_suffix += "lid_driven_cavity/"
     
     
     def verify(self):
@@ -189,7 +193,7 @@ class AdaptiveLidDrivenCavity(LidDrivenCavity):
         
         self.adaptive_solver_tolerance = 1.e-4
         
-        self.output_dir += "adaptive/"
+        self.output_dir_suffix += "adaptive/"
 
         
 class LidDrivenCavityWithSolidSubdomain(LidDrivenCavity):
@@ -252,7 +256,7 @@ class LidDrivenCavityWithSolidSubdomain(LidDrivenCavity):
             timestep_bounds = timestep_size,
             quadrature_degree = 3)
         
-        self.output_dir += "with_solid_subdomain/"
+        self.output_dir_suffix += "with_solid_subdomain/"
         
         
 class AdaptiveLidDrivenCavityWithSolidSubdomain(LidDrivenCavityWithSolidSubdomain):
@@ -274,7 +278,7 @@ class AdaptiveLidDrivenCavityWithSolidSubdomain(LidDrivenCavityWithSolidSubdomai
         
         self.adaptive_solver_tolerance = 1.e-5
         
-        self.output_dir += "adaptive/"
+        self.output_dir_suffix += "adaptive/"
     
     
 class HeatDrivenCavity(Cavity):
@@ -312,7 +316,7 @@ class HeatDrivenCavity(Cavity):
         
         self.adapt_timestep_to_unsteadiness = True
         
-        self.output_dir += "heat_driven_cavity/"
+        self.output_dir_suffix += "heat_driven_cavity/"
         
         
     def verify(self):
@@ -332,7 +336,7 @@ class AdaptiveHeatDrivenCavity(HeatDrivenCavity):
     
         HeatDrivenCavity.__init__(self, mesh_size = mesh_size)
         
-        self.output_dir += "adaptive/"
+        self.output_dir_suffix += "adaptive/"
         
         p, u, T = fenics.split(self.model.state.solution)
         
@@ -379,7 +383,7 @@ class HeatDrivenCavityWithWater(Cavity):
                 prandtl_number = self.Pr),
             timestep_bounds = (1.e-4, 1.e-3, 1.e-2))
             
-        self.output_dir += "heat_driven_cavity_with_water/"
+        self.output_dir_suffix += "heat_driven_cavity_with_water/"
 
         self.stop_when_steady = True
         
@@ -407,7 +411,7 @@ class AdaptiveHeatDrivenCavityWithWater(HeatDrivenCavityWithWater):
     
         HeatDrivenCavityWithWater.__init__(self, mesh_size = mesh_size)
         
-        self.output_dir += "adaptive/"
+        self.output_dir_suffix += "adaptive/"
         
         p, u, T = fenics.split(self.model.state.solution)
         
@@ -499,7 +503,7 @@ class StefanProblem(Benchmark):
 
         self.end_time = end_time
         
-        self.output_dir += "stefan_problem/"
+        self.output_dir_suffix += "stefan_problem/"
     
         self.stop_when_steady = False
         
@@ -530,7 +534,7 @@ class AdaptiveStefanProblem(StefanProblem):
         
         self.adaptive_solver_tolerance = 1.e-6
         
-        self.output_dir += "adaptive/"
+        self.output_dir_suffix += "adaptive/"
         
         """ This test fails with the usual initial guess of w^0 = w_n, but passes with w^0 = 0. """
         self.initial_guess = ("0.", "0.", "0.")
@@ -658,7 +662,7 @@ class AdaptiveConvectionCoupledMeltingOctadecanePCM(Cavity):
         
         self.stop_when_steady = False
         
-        self.output_dir += "adaptive_convection_coupled_melting_octadecane_pcm/"
+        self.output_dir_suffix += "adaptive_convection_coupled_melting_octadecane_pcm/"
         
         self.regularization_central_temperature = regularization_central_temperature
         

@@ -46,3 +46,25 @@ def test_xdmf_context_unit():
     with fenics.XDMFFile("test.xdmf") as solution_file:
 
         return
+
+        
+def test_checkpoint_and_restart():
+
+    benchmark = phaseflow.benchmarks.AdaptiveLidDrivenCavity()
+    
+    benchmark.run()
+    
+    benchmark2 = phaseflow.benchmarks.AdaptiveLidDrivenCavity()
+    
+    benchmark2.model.state.read_checkpoint(
+        benchmark.output_dir + "/checkpoint_t" + str(benchmark.end_time) + ".h5")
+    
+    assert(benchmark.model.state.time == benchmark2.model.state.time)
+    
+    error = fenics.errornorm(benchmark.model.state.solution.leaf_node(),
+        benchmark2.model.state.solution.leaf_node())
+    
+    print("Restart L2 errornorm =  " + str(error))
+    
+    assert(abs(error) < 1.e-15)
+    

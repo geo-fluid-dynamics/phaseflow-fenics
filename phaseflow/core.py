@@ -6,14 +6,11 @@ import phaseflow.helpers
 import os
 import tempfile
 
+
 class SolutionFile(fenics.XDMFFile):
 
     def __init__(self, filepath):
 
-        tempdir = tempfile.mkdtemp()
-        
-        filepath = tempdir + "/phaseflow/output/" + filepath
-        
         fenics.XDMFFile.__init__(self, filepath)
         
         self.parameters["functions_share_mesh"] = True  
@@ -23,11 +20,24 @@ class SolutionFile(fenics.XDMFFile):
     
 class State:
 
-    def __init__(self, function_space, time = 0.):
-    
+    def __init__(self, function_space, element, time = 0.):
+        """ 
+        Parameters
+        ----------
+        function_space : fenics.FunctionSpace
+        
+        element : fenics.MixedElement
+        
+            Referencing the element here is necessary for the read_checkpoint method,
+            since the type of function_space
+            
+        time : float
+        """
         self.solution = fenics.Function(function_space)
         
         self.time = time
+        
+        self.element = element
         
     
     def write_solution_to_xdmf(self, file):
@@ -55,11 +65,7 @@ class State:
         
     
     def write_checkpoint(self, output_dir):
-        """Write the checkpoint file (with solution and time)."""
-        tempdir = tempfile.mkdtemp()
-        
-        output_dir = tempdir + "/phaseflow/output/"  + output_dir
-        
+        """Write the checkpoint file (with solution and time)."""        
         filepath = output_dir + "/checkpoint_t" + str(self.time) + ".h5"
          
         phaseflow.helpers.print_once("Writing checkpoint file to " + filepath)
@@ -87,7 +93,7 @@ class State:
         
             h5.read(mesh, "mesh", True)
         
-        function_space = fenics.FunctionSpace(mesh, self.solution.function_space().element())
+        function_space = fenics.FunctionSpace(mesh, self.element)
 
         self.solution = fenics.Function(function_space)
 
@@ -123,9 +129,9 @@ class Model:
         
         self.function_space = fenics.FunctionSpace(mesh, element)
         
-        self.state = State(self.function_space)
+        self.state = State(self.function_space, self.element)
 
-        self.old_state = State(self.function_space)
+        self.old_state = State(self.function_space, self.element)
         
         self.old_state.solution = fenics.interpolate(
             fenics.Expression(initial_values, element = element), 
@@ -265,7 +271,7 @@ class TimeStepper:
             solver,
             time_epsilon = time_epsilon,
             max_timesteps = 1000000000000,
-            output_dir = None,
+            output_dir_suffix = None,
             stop_when_steady = False,
             steady_relative_tolerance = 1.e-4,
             adapt_timestep_to_unsteadiness = False,
@@ -286,7 +292,9 @@ class TimeStepper:
         
         self.timestep_size = model.timestep_size
 
-        self.output_dir = output_dir
+        tempdir = tempfile.mkdtemp()
+        
+        self.output_dir = tempdir + "/phaseflow/output/" + output_dir_suffix
         
         self.solution_file = None
         
@@ -302,99 +310,86 @@ class TimeStepper:
         
         
     def run_until_end_time(self):
-        """ Optionally run inside of a file context manager.
-        Without this, exceptions are more likely to corrupt the outputs.
-        """
-        if self.output_dir is None:
         
-            self.__run_until_end_time()
+        solution_filepath = self.output_dir + "/solution.xdmf"
+    
+        with SolutionFile(solution_filepath) as self.solution_file:
+            """ Run inside of a file context manager.
+            Without this, exceptions are more likely to corrupt the outputs.
+            """
+            self.old_state.write_solution_to_xdmf(self.solution_file)
         
-        else:
-        
-            solution_filepath = self.output_dir + "/solution.xdmf"
-        
-            with SolutionFile(solution_filepath) as self.solution_file:
-            
-                self.old_state.write_solution_to_xdmf(self.solution_file)
-            
-                self.__run_until_end_time()
-                
-        
-    def __run_until_end_time(self):
+            start_time = 0. + self.state.time
 
-        start_time = 0. + self.state.time
-
-        if self.end_time is not None:
-        
-            if start_time >= self.end_time - self.time_epsilon:
-        
-                phaseflow.helpers.print_once(
-                    "Start time is already too close to end time. Only writing initial values.")
-                
-                return
-            
-            
-        # Run solver for each time step until reaching end time.
-        progress = fenics.Progress("Time-stepping")
-        
-        fenics.set_log_level(fenics.PROGRESS)
-        
-        for it in range(1, self.max_timesteps):
-            
             if self.end_time is not None:
             
-                if(self.state.time > self.end_time - self.time_epsilon):
+                if start_time >= self.end_time - self.time_epsilon:
+            
+                    phaseflow.helpers.print_once(
+                        "Start time is already too close to end time. Only writing initial values.")
                     
-                    break
+                    return
+                
+                
+            # Run solver for each time step until reaching end time.
+            progress = fenics.Progress("Time-stepping")
             
-            self.solver.solve()
-        
-            self.state.time += self.timestep_size.value
-    
-            phaseflow.helpers.print_once("Reached time t = " + str(self.state.time))
+            fenics.set_log_level(fenics.PROGRESS)
             
-            if self.output_dir is not None:
+            for it in range(1, self.max_timesteps):
+                
+                if self.end_time is not None:
+                
+                    if(self.state.time > self.end_time - self.time_epsilon):
+                        
+                        break
+                
+                self.solver.solve()
             
+                self.state.time += self.timestep_size.value
+
+                phaseflow.helpers.print_once("Reached time t = " + str(self.state.time))
+                
                 self.state.write_solution_to_xdmf(self.solution_file)
 
                 self.state.write_checkpoint(output_dir = self.output_dir)
-            
-            
-            # Check for steady state.
-            if self.stop_when_steady:
-            
-                self.set_unsteadiness()
                 
-                if (self.unsteadiness < self.steady_relative_tolerance):
-            
-                    steady = True
+                
+                # Check for steady state.
+                if self.stop_when_steady:
+                
+                    self.set_unsteadiness()
                     
-                    phaseflow.helpers.print_once("Reached steady state at time t = " + str(self.state.time))
-                    
-                    break
-                    
-                if self.adapt_timestep_to_unsteadiness:
-
-                    new_timestep_size = \
-                        self.timestep_size.value/self.unsteadiness**self.adaptive_time_power
-                    
-                    self.model.set_timestep_size_value(new_timestep_size)
+                    if (self.unsteadiness < self.steady_relative_tolerance):
+                
+                        steady = True
                         
-            if self.end_time is not None:
-            
-                progress.update(self.state.time / self.end_time)
+                        phaseflow.helpers.print_once("Reached steady state at time t = " + str(self.state.time))
+                        
+                        break
+                        
+                    if self.adapt_timestep_to_unsteadiness:
+
+                        new_timestep_size = \
+                            self.timestep_size.value/self.unsteadiness**self.adaptive_time_power
+                        
+                        self.model.set_timestep_size_value(new_timestep_size)
+                            
+                if self.end_time is not None:
                 
-                if self.state.time >= (self.end_time - fenics.dolfin.DOLFIN_EPS):
+                    progress.update(self.state.time / self.end_time)
+                    
+                    if self.state.time >= (self.end_time - fenics.dolfin.DOLFIN_EPS):
+                    
+                        phaseflow.helpers.print_once("Reached end time, t = " + str(self.end_time))
+                    
+                        break
+                    
+                    
+                # Set initial values for next time step.
+                self.old_state.solution.leaf_node().vector()[:] = self.state.solution.leaf_node().vector()
                 
-                    phaseflow.helpers.print_once("Reached end time, t = " + str(self.end_time))
-                
-                    break
-                
-                
-            # Set initial values for next time step.
-            self.old_state.solution.leaf_node().vector()[:] = self.state.solution.leaf_node().vector()
-            
-            self.old_state.time = 0. + self.state.time
+                self.old_state.time = 0. + self.state.time
     
         
     def set_unsteadiness(self):
