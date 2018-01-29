@@ -14,15 +14,15 @@ We present the mathematical model, the numerical methods, the Phaseflow implemen
 Author: Alexander G. Zimmerman <zimmerman@aices.rwth-aachen.de>
 
 ## Current capabilities
-- Unsteady incompressible flow
+- Incompressible flow
 
     Benchmark: Lid-driven cavity
     
     <img src="./docs/images/LidDrivenCavity.png" width="360">
 
-- Thermal convection
+- Thermally driven convection
 
-    Benchmarks: Heat-driven cavity (left), natural convection of water (right)
+    Benchmarks: Heat-driven cavity with linear buoyancy (left) and with nonlinear density anomaly of water (right)
     
     <img src="./docs/images/NaturalConvectionAir.png" width="360"> <img src="./docs/images/NaturalConvectionWater.png" width="360">
     
@@ -59,7 +59,7 @@ Pull the latest version of the master branch
 
 Run tests
 
-    python3 -m pytest -v -s -k "not debug"
+    python3 -m pytest -v -s -k "(not failing) and (not 3d)"
 
 ## Some Docker details
 To share a folder between the host container, and to name the container for future use (with start/stop), enter
