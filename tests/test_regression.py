@@ -12,12 +12,14 @@ class AdaptiveConvectionCoupledMeltingOctadecanePCM_Regression(
             initial_mesh_size = (1, 1),
             initial_hot_wall_refinement_cycles = 6,
             end_time = 30.,
+            automatic_jacobian = False,
             quadrature_degree = 8,
             adaptive_solver_tolerance = 1.e-5):
     
         phaseflow.benchmarks.AdaptiveConvectionCoupledMeltingOctadecanePCM.__init__(self, 
             timestep_size = 10., 
             end_time = end_time, 
+            automatic_jacobian = automatic_jacobian,
             quadrature_degree = quadrature_degree,
             depth_3d = depth_3d, 
             initial_mesh_size = initial_mesh_size, 
@@ -56,10 +58,11 @@ class AdaptiveConvectionCoupledMeltingOctadecanePCM_Regression(
 class AdaptiveConvectionCoupledMeltingOctadecanePCM_3D_Regression(
         AdaptiveConvectionCoupledMeltingOctadecanePCM_Regression):
 
-    def __init__(self):
+    def __init__(self, automatic_jacobian = False):
     
         AdaptiveConvectionCoupledMeltingOctadecanePCM_Regression.__init__(self, 
             end_time = 10., 
+            automatic_jacobian = automatic_jacobian,
             quadrature_degree = 7,
             depth_3d = 0.5, 
             initial_mesh_size = (1, 1, 1), 
@@ -87,11 +90,17 @@ class AdaptiveConvectionCoupledMeltingOctadecanePCM_3D_Regression(
         assert(abs(pci_x_position - reference_pci_x_position) < 1.e-2)
         
 
-def test_adaptive_convection_coupled_melting_octadecane_pcm_regression():
+def test_adaptive_convection_coupled_melting_octadecane_pcm_regression__ci__():
 
     AdaptiveConvectionCoupledMeltingOctadecanePCM_Regression().run()
 
 
-def test_adaptive_convection_coupled_melting_octadecane_pcm_threed_regression():
+def test_adaptive_convection_coupled_melting_octadecane_pcm_3d_regression():
 
     AdaptiveConvectionCoupledMeltingOctadecanePCM_3D_Regression().run()    
+
+    
+def test_adaptive_convection_coupled_melting_octadecane_pcm_regression_autodiff__ci__():
+
+    AdaptiveConvectionCoupledMeltingOctadecanePCM_Regression(automatic_jacobian = True).run()
+    

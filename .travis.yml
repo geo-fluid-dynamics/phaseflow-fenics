@@ -17,4 +17,4 @@ before_install:
 - docker pull zimmerman/phaseflow-fenics:latest
 
 script:
-- docker run --rm -P -v `pwd`:/home/fenics/shared -w /home/fenics/shared zimmerman/phaseflow-fenics:latest "pip3 install --user -r requirements.txt && pip3 install --user --upgrade . && python3 -m pytest -v -k '(not failing) and (not threed)'" 
+- docker run --rm -P -v `pwd`:/home/fenics/shared -w /home/fenics/shared zimmerman/phaseflow-fenics:latest "pip3 install --user -r requirements.txt && pip3 install --user --upgrade . && python3 -m pytest -v -k '_ci_'" 
