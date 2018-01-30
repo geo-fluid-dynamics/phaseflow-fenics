@@ -36,8 +36,12 @@ class Benchmark:
         assert(False)
         
     
-    def verify_scalar_solution_component(self, component, points, verified_values, 
-        relative_tolerance, absolute_tolerance):
+    def verify_scalar_solution_component(self, 
+            component, 
+            points, 
+            verified_values, 
+            relative_tolerance, 
+            absolute_tolerance):
     
         assert(len(verified_values) == len(points))
         
@@ -148,7 +152,8 @@ class LidDrivenCavity(Cavity):
     def __init__(self, 
             mesh_size = 20, 
             ymin = 0., 
-            timestep_size = 1.e12):
+            timestep_size = 1.e12,
+            automatic_jacobian = False):
     
         Cavity.__init__(self, mesh_size = mesh_size, ymin = ymin)
         
@@ -166,7 +171,8 @@ class LidDrivenCavity(Cavity):
                 {"subspace": 1, "location": self.top_wall, "value": (1., 0.)},
                 {"subspace": 1, "location": self.fixed_walls, "value": (0., 0.)}],
             timestep_bounds = timestep_size,
-            liquid_viscosity = 0.01)
+            liquid_viscosity = 0.01,
+            automatic_jacobian = automatic_jacobian)
         
         self.end_time = timestep_size
         
@@ -186,9 +192,13 @@ class LidDrivenCavity(Cavity):
     
 class AdaptiveLidDrivenCavity(LidDrivenCavity):
 
-    def __init__(self, mesh_size = 2, ymin = 0., timestep_size = 1.e12):
+    def __init__(self, mesh_size = 2, ymin = 0., timestep_size = 1.e12, automatic_jacobian = False):
     
-        LidDrivenCavity.__init__(self, mesh_size = mesh_size, ymin = ymin, timestep_size = timestep_size)
+        LidDrivenCavity.__init__(self, 
+            mesh_size = mesh_size, 
+            ymin = ymin, 
+            timestep_size = timestep_size,
+            automatic_jacobian = automatic_jacobian)
         
         p, u, T = fenics.split(self.model.state.solution)
         
@@ -203,9 +213,14 @@ class LidDrivenCavityWithSolidSubdomain(LidDrivenCavity):
 
     y_pci = 0.
     
-    def __init__(self, mesh_size = [20, 25], pci_refinement_cycles = 4, timestep_size = 20.):
+    def __init__(self, 
+            mesh_size = [20, 25], 
+            pci_refinement_cycles = 4, 
+            timestep_size = 20.,
+            automatic_jacobian = False):
     
-        LidDrivenCavity.__init__(self, mesh_size = mesh_size, ymin = -0.25, timestep_size = timestep_size)
+        LidDrivenCavity.__init__(self, mesh_size = mesh_size, ymin = -0.25, timestep_size = timestep_size,
+            automatic_jacobian = automatic_jacobian)
         
         self.relative_tolerance = 8.e-2  # @todo This is quite large.
         
@@ -213,7 +228,7 @@ class LidDrivenCavityWithSolidSubdomain(LidDrivenCavity):
         
         self.refine_near_y_pci(pci_refinement_cycles = pci_refinement_cycles)
         
-        self.setup_model(timestep_size = timestep_size)
+        self.setup_model(timestep_size = timestep_size, automatic_jacobian = automatic_jacobian)
         
         
     def refine_near_y_pci(self, pci_refinement_cycles = 4):   
@@ -238,7 +253,7 @@ class LidDrivenCavityWithSolidSubdomain(LidDrivenCavity):
             self.mesh = self.mesh.child()
         
         
-    def setup_model(self, timestep_size = 20.):
+    def setup_model(self, timestep_size = 20., automatic_jacobian = False):
     
         self.model = phaseflow.pure_with_constant_properties.Model(self.mesh,
             initial_values = (
@@ -257,7 +272,8 @@ class LidDrivenCavityWithSolidSubdomain(LidDrivenCavity):
                 regularization_central_temperature = -0.01,
                 regularization_smoothing_parameter = 0.01),
             timestep_bounds = timestep_size,
-            quadrature_degree = 3)
+            quadrature_degree = 3,
+            automatic_jacobian = automatic_jacobian)
         
         self.output_dir_suffix += "with_solid_subdomain/"
         
@@ -267,11 +283,10 @@ class AdaptiveLidDrivenCavityWithSolidSubdomain(LidDrivenCavityWithSolidSubdomai
     Unfortunately, the adaptive solver computes an error estimate of exactly 0,
     which seems to be a bug in FEniCS.
     We'll want to make a MWE and investigate. For now let's leave this failing benchmark here."""
-    def __init__(self):
+    def __init__(self, automatic_jacobian = False):
     
-        LidDrivenCavityWithSolidSubdomain.__init__(self, 
-            mesh_size = (4, 5),
-            pci_refinement_cycles = 4)
+        LidDrivenCavityWithSolidSubdomain.__init__(self, mesh_size = (4, 5), pci_refinement_cycles = 4,
+            automatic_jacobian = automatic_jacobian)
         
         self.end_time = 2.*self.timestep_size
         
@@ -286,7 +301,7 @@ class AdaptiveLidDrivenCavityWithSolidSubdomain(LidDrivenCavityWithSolidSubdomai
     
 class HeatDrivenCavity(Cavity):
 
-    def __init__(self, mesh_size = 20):
+    def __init__(self, mesh_size = 20, automatic_jacobian = False):
     
         Cavity.__init__(self, mesh_size = mesh_size)
         
@@ -311,7 +326,8 @@ class HeatDrivenCavity(Cavity):
             buoyancy = phaseflow.pure.IdealizedLinearBoussinesqBuoyancy(
                 rayleigh_numer = self.Ra, 
                 prandtl_number = self.Pr),
-            timestep_bounds = (1.e-4, 1.e-3, 1.e12))
+            timestep_bounds = (1.e-4, 1.e-3, 1.e12),
+            automatic_jacobian = automatic_jacobian)
             
         self.stop_when_steady = True
         
@@ -335,9 +351,9 @@ class HeatDrivenCavity(Cavity):
     
 class AdaptiveHeatDrivenCavity(HeatDrivenCavity):
     
-    def __init__(self, mesh_size = 2):
+    def __init__(self, mesh_size = 2, automatic_jacobian = False):
     
-        HeatDrivenCavity.__init__(self, mesh_size = mesh_size)
+        HeatDrivenCavity.__init__(self, mesh_size = mesh_size, automatic_jacobian = automatic_jacobian)
         
         self.output_dir_suffix += "adaptive/"
         
@@ -350,7 +366,7 @@ class AdaptiveHeatDrivenCavity(HeatDrivenCavity):
         
 class HeatDrivenCavityWithWater(Cavity):
 
-    def __init__(self, mesh_size = 40):
+    def __init__(self, mesh_size = 40, automatic_jacobian = False):
     
         Cavity.__init__(self, mesh_size = mesh_size)
         
@@ -384,7 +400,8 @@ class HeatDrivenCavityWithWater(Cavity):
                 cold_temperature = T_cold,
                 rayleigh_numer = self.Ra, 
                 prandtl_number = self.Pr),
-            timestep_bounds = (1.e-4, 1.e-3, 1.e-2))
+            timestep_bounds = (1.e-4, 1.e-3, 1.e-2),
+            automatic_jacobian = automatic_jacobian)
             
         self.output_dir_suffix += "heat_driven_cavity_with_water/"
 
@@ -410,9 +427,10 @@ class HeatDrivenCavityWithWater(Cavity):
             
 class AdaptiveHeatDrivenCavityWithWater(HeatDrivenCavityWithWater):
     
-    def __init__(self, mesh_size = 4):
+    def __init__(self, mesh_size = 4, automatic_jacobian = False):
     
-        HeatDrivenCavityWithWater.__init__(self, mesh_size = mesh_size)
+        HeatDrivenCavityWithWater.__init__(self, mesh_size = mesh_size, 
+            automatic_jacobian = automatic_jacobian)
         
         self.output_dir_suffix += "adaptive/"
         
@@ -464,14 +482,15 @@ class StefanProblem(Benchmark):
         return mesh
             
 
-    def __init__(self,
-            T_hot = 1.,
-            T_cold = -0.01,
+    def __init__(self, 
+            T_hot = 1., 
+            T_cold = -0.01, 
             regularization_smoothing_parameter = 0.005,
             timestep_size = 1.e-3,
-            initial_uniform_cell_count = 311,
-            initial_hot_wall_refinement_cycles = 0,
             end_time = 0.1,
+            initial_uniform_cell_count = 311, 
+            initial_hot_wall_refinement_cycles = 0,
+            automatic_jacobian = False, 
             quadrature_degree = None):
     
         Benchmark.__init__(self)
@@ -502,6 +521,7 @@ class StefanProblem(Benchmark):
                 regularization_central_temperature = 0.,
                 regularization_smoothing_parameter = regularization_smoothing_parameter),
             timestep_bounds = timestep_size,
+            automatic_jacobian = automatic_jacobian,
             quadrature_degree = quadrature_degree)
 
         self.end_time = end_time
@@ -523,11 +543,12 @@ class StefanProblem(Benchmark):
 
 class AdaptiveStefanProblem(StefanProblem):
 
-    def __init__(self):
+    def __init__(self, automatic_jacobian = False):
     
         StefanProblem.__init__(self,
             initial_uniform_cell_count = 4,
-            initial_hot_wall_refinement_cycles = 8)
+            initial_hot_wall_refinement_cycles = 8,
+            automatic_jacobian = automatic_jacobian)
         
         p, u, T = fenics.split(self.model.state.solution)
         
@@ -561,6 +582,7 @@ class AdaptiveConvectionCoupledMeltingOctadecanePCM(Cavity):
             regularization_smoothing_parameter = 0.025,
             end_time = 80.,
             adaptive_solver_tolerance = 1.e-5,
+            automatic_jacobian = False,
             quadrature_degree = 8,
             depth_3d = None):
     
@@ -651,6 +673,7 @@ class AdaptiveConvectionCoupledMeltingOctadecanePCM(Cavity):
                 regularization_central_temperature = regularization_central_temperature,
                 regularization_smoothing_parameter = regularization_smoothing_parameter),
             timestep_bounds = timestep_size,
+            automatic_jacobian = automatic_jacobian,
             quadrature_degree = quadrature_degree)
         
         phi = self.model.semi_phasefield_mapping.function

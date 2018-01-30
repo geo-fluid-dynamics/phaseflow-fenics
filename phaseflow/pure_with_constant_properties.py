@@ -18,6 +18,7 @@ class Model(phaseflow.core.Model):
             solid_viscosity = 1.e8,
             gravity = None,
             penalty_parameter = 1.e-7,
+            automatic_jacobian = False,
             quadrature_degree = None):
         """
         Parameters
@@ -127,33 +128,41 @@ class Model(phaseflow.core.Model):
             + dot(grad(psi_T), 1./Pr*grad(T) - T*u)        
             )*dx
 
-            
-        # Set the Gateaux derivative in variational form.
-        df_B = buoyancy.derivative_function
         
-        dphi = semi_phasefield_mapping.derivative_function
-        
-        dmu = phase_dependent_viscosity.derivative_function
-            
+        # Set the derivative of the variational form for linearizing the nonlinear problem.
         delta_w = fenics.TrialFunction(W)
         
-        delta_p, delta_u, delta_T = fenics.split(delta_w)
+        if automatic_jacobian:
         
-        w_k = w
+            self.derivative_of_variational_form = fenics.derivative(self.variational_form, w, delta_w)
         
-        p_k, u_k, T_k = fenics.split(w_k)
+        else:
         
-        self.derivative_of_variational_form = (
-            b(delta_u, psi_p) - psi_p*gamma*delta_p 
-            + dot(psi_u, 1./Delta_t*delta_u + delta_T*df_B(T_k))
-            + c(u_k, delta_u, psi_u) + c(delta_u, u_k, psi_u) 
-            + b(psi_u, delta_p) 
-            + a(delta_T*dmu(T_k), u_k, psi_u) + a(mu(T_k), delta_u, psi_u) 
-            + 1./Delta_t*psi_T*delta_T*(1. - 1./Ste*dphi(T_k))
-            + dot(grad(psi_T), 1./Pr*grad(delta_T) - T_k*delta_u - delta_T*u_k)
-            )*dx
-
+        
+            # Set the manually derived Gateaux derivative in variational form.
+            df_B = buoyancy.derivative_function
             
+            dphi = semi_phasefield_mapping.derivative_function
+            
+            dmu = phase_dependent_viscosity.derivative_function
+            
+            delta_p, delta_u, delta_T = fenics.split(delta_w)
+            
+            w_k = w
+            
+            p_k, u_k, T_k = fenics.split(w_k)
+            
+            self.derivative_of_variational_form = (
+                b(delta_u, psi_p) - psi_p*gamma*delta_p 
+                + dot(psi_u, 1./Delta_t*delta_u + delta_T*df_B(T_k))
+                + c(u_k, delta_u, psi_u) + c(delta_u, u_k, psi_u) 
+                + b(psi_u, delta_p) 
+                + a(delta_T*dmu(T_k), u_k, psi_u) + a(mu(T_k), delta_u, psi_u) 
+                + 1./Delta_t*psi_T*delta_T*(1. - 1./Ste*dphi(T_k))
+                + dot(grad(psi_T), 1./Pr*grad(delta_T) - T_k*delta_u - delta_T*u_k)
+                )*dx
+        
+        
         #
         self.setup_problem()
         

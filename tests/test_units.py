@@ -4,7 +4,7 @@ import fenics
 import tempfile
 
 
-def test_1d_output_unit():
+def test_1d_output_unit__ci__():
 
     mesh = fenics.UnitIntervalMesh(5)
     
@@ -20,7 +20,7 @@ def test_1d_output_unit():
         state.write_solution_to_xdmf(solution_file)
     
         
-def test_1d_velocity_unit():
+def test_1d_velocity_unit__ci__():
 
     mesh = fenics.UnitIntervalMesh(5)
 
@@ -33,7 +33,7 @@ def test_1d_velocity_unit():
     print(bc.get_boundary_values())
     
     
-def test_xdmf_unit():
+def test_xdmf_unit__ci__():
 
     solution_file = fenics.XDMFFile("test.xdmf")
 
@@ -41,14 +41,14 @@ def test_xdmf_unit():
 '''This test seems to fail with fenics-2016.2.0. 
 I vaguely recall seeing an issue on their Bitbucket which mentions having
 not always used the proper context manager style with some of their file classes.'''
-def test_xdmf_context_unit():
+def test_xdmf_context_unit__ci__():
 
     with fenics.XDMFFile("test.xdmf") as solution_file:
 
         return
 
         
-def test_checkpoint_and_restart():
+def test_checkpoint_and_restart__ci__():
 
     benchmark = phaseflow.benchmarks.AdaptiveLidDrivenCavity()
     

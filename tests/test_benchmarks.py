@@ -2,47 +2,67 @@
 from .context import phaseflow
 
 
-def test_adaptive_lid_driven_cavity_benchmark():
-    
-    benchmark = phaseflow.benchmarks.AdaptiveLidDrivenCavity()
-    
-    benchmark.prefix_output_dir_with_tempdir = True
-    
-    benchmark.run()
+class BenchmarkTest():
 
+    def __init__(self, benchmark):
+    
+        self.benchmark = benchmark
+        
+        self.benchmark.prefix_output_dir_with_tempdir = True
+        
+        
+    def run(self):
+    
+        self.benchmark.run()    
+    
+        
 
-def test_adaptive_lid_driven_cavity_with_solid_subdomain_benchmark():
+def test_adaptive_lid_driven_cavity_benchmark__ci__():
     
-    benchmark = phaseflow.benchmarks.AdaptiveLidDrivenCavityWithSolidSubdomain()
+    BenchmarkTest(phaseflow.benchmarks.AdaptiveLidDrivenCavity()).run()
+    
 
-    benchmark.prefix_output_dir_with_tempdir = True
+def test_adaptive_lid_driven_cavity_with_solid_subdomain_benchmark__ci__():
     
-    benchmark.run()
+    BenchmarkTest(phaseflow.benchmarks.AdaptiveLidDrivenCavityWithSolidSubdomain()).run()
     
     
-def test_adaptive_heat_driven_cavity_benchmark():
+def test_adaptive_heat_driven_cavity_benchmark__ci__():
     
-    benchmark = phaseflow.benchmarks.AdaptiveHeatDrivenCavity()
-    
-    benchmark.prefix_output_dir_with_tempdir = True
-    
-    benchmark.run()
+    BenchmarkTest(phaseflow.benchmarks.AdaptiveHeatDrivenCavity()).run()
 
     
 def test_adaptive_heat_driven_cavity_with_water_benchmark():
     
-    benchmark = phaseflow.benchmarks.AdaptiveHeatDrivenCavityWithWater()
-    
-    benchmark.prefix_output_dir_with_tempdir = True
-    
-    benchmark.run()
+    BenchmarkTest(phaseflow.benchmarks.AdaptiveHeatDrivenCavityWithWater()).run()
     
     
-def test_adaptive_stefan_problem_benchmark():
+def test_adaptive_stefan_problem_benchmark__ci__():
 
-    benchmark = phaseflow.benchmarks.AdaptiveStefanProblem()
+    BenchmarkTest(phaseflow.benchmarks.AdaptiveStefanProblem()).run()
 
-    benchmark.prefix_output_dir_with_tempdir = True
+
+def test_adaptive_lid_driven_cavity_benchmark_autodiff():
     
-    benchmark.run()
+    BenchmarkTest(phaseflow.benchmarks.AdaptiveLidDrivenCavity(automatic_jacobian = True)).run()
     
+
+def test_adaptive_lid_driven_cavity_with_solid_subdomain_benchmark_autodiff():
+    
+    BenchmarkTest(phaseflow.benchmarks.AdaptiveLidDrivenCavityWithSolidSubdomain(
+        automatic_jacobian = True)).run()
+    
+    
+def test_adaptive_heat_driven_cavity_benchmark_autodiff():
+    
+    BenchmarkTest(phaseflow.benchmarks.AdaptiveHeatDrivenCavity(automatic_jacobian = True)).run()
+
+    
+def test_adaptive_heat_driven_cavity_with_water_benchmark_autodiff():
+    
+    BenchmarkTest(phaseflow.benchmarks.AdaptiveHeatDrivenCavityWithWater(automatic_jacobian = True)).run()
+    
+    
+def test_adaptive_stefan_problem_benchmark_autodiff():
+
+    BenchmarkTest(phaseflow.benchmarks.AdaptiveStefanProblem(automatic_jacobian = True)).run()
