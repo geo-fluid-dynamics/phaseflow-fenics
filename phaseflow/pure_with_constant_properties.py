@@ -91,7 +91,7 @@ class Model(phaseflow.core.Model):
         
         f_B = buoyancy.function
         
-        phi = semi_phasefield_mapping.function
+        phi = semi_phasefield_mapping
         
         gamma = fenics.Constant(penalty_parameter)
         
@@ -100,7 +100,6 @@ class Model(phaseflow.core.Model):
         mu_S = fenics.Constant(solid_viscosity)
         
         phase_dependent_viscosity = phaseflow.pure.PhaseDependentMaterialProperty(
-            semi_phasefield_mapping = semi_phasefield_mapping,
             liquid_value = mu_L,
             solid_value = mu_S)
         
@@ -123,7 +122,7 @@ class Model(phaseflow.core.Model):
         self.variational_form = (
             b(u, psi_p) - psi_p*gamma*p
             + dot(psi_u, 1./Delta_t*(u - u_n) + f_B(T))
-            + c(u, u, psi_u) + b(psi_u, p) + a(mu(T), u, psi_u)
+            + c(u, u, psi_u) + b(psi_u, p) + a(mu(phi,T), u, psi_u)
             + 1./Delta_t*psi_T*(T - T_n - 1./Ste*(phi(T) - phi(T_n)))
             + dot(grad(psi_T), 1./Pr*grad(T) - T*u)        
             )*dx
@@ -157,7 +156,7 @@ class Model(phaseflow.core.Model):
                 + dot(psi_u, 1./Delta_t*delta_u + delta_T*df_B(T_k))
                 + c(u_k, delta_u, psi_u) + c(delta_u, u_k, psi_u) 
                 + b(psi_u, delta_p) 
-                + a(delta_T*dmu(T_k), u_k, psi_u) + a(mu(T_k), delta_u, psi_u) 
+                + a(delta_T*dmu(phi, T_k), u_k, psi_u) + a(mu(phi, T_k), delta_u, psi_u) 
                 + 1./Delta_t*psi_T*delta_T*(1. - 1./Ste*dphi(T_k))
                 + dot(grad(psi_T), 1./Pr*grad(delta_T) - T_k*delta_u - delta_T*u_k)
                 )*dx
