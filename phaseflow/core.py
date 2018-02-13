@@ -421,6 +421,11 @@ class ContinuousFunction:
         self.function = function
         
         self.derivative_function = derivative_function
+        
+    
+    def __call__(self, arg):
+        
+        return self.function(arg)
       
         
 class Point(fenics.Point):

@@ -22,23 +22,23 @@ def make_mixed_element(mesh_ufl_cell, pressure_degree = 1, temperature_degree = 
 
 class PhaseDependentMaterialProperty(phaseflow.core.ContinuousFunction):
 
-    def __init__(self, semi_phasefield_mapping, liquid_value, solid_value):
+    def __init__(self, liquid_value, solid_value):
     
         P_L = fenics.Constant(liquid_value)
         
         P_S = fenics.Constant(solid_value)
         
-        phi = semi_phasefield_mapping.function
+        def P(semi_phasefield_mapping, T):
         
-        def P(T):
-        
+            phi = semi_phasefield_mapping.function
+            
             return P_L + (P_S - P_L)*phi(T)
         
-
-        dphi = semi_phasefield_mapping.derivative_function
         
-        def dP(T):
+        def dP(semi_phasefield_mapping, T):
         
+            dphi = semi_phasefield_mapping.derivative_function
+            
             return (P_S - P_L)*dphi(T)
             
         phaseflow.core.ContinuousFunction.__init__(self, function = P, derivative_function = dP)
@@ -153,8 +153,8 @@ class TanhSemiPhasefieldMapping(phaseflow.core.ContinuousFunction):
             return -sech((T_r - T)/r)**2/(2.*r)
             
         phaseflow.core.ContinuousFunction.__init__(self, function=phi, derivative_function=dphi)
-        
-
+    
+    
 class ConstantFunction(phaseflow.core.ContinuousFunction):
 
     def __init__(self, constant_value):
