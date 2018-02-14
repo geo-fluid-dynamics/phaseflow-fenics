@@ -1,3 +1,7 @@
+"""**pure.py** contains code specific to pure materials.
+
+For example, this is useful for pure water, but not for salt water.
+"""
 import fenics
 import phaseflow
 

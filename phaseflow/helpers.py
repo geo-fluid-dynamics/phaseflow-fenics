@@ -1,4 +1,7 @@
-""" This module contains a variety of useful classes and functions."""
+"""**helpers.py** contains a variety of generally useful code.
+
+Containing this code here cleans up the other modules which are more specific to our problem of interest.
+"""
 import inspect
 import errno    
 import os

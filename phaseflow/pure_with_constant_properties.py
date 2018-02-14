@@ -1,3 +1,7 @@
+"""**pure_with_constant_properties.py** contains code specific to pure materials with constant properties.
+
+For example, this is useful for an octadecane phase-change material.
+"""
 import fenics
 import phaseflow
 import phaseflow.pure

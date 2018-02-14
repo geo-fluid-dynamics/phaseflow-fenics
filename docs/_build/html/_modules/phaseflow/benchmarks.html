@@ -31,7 +31,8 @@
           <div class="body" role="main">
             
   <h1>Source code for phaseflow.benchmarks</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span> <span class="nn">phaseflow</span>
+<span></span><span class="sd">&quot;&quot;&quot;**benchmarks.py** applies Phaseflow to a variety of benchmark problems.&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">phaseflow</span>
 <span class="kn">import</span> <span class="nn">fenics</span>
 
  
@@ -242,8 +243,12 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">output_dir_suffix</span> <span class="o">+=</span> <span class="s2">&quot;adaptive/&quot;</span>
 
         
-<span class="k">class</span> <span class="nc">LidDrivenCavityWithSolidSubdomain</span><span class="p">(</span><span class="n">LidDrivenCavity</span><span class="p">):</span>
-
+<div class="viewcode-block" id="LidDrivenCavityWithSolidSubdomain"><a class="viewcode-back" href="../../index.html#phaseflow.benchmarks.LidDrivenCavityWithSolidSubdomain">[docs]</a><span class="k">class</span> <span class="nc">LidDrivenCavityWithSolidSubdomain</span><span class="p">(</span><span class="n">LidDrivenCavity</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Similar to the lid-driven cavity, but extended with a solid subdomain to test variable viscosity.</span>
+<span class="sd">    </span>
+<span class="sd">    The unit square from the original benchmark is prescribed a temperature which makes it fluid,</span>
+<span class="sd">    while below the original bottom wall, a cold temperature is prescribed, making it solid.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">y_pci</span> <span class="o">=</span> <span class="mf">0.</span>
     
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> 
@@ -307,15 +312,18 @@
             <span class="n">timestep_bounds</span> <span class="o">=</span> <span class="n">timestep_size</span><span class="p">,</span>
             <span class="n">quadrature_degree</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span>
             <span class="n">automatic_jacobian</span> <span class="o">=</span> <span class="n">automatic_jacobian</span><span class="p">)</span>
-        
+        </div>
         <span class="bp">self</span><span class="o">.</span><span class="n">output_dir_suffix</span> <span class="o">+=</span> <span class="s2">&quot;with_solid_subdomain/&quot;</span>
         
         
 <div class="viewcode-block" id="AdaptiveLidDrivenCavityWithSolidSubdomain"><a class="viewcode-back" href="../../index.html#phaseflow.benchmarks.AdaptiveLidDrivenCavityWithSolidSubdomain">[docs]</a><span class="k">class</span> <span class="nc">AdaptiveLidDrivenCavityWithSolidSubdomain</span><span class="p">(</span><span class="n">LidDrivenCavityWithSolidSubdomain</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot; Ideally we should be able to use AMR instead of manually refining the prescribed PCI.</span>
+    <span class="sd">&quot;&quot;&quot; Adaptively solve the lid-driven cavity with solid subdomain example.</span>
+<span class="sd">    </span>
+<span class="sd">    Ideally we should be able to use AMR instead of manually refining the prescribed PCI.</span>
 <span class="sd">    Unfortunately, the adaptive solver computes an error estimate of exactly 0,</span>
 <span class="sd">    which seems to be a bug in FEniCS.</span>
-<span class="sd">    We&#39;ll want to make a MWE and investigate. For now let&#39;s leave this failing benchmark here.&quot;&quot;&quot;</span>
+<span class="sd">    We&#39;ll want to make a MWE and investigate. For now let&#39;s leave this failing benchmark here.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">automatic_jacobian</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
     
         <span class="n">LidDrivenCavityWithSolidSubdomain</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mesh_size</span> <span class="o">=</span> <span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span> <span class="n">pci_refinement_cycles</span> <span class="o">=</span> <span class="mi">4</span><span class="p">,</span>
