@@ -34,7 +34,63 @@
 <h1>Welcome to Phaseflow’s documentation!<a class="headerlink" href="#welcome-to-phaseflow-s-documentation" title="Permalink to this headline">¶</a></h1>
 <div class="toctree-wrapper compound">
 </div>
-</div>
+<span class="target" id="module-phaseflow"></span><span class="target" id="module-phaseflow.benchmarks"></span><dl class="class">
+<dt id="phaseflow.benchmarks.AdaptiveLidDrivenCavityWithSolidSubdomain">
+<em class="property">class </em><code class="descclassname">phaseflow.benchmarks.</code><code class="descname">AdaptiveLidDrivenCavityWithSolidSubdomain</code><span class="sig-paren">(</span><em>automatic_jacobian=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/phaseflow/benchmarks.html#AdaptiveLidDrivenCavityWithSolidSubdomain"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#phaseflow.benchmarks.AdaptiveLidDrivenCavityWithSolidSubdomain" title="Permalink to this definition">¶</a></dt>
+<dd><p>Ideally we should be able to use AMR instead of manually refining the prescribed PCI.
+Unfortunately, the adaptive solver computes an error estimate of exactly 0,
+which seems to be a bug in FEniCS.
+We’ll want to make a MWE and investigate. For now let’s leave this failing benchmark here.</p>
+</dd></dl>
+
+<span class="target" id="module-phaseflow.core"></span><p>This module contains the core functionalty of Phaseflow.</p>
+<dl class="class">
+<dt id="phaseflow.core.Point">
+<em class="property">class </em><code class="descclassname">phaseflow.core.</code><code class="descname">Point</code><span class="sig-paren">(</span><em>coordinates</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/phaseflow/core.html#Point"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#phaseflow.core.Point" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="class">
+<dt id="phaseflow.core.SolutionFile">
+<em class="property">class </em><code class="descclassname">phaseflow.core.</code><code class="descname">SolutionFile</code><span class="sig-paren">(</span><em>filepath</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/phaseflow/core.html#SolutionFile"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#phaseflow.core.SolutionFile" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="class">
+<dt id="phaseflow.core.TimeStepSize">
+<em class="property">class </em><code class="descclassname">phaseflow.core.</code><code class="descname">TimeStepSize</code><span class="sig-paren">(</span><em>min=0.0</em>, <em>value=0.0</em>, <em>max=0.0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/phaseflow/core.html#TimeStepSize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#phaseflow.core.TimeStepSize" title="Permalink to this definition">¶</a></dt>
+<dd><p>This class implements a bounded adaptive time step size.</p>
+</dd></dl>
+
+<span class="target" id="module-phaseflow.helpers"></span><p>This module contains a variety of useful classes and functions.</p>
+<dl class="function">
+<dt id="phaseflow.helpers.arguments">
+<code class="descclassname">phaseflow.helpers.</code><code class="descname">arguments</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/phaseflow/helpers.html#arguments"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#phaseflow.helpers.arguments" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns tuple containing dictionary of calling function’s
+named arguments and a list of calling function’s unnamed
+positional arguments.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="phaseflow.helpers.mkdir_p">
+<code class="descclassname">phaseflow.helpers.</code><code class="descname">mkdir_p</code><span class="sig-paren">(</span><em>path</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/phaseflow/helpers.html#mkdir_p"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#phaseflow.helpers.mkdir_p" title="Permalink to this definition">¶</a></dt>
+<dd><p>Make a directory if it doesn’t exist.
+Code from <a class="reference external" href="https://stackoverflow.com/questions/600268/mkdir-p-functionality-in-python">https://stackoverflow.com/questions/600268/mkdir-p-functionality-in-python</a></p>
+</dd></dl>
+
+<span class="target" id="module-phaseflow.pure"></span><dl class="class">
+<dt id="phaseflow.pure.GebhartWaterBuoyancy">
+<em class="property">class </em><code class="descclassname">phaseflow.pure.</code><code class="descname">GebhartWaterBuoyancy</code><span class="sig-paren">(</span><em>hot_temperature, cold_temperature, rayleigh_numer, prandtl_number, gravity=[0.0, -1.0]</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/phaseflow/pure.html#GebhartWaterBuoyancy"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#phaseflow.pure.GebhartWaterBuoyancy" title="Permalink to this definition">¶</a></dt>
+<dd><p>Water buoyancy model centered around the density anomaly, published in cite{gebhart1977}.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="phaseflow.pure.make_mixed_element">
+<code class="descclassname">phaseflow.pure.</code><code class="descname">make_mixed_element</code><span class="sig-paren">(</span><em>mesh_ufl_cell</em>, <em>pressure_degree=1</em>, <em>temperature_degree=1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/phaseflow/pure.html#make_mixed_element"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#phaseflow.pure.make_mixed_element" title="Permalink to this definition">¶</a></dt>
+<dd><p>An attempt was made to define this as a sub-class of fenics.MixedElement,
+instead of as a function;
+but DOLFIN’s JIT compiler was throwing an error related to its __repr attribute.</p>
+</dd></dl>
+
+<span class="target" id="module-phaseflow.pure_with_constant_properties"></span></div>
 <div class="section" id="indices-and-tables">
 <h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h1>
 <ul class="simple">

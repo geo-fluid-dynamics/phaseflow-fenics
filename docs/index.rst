@@ -10,8 +10,25 @@ Welcome to Phaseflow's documentation!
    :maxdepth: 2
    :caption: Contents:
 
+.. automodule:: phaseflow
+   :members: 
 
+.. automodule:: phaseflow.benchmarks
+   :members:
+   
+.. automodule:: phaseflow.core
+   :members: 
 
+.. automodule:: phaseflow.helpers
+   :members: 
+
+.. automodule:: phaseflow.pure
+   :members: 
+
+.. automodule:: phaseflow.pure_with_constant_properties
+   :members: 
+
+   
 Indices and tables
 ==================
 
