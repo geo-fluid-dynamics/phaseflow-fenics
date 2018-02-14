@@ -1,0 +1,249 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+        <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>phaseflow.pure_with_constant_properties &#8212; Phaseflow Alpha documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" src="../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for phaseflow.pure_with_constant_properties</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;**pure_with_constant_properties.py** contains code specific to pure materials with constant properties.</span>
+
+<span class="sd">For example, this is useful for an octadecane phase-change material.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">fenics</span>
+<span class="kn">import</span> <span class="nn">phaseflow</span>
+<span class="kn">import</span> <span class="nn">phaseflow.pure</span>
+
+
+<div class="viewcode-block" id="Model"><a class="viewcode-back" href="../../index.html#phaseflow.pure_with_constant_properties.Model">[docs]</a><span class="k">class</span> <span class="nc">Model</span><span class="p">(</span><span class="n">phaseflow</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">Model</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+            <span class="n">mesh</span><span class="p">,</span>
+            <span class="n">initial_values</span><span class="p">,</span>
+            <span class="n">boundary_conditions</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> 
+            <span class="n">buoyancy</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">semi_phasefield_mapping</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">timestep_bounds</span> <span class="o">=</span> <span class="p">(</span><span class="mf">1.e-4</span><span class="p">,</span> <span class="mf">1.</span><span class="p">,</span> <span class="mf">1.e12</span><span class="p">),</span>
+            <span class="n">prandtl_number</span> <span class="o">=</span> <span class="mf">1.</span><span class="p">,</span>
+            <span class="n">stefan_number</span> <span class="o">=</span> <span class="mf">1.</span><span class="p">,</span>
+            <span class="n">liquid_viscosity</span> <span class="o">=</span> <span class="mf">1.</span><span class="p">,</span>
+            <span class="n">solid_viscosity</span> <span class="o">=</span> <span class="mf">1.e8</span><span class="p">,</span>
+            <span class="n">gravity</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">penalty_parameter</span> <span class="o">=</span> <span class="mf">1.e-7</span><span class="p">,</span>
+            <span class="n">automatic_jacobian</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+            <span class="n">quadrature_degree</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        state : phaseflow.State</span>
+<span class="sd">        </span>
+<span class="sd">        timestep_size : float</span>
+<span class="sd">        </span>
+<span class="sd">        boundary_conditions : [fenics.DirichletBoundaryCondition,]</span>
+<span class="sd">        </span>
+<span class="sd">        buoyancy : phaseflow.ContinuousFunctionOfTemperature</span>
+<span class="sd">        </span>
+<span class="sd">        semi_phasefield_mapping : phaseflow.ContinuousFunctionOfTemperature</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">phaseflow</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">Model</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+            <span class="n">mesh</span> <span class="o">=</span> <span class="n">mesh</span><span class="p">,</span>
+            <span class="n">element</span> <span class="o">=</span> <span class="n">phaseflow</span><span class="o">.</span><span class="n">pure</span><span class="o">.</span><span class="n">make_mixed_element</span><span class="p">(</span><span class="n">mesh</span><span class="o">.</span><span class="n">ufl_cell</span><span class="p">()),</span>
+            <span class="n">initial_values</span> <span class="o">=</span> <span class="n">initial_values</span><span class="p">,</span>
+            <span class="n">boundary_conditions</span> <span class="o">=</span> <span class="n">boundary_conditions</span><span class="p">,</span>
+            <span class="n">timestep_bounds</span> <span class="o">=</span> <span class="n">timestep_bounds</span><span class="p">,</span>
+            <span class="n">quadrature_degree</span> <span class="o">=</span> <span class="n">quadrature_degree</span><span class="p">)</span>
+        
+        
+        <span class="c1">## Handle default arguments.    </span>
+        <span class="k">if</span> <span class="n">semi_phasefield_mapping</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        
+            <span class="n">semi_phasefield_mapping</span> <span class="o">=</span> <span class="n">phaseflow</span><span class="o">.</span><span class="n">pure</span><span class="o">.</span><span class="n">ConstantFunction</span><span class="p">(</span><span class="mf">0.</span><span class="p">)</span>
+            
+        <span class="k">if</span> <span class="n">buoyancy</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        
+            <span class="n">buoyancy</span> <span class="o">=</span> <span class="n">phaseflow</span><span class="o">.</span><span class="n">pure</span><span class="o">.</span><span class="n">ConstantFunction</span><span class="p">((</span><span class="mf">0.</span><span class="p">,)</span><span class="o">*</span><span class="n">mesh</span><span class="o">.</span><span class="n">type</span><span class="p">()</span><span class="o">.</span><span class="n">dim</span><span class="p">())</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">semi_phasefield_mapping</span> <span class="o">=</span> <span class="n">semi_phasefield_mapping</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">buoyancy</span> <span class="o">=</span> <span class="n">buoyancy</span>
+        
+        
+        <span class="c1">## Set the variational form.</span>
+        <span class="sd">&quot;&quot;&quot;Set local names for math operators to improve readability.&quot;&quot;&quot;</span>
+        <span class="n">inner</span><span class="p">,</span> <span class="n">dot</span><span class="p">,</span> <span class="n">grad</span><span class="p">,</span> <span class="n">div</span><span class="p">,</span> <span class="n">sym</span> <span class="o">=</span> <span class="n">fenics</span><span class="o">.</span><span class="n">inner</span><span class="p">,</span> <span class="n">fenics</span><span class="o">.</span><span class="n">dot</span><span class="p">,</span> <span class="n">fenics</span><span class="o">.</span><span class="n">grad</span><span class="p">,</span> <span class="n">fenics</span><span class="o">.</span><span class="n">div</span><span class="p">,</span> <span class="n">fenics</span><span class="o">.</span><span class="n">sym</span>
+        
+        <span class="sd">&quot;&quot;&quot;The linear, bilinear, and trilinear forms b, a, and c, follow the common notation </span>
+<span class="sd">        for applying the finite element method to the incompressible Navier-Stokes equations,</span>
+<span class="sd">        e.g. from danaila2014newton and huerta2003fefluids.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">def</span> <span class="nf">b</span><span class="p">(</span><span class="n">u</span><span class="p">,</span> <span class="n">p</span><span class="p">):</span>
+        
+            <span class="k">return</span> <span class="o">-</span><span class="n">div</span><span class="p">(</span><span class="n">u</span><span class="p">)</span><span class="o">*</span><span class="n">p</span>  <span class="c1"># Divergence</span>
+        
+        
+        <span class="k">def</span> <span class="nf">D</span><span class="p">(</span><span class="n">u</span><span class="p">):</span>
+        
+            <span class="k">return</span> <span class="n">sym</span><span class="p">(</span><span class="n">grad</span><span class="p">(</span><span class="n">u</span><span class="p">))</span>  <span class="c1"># Symmetric part of velocity gradient</span>
+        
+        
+        <span class="k">def</span> <span class="nf">a</span><span class="p">(</span><span class="n">mu</span><span class="p">,</span> <span class="n">u</span><span class="p">,</span> <span class="n">v</span><span class="p">):</span>
+            
+            <span class="k">return</span> <span class="mf">2.</span><span class="o">*</span><span class="n">mu</span><span class="o">*</span><span class="n">inner</span><span class="p">(</span><span class="n">D</span><span class="p">(</span><span class="n">u</span><span class="p">),</span> <span class="n">D</span><span class="p">(</span><span class="n">v</span><span class="p">))</span>  <span class="c1"># Stokes stress-strain</span>
+        
+        
+        <span class="k">def</span> <span class="nf">c</span><span class="p">(</span><span class="n">u</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">v</span><span class="p">):</span>
+            
+            <span class="k">return</span> <span class="n">dot</span><span class="p">(</span><span class="n">dot</span><span class="p">(</span><span class="n">grad</span><span class="p">(</span><span class="n">z</span><span class="p">),</span> <span class="n">u</span><span class="p">),</span> <span class="n">v</span><span class="p">)</span>  <span class="c1"># Convection of the velocity field</span>
+        
+        <span class="n">Delta_t</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Delta_t</span>
+        
+        <span class="n">Pr</span> <span class="o">=</span> <span class="n">fenics</span><span class="o">.</span><span class="n">Constant</span><span class="p">(</span><span class="n">prandtl_number</span><span class="p">)</span>
+        
+        <span class="n">Ste</span> <span class="o">=</span> <span class="n">fenics</span><span class="o">.</span><span class="n">Constant</span><span class="p">(</span><span class="n">stefan_number</span><span class="p">)</span>
+        
+        <span class="n">f_B</span> <span class="o">=</span> <span class="n">buoyancy</span><span class="o">.</span><span class="n">function</span>
+        
+        <span class="n">phi</span> <span class="o">=</span> <span class="n">semi_phasefield_mapping</span>
+        
+        <span class="n">gamma</span> <span class="o">=</span> <span class="n">fenics</span><span class="o">.</span><span class="n">Constant</span><span class="p">(</span><span class="n">penalty_parameter</span><span class="p">)</span>
+        
+        <span class="n">mu_L</span> <span class="o">=</span> <span class="n">fenics</span><span class="o">.</span><span class="n">Constant</span><span class="p">(</span><span class="n">liquid_viscosity</span><span class="p">)</span>
+        
+        <span class="n">mu_S</span> <span class="o">=</span> <span class="n">fenics</span><span class="o">.</span><span class="n">Constant</span><span class="p">(</span><span class="n">solid_viscosity</span><span class="p">)</span>
+        
+        <span class="n">phase_dependent_viscosity</span> <span class="o">=</span> <span class="n">phaseflow</span><span class="o">.</span><span class="n">pure</span><span class="o">.</span><span class="n">PhaseDependentMaterialProperty</span><span class="p">(</span>
+            <span class="n">liquid_value</span> <span class="o">=</span> <span class="n">mu_L</span><span class="p">,</span>
+            <span class="n">solid_value</span> <span class="o">=</span> <span class="n">mu_S</span><span class="p">)</span>
+        
+        <span class="n">mu</span> <span class="o">=</span> <span class="n">phase_dependent_viscosity</span><span class="o">.</span><span class="n">function</span>
+        
+        <span class="n">W</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">function_space</span>
+        
+        <span class="n">psi_p</span><span class="p">,</span> <span class="n">psi_u</span><span class="p">,</span> <span class="n">psi_T</span> <span class="o">=</span> <span class="n">fenics</span><span class="o">.</span><span class="n">TestFunctions</span><span class="p">(</span><span class="n">W</span><span class="p">)</span>
+        
+        <span class="n">w</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">solution</span>
+        
+        <span class="n">p</span><span class="p">,</span> <span class="n">u</span><span class="p">,</span> <span class="n">T</span> <span class="o">=</span> <span class="n">fenics</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">w</span><span class="p">)</span>
+        
+        <span class="n">w_n</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">old_state</span><span class="o">.</span><span class="n">solution</span>
+         
+        <span class="n">p_n</span><span class="p">,</span> <span class="n">u_n</span><span class="p">,</span> <span class="n">T_n</span> <span class="o">=</span> <span class="n">fenics</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">w_n</span><span class="p">)</span>
+        
+        <span class="n">dx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">integration_metric</span>
+    
+        <span class="bp">self</span><span class="o">.</span><span class="n">variational_form</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">b</span><span class="p">(</span><span class="n">u</span><span class="p">,</span> <span class="n">psi_p</span><span class="p">)</span> <span class="o">-</span> <span class="n">psi_p</span><span class="o">*</span><span class="n">gamma</span><span class="o">*</span><span class="n">p</span>
+            <span class="o">+</span> <span class="n">dot</span><span class="p">(</span><span class="n">psi_u</span><span class="p">,</span> <span class="mf">1.</span><span class="o">/</span><span class="n">Delta_t</span><span class="o">*</span><span class="p">(</span><span class="n">u</span> <span class="o">-</span> <span class="n">u_n</span><span class="p">)</span> <span class="o">+</span> <span class="n">f_B</span><span class="p">(</span><span class="n">T</span><span class="p">))</span>
+            <span class="o">+</span> <span class="n">c</span><span class="p">(</span><span class="n">u</span><span class="p">,</span> <span class="n">u</span><span class="p">,</span> <span class="n">psi_u</span><span class="p">)</span> <span class="o">+</span> <span class="n">b</span><span class="p">(</span><span class="n">psi_u</span><span class="p">,</span> <span class="n">p</span><span class="p">)</span> <span class="o">+</span> <span class="n">a</span><span class="p">(</span><span class="n">mu</span><span class="p">(</span><span class="n">phi</span><span class="p">,</span><span class="n">T</span><span class="p">),</span> <span class="n">u</span><span class="p">,</span> <span class="n">psi_u</span><span class="p">)</span>
+            <span class="o">+</span> <span class="mf">1.</span><span class="o">/</span><span class="n">Delta_t</span><span class="o">*</span><span class="n">psi_T</span><span class="o">*</span><span class="p">(</span><span class="n">T</span> <span class="o">-</span> <span class="n">T_n</span> <span class="o">-</span> <span class="mf">1.</span><span class="o">/</span><span class="n">Ste</span><span class="o">*</span><span class="p">(</span><span class="n">phi</span><span class="p">(</span><span class="n">T</span><span class="p">)</span> <span class="o">-</span> <span class="n">phi</span><span class="p">(</span><span class="n">T_n</span><span class="p">)))</span>
+            <span class="o">+</span> <span class="n">dot</span><span class="p">(</span><span class="n">grad</span><span class="p">(</span><span class="n">psi_T</span><span class="p">),</span> <span class="mf">1.</span><span class="o">/</span><span class="n">Pr</span><span class="o">*</span><span class="n">grad</span><span class="p">(</span><span class="n">T</span><span class="p">)</span> <span class="o">-</span> <span class="n">T</span><span class="o">*</span><span class="n">u</span><span class="p">)</span>        
+            <span class="p">)</span><span class="o">*</span><span class="n">dx</span>
+
+        
+        <span class="c1"># Set the derivative of the variational form for linearizing the nonlinear problem.</span>
+        <span class="n">delta_w</span> <span class="o">=</span> <span class="n">fenics</span><span class="o">.</span><span class="n">TrialFunction</span><span class="p">(</span><span class="n">W</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="n">automatic_jacobian</span><span class="p">:</span>
+        
+            <span class="bp">self</span><span class="o">.</span><span class="n">derivative_of_variational_form</span> <span class="o">=</span> <span class="n">fenics</span><span class="o">.</span><span class="n">derivative</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">variational_form</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">delta_w</span><span class="p">)</span>
+        
+        <span class="k">else</span><span class="p">:</span>
+        
+        
+            <span class="c1"># Set the manually derived Gateaux derivative in variational form.</span>
+            <span class="n">df_B</span> <span class="o">=</span> <span class="n">buoyancy</span><span class="o">.</span><span class="n">derivative_function</span>
+            
+            <span class="n">dphi</span> <span class="o">=</span> <span class="n">semi_phasefield_mapping</span><span class="o">.</span><span class="n">derivative_function</span>
+            
+            <span class="n">dmu</span> <span class="o">=</span> <span class="n">phase_dependent_viscosity</span><span class="o">.</span><span class="n">derivative_function</span>
+            
+            <span class="n">delta_p</span><span class="p">,</span> <span class="n">delta_u</span><span class="p">,</span> <span class="n">delta_T</span> <span class="o">=</span> <span class="n">fenics</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">delta_w</span><span class="p">)</span>
+            
+            <span class="n">w_k</span> <span class="o">=</span> <span class="n">w</span>
+            
+            <span class="n">p_k</span><span class="p">,</span> <span class="n">u_k</span><span class="p">,</span> <span class="n">T_k</span> <span class="o">=</span> <span class="n">fenics</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">w_k</span><span class="p">)</span>
+            
+            <span class="bp">self</span><span class="o">.</span><span class="n">derivative_of_variational_form</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">b</span><span class="p">(</span><span class="n">delta_u</span><span class="p">,</span> <span class="n">psi_p</span><span class="p">)</span> <span class="o">-</span> <span class="n">psi_p</span><span class="o">*</span><span class="n">gamma</span><span class="o">*</span><span class="n">delta_p</span> 
+                <span class="o">+</span> <span class="n">dot</span><span class="p">(</span><span class="n">psi_u</span><span class="p">,</span> <span class="mf">1.</span><span class="o">/</span><span class="n">Delta_t</span><span class="o">*</span><span class="n">delta_u</span> <span class="o">+</span> <span class="n">delta_T</span><span class="o">*</span><span class="n">df_B</span><span class="p">(</span><span class="n">T_k</span><span class="p">))</span>
+                <span class="o">+</span> <span class="n">c</span><span class="p">(</span><span class="n">u_k</span><span class="p">,</span> <span class="n">delta_u</span><span class="p">,</span> <span class="n">psi_u</span><span class="p">)</span> <span class="o">+</span> <span class="n">c</span><span class="p">(</span><span class="n">delta_u</span><span class="p">,</span> <span class="n">u_k</span><span class="p">,</span> <span class="n">psi_u</span><span class="p">)</span> 
+                <span class="o">+</span> <span class="n">b</span><span class="p">(</span><span class="n">psi_u</span><span class="p">,</span> <span class="n">delta_p</span><span class="p">)</span> 
+                <span class="o">+</span> <span class="n">a</span><span class="p">(</span><span class="n">delta_T</span><span class="o">*</span><span class="n">dmu</span><span class="p">(</span><span class="n">phi</span><span class="p">,</span> <span class="n">T_k</span><span class="p">),</span> <span class="n">u_k</span><span class="p">,</span> <span class="n">psi_u</span><span class="p">)</span> <span class="o">+</span> <span class="n">a</span><span class="p">(</span><span class="n">mu</span><span class="p">(</span><span class="n">phi</span><span class="p">,</span> <span class="n">T_k</span><span class="p">),</span> <span class="n">delta_u</span><span class="p">,</span> <span class="n">psi_u</span><span class="p">)</span> 
+                <span class="o">+</span> <span class="mf">1.</span><span class="o">/</span><span class="n">Delta_t</span><span class="o">*</span><span class="n">psi_T</span><span class="o">*</span><span class="n">delta_T</span><span class="o">*</span><span class="p">(</span><span class="mf">1.</span> <span class="o">-</span> <span class="mf">1.</span><span class="o">/</span><span class="n">Ste</span><span class="o">*</span><span class="n">dphi</span><span class="p">(</span><span class="n">T_k</span><span class="p">))</span>
+                <span class="o">+</span> <span class="n">dot</span><span class="p">(</span><span class="n">grad</span><span class="p">(</span><span class="n">psi_T</span><span class="p">),</span> <span class="mf">1.</span><span class="o">/</span><span class="n">Pr</span><span class="o">*</span><span class="n">grad</span><span class="p">(</span><span class="n">delta_T</span><span class="p">)</span> <span class="o">-</span> <span class="n">T_k</span><span class="o">*</span><span class="n">delta_u</span> <span class="o">-</span> <span class="n">delta_T</span><span class="o">*</span><span class="n">u_k</span><span class="p">)</span>
+                <span class="p">)</span><span class="o">*</span><span class="n">dx</span>
+        
+        
+        <span class="c1">#</span></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setup_problem</span><span class="p">()</span>
+        
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, Alexander G. Zimmerman.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.7.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

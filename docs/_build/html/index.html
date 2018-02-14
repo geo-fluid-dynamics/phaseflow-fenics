@@ -38,36 +38,206 @@
 <dl class="class">
 <dt id="phaseflow.benchmarks.AdaptiveLidDrivenCavityWithSolidSubdomain">
 <em class="property">class </em><code class="descclassname">phaseflow.benchmarks.</code><code class="descname">AdaptiveLidDrivenCavityWithSolidSubdomain</code><span class="sig-paren">(</span><em>automatic_jacobian=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/phaseflow/benchmarks.html#AdaptiveLidDrivenCavityWithSolidSubdomain"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#phaseflow.benchmarks.AdaptiveLidDrivenCavityWithSolidSubdomain" title="Permalink to this definition">¶</a></dt>
-<dd><p>Adaptively solve the lid-driven cavity with solid subdomain example.</p>
+<dd><p>Bases: <a class="reference internal" href="#phaseflow.benchmarks.LidDrivenCavityWithSolidSubdomain" title="phaseflow.benchmarks.LidDrivenCavityWithSolidSubdomain"><code class="xref py py-class docutils literal notranslate"><span class="pre">phaseflow.benchmarks.LidDrivenCavityWithSolidSubdomain</span></code></a></p>
+<p>Adaptively solve the lid-driven cavity with solid subdomain example.</p>
 <p>Ideally we should be able to use AMR instead of manually refining the prescribed PCI.
 Unfortunately, the adaptive solver computes an error estimate of exactly 0,
 which seems to be a bug in FEniCS.
 We’ll want to make a MWE and investigate. For now let’s leave this failing benchmark here.</p>
+<p class="rubric">Methods</p>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><code class="xref py py-obj docutils literal notranslate"><span class="pre">refine_near_y_pci</span></code>([pci_refinement_cycles])</td>
+<td></td>
+</tr>
+<tr class="row-even"><td><code class="xref py py-obj docutils literal notranslate"><span class="pre">run</span></code>()</td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><code class="xref py py-obj docutils literal notranslate"><span class="pre">setup_model</span></code>([timestep_size,&nbsp;automatic_jacobian])</td>
+<td></td>
+</tr>
+<tr class="row-even"><td><code class="xref py py-obj docutils literal notranslate"><span class="pre">verify</span></code>()</td>
+<td>Verify against cite{ghia1982}.</td>
+</tr>
+<tr class="row-odd"><td><code class="xref py py-obj docutils literal notranslate"><span class="pre">verify_scalar_solution_component</span></code>(component,&nbsp;…)</td>
+<td></td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="class">
 <dt id="phaseflow.benchmarks.LidDrivenCavityWithSolidSubdomain">
 <em class="property">class </em><code class="descclassname">phaseflow.benchmarks.</code><code class="descname">LidDrivenCavityWithSolidSubdomain</code><span class="sig-paren">(</span><em>mesh_size=[20, 25], pci_refinement_cycles=4, timestep_size=20.0, automatic_jacobian=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/phaseflow/benchmarks.html#LidDrivenCavityWithSolidSubdomain"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#phaseflow.benchmarks.LidDrivenCavityWithSolidSubdomain" title="Permalink to this definition">¶</a></dt>
-<dd><p>Similar to the lid-driven cavity, but extended with a solid subdomain to test variable viscosity.</p>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">phaseflow.benchmarks.LidDrivenCavity</span></code></p>
+<p>Similar to the lid-driven cavity, but extended with a solid subdomain to test variable viscosity.</p>
 <p>The unit square from the original benchmark is prescribed a temperature which makes it fluid,
 while below the original bottom wall, a cold temperature is prescribed, making it solid.</p>
+<p class="rubric">Methods</p>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><code class="xref py py-obj docutils literal notranslate"><span class="pre">refine_near_y_pci</span></code>([pci_refinement_cycles])</td>
+<td></td>
+</tr>
+<tr class="row-even"><td><code class="xref py py-obj docutils literal notranslate"><span class="pre">run</span></code>()</td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><code class="xref py py-obj docutils literal notranslate"><span class="pre">setup_model</span></code>([timestep_size,&nbsp;automatic_jacobian])</td>
+<td></td>
+</tr>
+<tr class="row-even"><td><code class="xref py py-obj docutils literal notranslate"><span class="pre">verify</span></code>()</td>
+<td>Verify against cite{ghia1982}.</td>
+</tr>
+<tr class="row-odd"><td><code class="xref py py-obj docutils literal notranslate"><span class="pre">verify_scalar_solution_component</span></code>(component,&nbsp;…)</td>
+<td></td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <span class="target" id="module-phaseflow.core"></span><p><strong>core.py</strong> contains the core functionality.</p>
 <dl class="class">
 <dt id="phaseflow.core.Point">
 <em class="property">class </em><code class="descclassname">phaseflow.core.</code><code class="descname">Point</code><span class="sig-paren">(</span><em>coordinates</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/phaseflow/core.html#Point"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#phaseflow.core.Point" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">dolfin.cpp.mesh.Point</span></code></p>
+<p class="rubric">Attributes</p>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><code class="xref py py-obj docutils literal notranslate"><span class="pre">thisown</span></code></td>
+<td>The membership flag</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Methods</p>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><code class="xref py py-obj docutils literal notranslate"><span class="pre">array</span></code></td>
+<td>Return copy of coordinate array Returns list of double The coordinates.</td>
+</tr>
+<tr class="row-even"><td><code class="xref py py-obj docutils literal notranslate"><span class="pre">cross</span></code></td>
+<td>Compute cross product with given vector</td>
+</tr>
+<tr class="row-odd"><td><code class="xref py py-obj docutils literal notranslate"><span class="pre">distance</span></code></td>
+<td>Compute distance to given point</td>
+</tr>
+<tr class="row-even"><td><code class="xref py py-obj docutils literal notranslate"><span class="pre">dot</span></code></td>
+<td>Compute dot product with given vector</td>
+</tr>
+<tr class="row-odd"><td><code class="xref py py-obj docutils literal notranslate"><span class="pre">norm</span></code></td>
+<td>Compute norm of point representing a vector from the origin</td>
+</tr>
+<tr class="row-even"><td><code class="xref py py-obj docutils literal notranslate"><span class="pre">rotate</span></code></td>
+<td>Rotate around a given axis</td>
+</tr>
+<tr class="row-odd"><td><code class="xref py py-obj docutils literal notranslate"><span class="pre">squared_distance</span></code></td>
+<td>Compute squared distance to given point</td>
+</tr>
+<tr class="row-even"><td><code class="xref py py-obj docutils literal notranslate"><span class="pre">squared_norm</span></code></td>
+<td>Compute norm of point representing a vector from the origin</td>
+</tr>
+<tr class="row-odd"><td><code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code></td>
+<td>Return informal string representation (pretty-print)</td>
+</tr>
+<tr class="row-even"><td><code class="xref py py-obj docutils literal notranslate"><span class="pre">x</span></code></td>
+<td>Return x-coordinate</td>
+</tr>
+<tr class="row-odd"><td><code class="xref py py-obj docutils literal notranslate"><span class="pre">y</span></code></td>
+<td>Return y-coordinate</td>
+</tr>
+<tr class="row-even"><td><code class="xref py py-obj docutils literal notranslate"><span class="pre">z</span></code></td>
+<td>Return z-coordinate</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
 
 <dl class="class">
 <dt id="phaseflow.core.SolutionFile">
 <em class="property">class </em><code class="descclassname">phaseflow.core.</code><code class="descname">SolutionFile</code><span class="sig-paren">(</span><em>filepath</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/phaseflow/core.html#SolutionFile"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#phaseflow.core.SolutionFile" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">dolfin.cpp.io.XDMFFile</span></code></p>
+<p class="rubric">Attributes</p>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><code class="xref py py-obj docutils literal notranslate"><span class="pre">parameters</span></code></td>
+<td><code class="xref cpp cpp-any docutils literal notranslate"><span class="pre">Parameters</span></code> .</td>
+</tr>
+<tr class="row-even"><td><code class="xref py py-obj docutils literal notranslate"><span class="pre">thisown</span></code></td>
+<td>The membership flag</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Methods</p>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><code class="xref py py-obj docutils literal notranslate"><span class="pre">close</span></code></td>
+<td>Close the file This closes any open HDF5 files.</td>
+</tr>
+<tr class="row-even"><td><code class="xref py py-obj docutils literal notranslate"><span class="pre">id</span></code></td>
+<td>Get unique identifier.</td>
+</tr>
+<tr class="row-odd"><td><code class="xref py py-obj docutils literal notranslate"><span class="pre">label</span></code></td>
+<td>Return label (description)</td>
+</tr>
+<tr class="row-even"><td><code class="xref py py-obj docutils literal notranslate"><span class="pre">name</span></code></td>
+<td>Return name.</td>
+</tr>
+<tr class="row-odd"><td><code class="xref py py-obj docutils literal notranslate"><span class="pre">read</span></code></td>
+<td>Read <code class="xref cpp cpp-any docutils literal notranslate"><span class="pre">MeshValueCollection</span></code>  from file, optionally specifying dataset name</td>
+</tr>
+<tr class="row-even"><td><code class="xref py py-obj docutils literal notranslate"><span class="pre">rename</span></code></td>
+<td>Rename variable.</td>
+</tr>
+<tr class="row-odd"><td><code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code></td>
+<td>Return informal string representation (pretty-print)</td>
+</tr>
+<tr class="row-even"><td><code class="xref py py-obj docutils literal notranslate"><span class="pre">write</span></code></td>
+<td>Save a cloud of points, with scalar values using an associated HDF5 file, or storing the data inline as XML.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
 
 <dl class="class">
 <dt id="phaseflow.core.TimeStepSize">
 <em class="property">class </em><code class="descclassname">phaseflow.core.</code><code class="descname">TimeStepSize</code><span class="sig-paren">(</span><em>min=0.0</em>, <em>value=0.0</em>, <em>max=0.0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/phaseflow/core.html#TimeStepSize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#phaseflow.core.TimeStepSize" title="Permalink to this definition">¶</a></dt>
-<dd><p>This class implements a bounded adaptive time step size.</p>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">phaseflow.core.BoundedValue</span></code></p>
+<p>This class implements a bounded adaptive time step size.</p>
+<p class="rubric">Methods</p>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><code class="xref py py-obj docutils literal notranslate"><span class="pre">set</span></code>(value)</td>
+<td></td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <span class="target" id="module-phaseflow.helpers"></span><p><strong>helpers.py</strong> contains a variety of generally useful code.</p>
@@ -92,7 +262,20 @@ Code from <a class="reference external" href="https://stackoverflow.com/question
 <dl class="class">
 <dt id="phaseflow.pure.GebhartWaterBuoyancy">
 <em class="property">class </em><code class="descclassname">phaseflow.pure.</code><code class="descname">GebhartWaterBuoyancy</code><span class="sig-paren">(</span><em>hot_temperature, cold_temperature, rayleigh_numer, prandtl_number, gravity=[0.0, -1.0]</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/phaseflow/pure.html#GebhartWaterBuoyancy"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#phaseflow.pure.GebhartWaterBuoyancy" title="Permalink to this definition">¶</a></dt>
-<dd><p>Water buoyancy model centered around the density anomaly, published in cite{gebhart1977}.</p>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">phaseflow.core.ContinuousFunction</span></code></p>
+<p>Water buoyancy model centered around the density anomaly, published in cite{gebhart1977}.</p>
+<p class="rubric">Methods</p>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><code class="xref py py-obj docutils literal notranslate"><span class="pre">__call__</span></code>(arg)</td>
+<td>Call self as a function.</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="function">
@@ -123,7 +306,9 @@ but DOLFIN’s JIT compiler was throwing an error related to its __repr attribut
         <div class="sphinxsidebarwrapper">
   <h3><a href="#">Table Of Contents</a></h3>
   <ul>
-<li><a class="reference internal" href="#">Welcome to Phaseflow’s documentation!</a></li>
+<li><a class="reference internal" href="#">Welcome to Phaseflow’s documentation!</a><ul>
+</ul>
+</li>
 <li><a class="reference internal" href="#indices-and-tables">Indices and tables</a></li>
 </ul>
 <div class="relations">

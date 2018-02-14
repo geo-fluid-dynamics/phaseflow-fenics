@@ -11,23 +11,29 @@ Welcome to Phaseflow's documentation!
    :caption: Contents:
 
 .. automodule:: phaseflow
-   :members: 
+   :members:
+   :show-inheritance:
 
 .. automodule:: phaseflow.benchmarks
    :members:
+   :show-inheritance:
    
 .. automodule:: phaseflow.core
    :members: 
-
+   :show-inheritance:
+   
 .. automodule:: phaseflow.helpers
    :members: 
-
+   :show-inheritance:
+   
 .. automodule:: phaseflow.pure
    :members: 
-
+   :show-inheritance:
+   
 .. automodule:: phaseflow.pure_with_constant_properties
    :members: 
-
+   :show-inheritance:
+   
    
 Indices and tables
 ==================

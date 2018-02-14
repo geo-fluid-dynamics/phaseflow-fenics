@@ -20,7 +20,8 @@ class SolutionFile(fenics.XDMFFile):
 class State:
 
     def __init__(self, function_space, element, time = 0.):
-        """ 
+        """ **State** collects the solution and associated time.
+        
         Parameters
         ----------
         function_space : fenics.FunctionSpace

@@ -57,7 +57,7 @@
     <span class="k">return</span> <span class="n">fenics</span><span class="o">.</span><span class="n">MixedElement</span><span class="p">([</span><span class="n">pressure_element</span><span class="p">,</span> <span class="n">velocity_element</span><span class="p">,</span> <span class="n">temperature_element</span><span class="p">])</span>
 
 
-<span class="k">class</span> <span class="nc">PhaseDependentMaterialProperty</span><span class="p">(</span><span class="n">phaseflow</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">ContinuousFunction</span><span class="p">):</span>
+<div class="viewcode-block" id="PhaseDependentMaterialProperty"><a class="viewcode-back" href="../../index.html#phaseflow.pure.PhaseDependentMaterialProperty">[docs]</a><span class="k">class</span> <span class="nc">PhaseDependentMaterialProperty</span><span class="p">(</span><span class="n">phaseflow</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">ContinuousFunction</span><span class="p">):</span>
 
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">liquid_value</span><span class="p">,</span> <span class="n">solid_value</span><span class="p">):</span>
     
@@ -77,11 +77,11 @@
             <span class="n">dphi</span> <span class="o">=</span> <span class="n">semi_phasefield_mapping</span><span class="o">.</span><span class="n">derivative_function</span>
             
             <span class="k">return</span> <span class="p">(</span><span class="n">P_S</span> <span class="o">-</span> <span class="n">P_L</span><span class="p">)</span><span class="o">*</span><span class="n">dphi</span><span class="p">(</span><span class="n">T</span><span class="p">)</span>
-            
+            </div>
         <span class="n">phaseflow</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">ContinuousFunction</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">function</span> <span class="o">=</span> <span class="n">P</span><span class="p">,</span> <span class="n">derivative_function</span> <span class="o">=</span> <span class="n">dP</span><span class="p">)</span>
             
             
-<span class="k">class</span> <span class="nc">IdealizedLinearBoussinesqBuoyancy</span><span class="p">(</span><span class="n">phaseflow</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">ContinuousFunction</span><span class="p">):</span>
+<div class="viewcode-block" id="IdealizedLinearBoussinesqBuoyancy"><a class="viewcode-back" href="../../index.html#phaseflow.pure.IdealizedLinearBoussinesqBuoyancy">[docs]</a><span class="k">class</span> <span class="nc">IdealizedLinearBoussinesqBuoyancy</span><span class="p">(</span><span class="n">phaseflow</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">ContinuousFunction</span><span class="p">):</span>
     
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rayleigh_numer</span><span class="p">,</span> <span class="n">prandtl_number</span><span class="p">,</span> <span class="n">gravity</span> <span class="o">=</span> <span class="p">[</span><span class="mf">0.</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.</span><span class="p">]):</span>
     
@@ -105,7 +105,7 @@
 <span class="sd">            &quot;&quot;&quot;</span>
 
             <span class="k">return</span> <span class="n">Ra</span><span class="o">/</span><span class="p">(</span><span class="n">Pr</span><span class="o">*</span><span class="n">Re</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span><span class="o">*</span><span class="n">g</span>
-    
+    </div>
         <span class="n">phaseflow</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">ContinuousFunction</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">function</span><span class="o">=</span><span class="n">f_B</span><span class="p">,</span> <span class="n">derivative_function</span><span class="o">=</span><span class="n">df_B</span><span class="p">)</span>
         
         
@@ -167,7 +167,7 @@
         <span class="n">phaseflow</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">ContinuousFunction</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">function</span><span class="o">=</span><span class="n">f_B</span><span class="p">,</span> <span class="n">derivative_function</span><span class="o">=</span><span class="n">df_B</span><span class="p">)</span>
         
         
-<span class="k">class</span> <span class="nc">TanhSemiPhasefieldMapping</span><span class="p">(</span><span class="n">phaseflow</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">ContinuousFunction</span><span class="p">):</span>
+<div class="viewcode-block" id="TanhSemiPhasefieldMapping"><a class="viewcode-back" href="../../index.html#phaseflow.pure.TanhSemiPhasefieldMapping">[docs]</a><span class="k">class</span> <span class="nc">TanhSemiPhasefieldMapping</span><span class="p">(</span><span class="n">phaseflow</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">ContinuousFunction</span><span class="p">):</span>
 
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">regularization_smoothing_parameter</span><span class="p">,</span> <span class="n">regularization_central_temperature</span> <span class="o">=</span> <span class="mf">0.</span><span class="p">):</span>
     
@@ -188,11 +188,11 @@
         <span class="k">def</span> <span class="nf">dphi</span><span class="p">(</span><span class="n">T</span><span class="p">):</span>
         
             <span class="k">return</span> <span class="o">-</span><span class="n">sech</span><span class="p">((</span><span class="n">T_r</span> <span class="o">-</span> <span class="n">T</span><span class="p">)</span><span class="o">/</span><span class="n">r</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="o">/</span><span class="p">(</span><span class="mf">2.</span><span class="o">*</span><span class="n">r</span><span class="p">)</span>
-            
+            </div>
         <span class="n">phaseflow</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">ContinuousFunction</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">function</span><span class="o">=</span><span class="n">phi</span><span class="p">,</span> <span class="n">derivative_function</span><span class="o">=</span><span class="n">dphi</span><span class="p">)</span>
     
     
-<span class="k">class</span> <span class="nc">ConstantFunction</span><span class="p">(</span><span class="n">phaseflow</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">ContinuousFunction</span><span class="p">):</span>
+<div class="viewcode-block" id="ConstantFunction"><a class="viewcode-back" href="../../index.html#phaseflow.pure.ConstantFunction">[docs]</a><span class="k">class</span> <span class="nc">ConstantFunction</span><span class="p">(</span><span class="n">phaseflow</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">ContinuousFunction</span><span class="p">):</span>
 
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">constant_value</span><span class="p">):</span>
     
@@ -205,7 +205,7 @@
         <span class="k">def</span> <span class="nf">df</span><span class="p">(</span><span class="n">T</span><span class="p">):</span>
         
             <span class="k">return</span> <span class="mf">0.</span><span class="o">*</span><span class="n">constant</span>
-            
+            </div>
         <span class="n">phaseflow</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">ContinuousFunction</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">function</span><span class="o">=</span><span class="n">f</span><span class="p">,</span> <span class="n">derivative_function</span><span class="o">=</span><span class="n">df</span><span class="p">)</span>
  
 </pre></div>
