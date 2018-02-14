@@ -1,4 +1,4 @@
-FROM quay.io/fenicsproject/stable:latest
+FROM quay.io/fenicsproject/stable:2017.1.0
 
 RUN pip3 install h5py
 
