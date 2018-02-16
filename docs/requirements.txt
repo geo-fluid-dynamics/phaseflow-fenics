@@ -3,3 +3,4 @@ h5py
 scipy
 numpy
 numpydoc
+phaseflow
