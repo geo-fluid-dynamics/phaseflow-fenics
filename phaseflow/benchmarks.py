@@ -1,3 +1,4 @@
+"""**benchmarks.py** applies Phaseflow to a variety of benchmark problems."""
 import phaseflow
 import fenics
 
@@ -210,7 +211,11 @@ class AdaptiveLidDrivenCavity(LidDrivenCavity):
 
         
 class LidDrivenCavityWithSolidSubdomain(LidDrivenCavity):
-
+    """ Similar to the lid-driven cavity, but extended with a solid subdomain to test variable viscosity.
+    
+    The unit square from the original benchmark is prescribed a temperature which makes it fluid,
+    while below the original bottom wall, a cold temperature is prescribed, making it solid.
+    """
     y_pci = 0.
     
     def __init__(self, 
@@ -279,10 +284,13 @@ class LidDrivenCavityWithSolidSubdomain(LidDrivenCavity):
         
         
 class AdaptiveLidDrivenCavityWithSolidSubdomain(LidDrivenCavityWithSolidSubdomain):
-    """ Ideally we should be able to use AMR instead of manually refining the prescribed PCI.
+    """ Adaptively solve the lid-driven cavity with solid subdomain example.
+    
+    Ideally we should be able to use AMR instead of manually refining the prescribed PCI.
     Unfortunately, the adaptive solver computes an error estimate of exactly 0,
     which seems to be a bug in FEniCS.
-    We'll want to make a MWE and investigate. For now let's leave this failing benchmark here."""
+    We'll want to make a MWE and investigate. For now let's leave this failing benchmark here.
+    """
     def __init__(self, automatic_jacobian = False):
     
         LidDrivenCavityWithSolidSubdomain.__init__(self, mesh_size = (4, 5), pci_refinement_cycles = 4,

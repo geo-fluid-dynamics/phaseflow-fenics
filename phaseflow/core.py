@@ -1,4 +1,4 @@
-"""This module contains the core functionalty of Phaseflow."""
+"""**core.py** contains the core functionality."""
 import fenics
 import h5py
 import numpy
@@ -20,7 +20,8 @@ class SolutionFile(fenics.XDMFFile):
 class State:
 
     def __init__(self, function_space, element, time = 0.):
-        """ 
+        """ **State** collects the solution and associated time.
+        
         Parameters
         ----------
         function_space : fenics.FunctionSpace
