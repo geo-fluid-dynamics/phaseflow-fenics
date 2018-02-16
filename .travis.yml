@@ -1,8 +1,3 @@
-language: python
-
-python:
-  - "3.5"
-  
 services:
   - docker
 
@@ -14,7 +9,7 @@ notifications:
   email: false
 
 before_install:
-- docker pull zimmerman/phaseflow-fenics:latest
+- docker pull quay.io/fenicsproject/stable:latest
 
 script:
-- docker run --rm -P -v `pwd`:/home/fenics/shared -w /home/fenics/shared zimmerman/phaseflow-fenics:latest "pip3 install --user -r requirements.txt && pip3 install --user --upgrade . && python3 -m pytest -v -k '_ci_'" 
+- docker run --rm -P -v `pwd`:/home/fenics/shared -w /home/fenics/shared quay.io/fenicsproject/stable:latest "pip3 install --user h5py && python3 -m pytest -v -k '_ci_'" 
