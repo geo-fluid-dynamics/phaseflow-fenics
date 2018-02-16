@@ -1,4 +1,4 @@
-"""This module contains the core functionalty of Phaseflow."""
+"""**core.lpy** contains the core functionality."""
 import fenics
 import h5py
 import numpy
