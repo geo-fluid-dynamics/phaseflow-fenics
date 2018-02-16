@@ -10,7 +10,6 @@ notifications:
 
 before_install:
 - docker pull quay.io/fenicsproject/stable:latest
-- docker run -P -v `pwd`:/home/fenics/shared -w /home/fenics/shared quay.io/fenicsproject/stable:latest "pip3 install --user h5py" 
 
 script:
-- docker run --rm -P -v `pwd`:/home/fenics/shared -w /home/fenics/shared quay.io/fenicsproject/stable:latest "python3 -m pytest -v -k '_ci_'" 
+- docker run --rm -P -v `pwd`:/home/fenics/shared -w /home/fenics/shared quay.io/fenicsproject/stable:latest "pip3 install --user h5py && python3 -m pytest -v -k '_ci_'" 
