@@ -14,7 +14,8 @@ class AdaptiveConvectionCoupledMeltingOctadecanePCM_Regression(
             end_time = 30.,
             automatic_jacobian = False,
             quadrature_degree = 8,
-            adaptive_solver_tolerance = 1.e-5):
+            adaptive_solver_tolerance = 1.e-5,
+            linear_solver = None):
     
         phaseflow.benchmarks.AdaptiveConvectionCoupledMeltingOctadecanePCM.__init__(self, 
             timestep_size = 10., 
@@ -24,7 +25,8 @@ class AdaptiveConvectionCoupledMeltingOctadecanePCM_Regression(
             depth_3d = depth_3d, 
             initial_mesh_size = initial_mesh_size, 
             initial_hot_wall_refinement_cycles = initial_hot_wall_refinement_cycles,
-            adaptive_solver_tolerance = adaptive_solver_tolerance)
+            adaptive_solver_tolerance = adaptive_solver_tolerance,
+            linear_solver = linear_solver)
     
         self.output_dir_suffix += "regression/"
         
@@ -58,7 +60,7 @@ class AdaptiveConvectionCoupledMeltingOctadecanePCM_Regression(
 class AdaptiveConvectionCoupledMeltingOctadecanePCM_3D_Regression(
         AdaptiveConvectionCoupledMeltingOctadecanePCM_Regression):
 
-    def __init__(self, automatic_jacobian = False):
+    def __init__(self, automatic_jacobian = False, linear_solver = None):
     
         AdaptiveConvectionCoupledMeltingOctadecanePCM_Regression.__init__(self, 
             end_time = 10., 
@@ -67,7 +69,8 @@ class AdaptiveConvectionCoupledMeltingOctadecanePCM_3D_Regression(
             depth_3d = 0.5, 
             initial_mesh_size = (1, 1, 1), 
             initial_hot_wall_refinement_cycles = 4,
-            adaptive_solver_tolerance = 5.e-4)
+            adaptive_solver_tolerance = 5.e-4,
+            linear_solver = linear_solver)
     
         self.output_dir_suffix += "3d/"
         

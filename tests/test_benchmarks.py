@@ -1,6 +1,6 @@
 """ This module runs the benchmark test suite. """
 from .context import phaseflow
-
+import fenics
 
 class BenchmarkTest():
 
@@ -13,7 +13,7 @@ class BenchmarkTest():
         
     def run(self):
     
-        self.benchmark.run()    
+        self.benchmark.run()
     
         
 

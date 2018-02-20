@@ -198,7 +198,8 @@ class Solver():
             nlp_max_iterations = 50,
             nlp_absolute_tolerance = 1.e-10,
             nlp_relative_tolerance = 1.e-9,
-            nlp_relaxation = 1.):
+            nlp_relaxation = 1.,
+            linear_solver = None):
     
         self.adaptive_goal_integrand = adaptive_goal_integrand
         
@@ -223,6 +224,14 @@ class Solver():
             
             self.fenics_solver.parameters["nonlinear_variational_solver"]["newton_solver"]\
                 ["relaxation_parameter"] = nlp_relaxation
+            
+            self.fenics_solver.parameters["nonlinear_variational_solver"]["newton_solver"]["krylov_solver"]\
+                ["monitor_convergence"] = True
+                
+            if linear_solver is not None:
+            
+                self.fenics_solver.parameters["nonlinear_variational_solver"]["newton_solver"]\
+                    ["linear_solver"] = linear_solver
         
         else:
         
@@ -235,6 +244,12 @@ class Solver():
             self.fenics_solver.parameters["newton_solver"]["relative_tolerance"] = nlp_relative_tolerance
             
             self.fenics_solver.parameters["newton_solver"]["relaxation_parameter"] = nlp_relaxation
+            
+            self.fenics_solver.parameters["newton_solver"]["krylov_solver"]["monitor_convergence"] = True
+                
+            if linear_solver is not None:
+            
+                self.fenics_solver.parameters["newton_solver"]["linear_solver"] = linear_solver
             
         if initial_guess is None:
         
