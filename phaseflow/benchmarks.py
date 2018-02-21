@@ -31,6 +31,8 @@ class Benchmark:
         
         self.prefix_output_dir_with_tempdir = False
         
+        self.solver = None
+        
         
     def verify(self):
         
@@ -69,18 +71,21 @@ class Benchmark:
                     assert(absolute_error < absolute_tolerance)
     
     
-    def run(self):
+    def setup_solver(self):
     
-        solver = phaseflow.core.Solver(
+        self.solver = phaseflow.core.Solver(
             model = self.model, 
             adaptive_goal_integrand = self.adaptive_goal_integrand, 
             adaptive_solver_tolerance = self.adaptive_solver_tolerance,
             initial_guess = self.initial_guess,
             linear_solver = self.linear_solver)
-        
+    
+    
+    def run(self):
+    
         timestepper = phaseflow.core.TimeStepper(
             model = self.model,
-            solver = solver,
+            solver = self.solver,
             output_dir_suffix = self.output_dir_suffix,
             prefix_output_dir_with_tempdir = self.prefix_output_dir_with_tempdir,
             end_time = self.end_time,

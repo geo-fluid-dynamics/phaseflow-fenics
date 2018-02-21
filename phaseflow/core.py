@@ -227,6 +227,9 @@ class Solver():
             
             self.fenics_solver.parameters["nonlinear_variational_solver"]["newton_solver"]["krylov_solver"]\
                 ["monitor_convergence"] = True
+            
+            self.fenics_solver.parameters["nonlinear_variational_solver"]["newton_solver"]["krylov_solver"]\
+                ["maximum_iterations"] = 1000
                 
             if linear_solver is not None:
             
@@ -246,6 +249,8 @@ class Solver():
             self.fenics_solver.parameters["newton_solver"]["relaxation_parameter"] = nlp_relaxation
             
             self.fenics_solver.parameters["newton_solver"]["krylov_solver"]["monitor_convergence"] = True
+            
+            self.fenics_solver.parameters["newton_solver"]["krylov_solver"]["maximum_iterations"] = 1000
                 
             if linear_solver is not None:
             
