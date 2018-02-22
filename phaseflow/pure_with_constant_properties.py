@@ -7,34 +7,23 @@ import phaseflow
 import phaseflow.pure
 
 
-class Model(phaseflow.core.Model):
+class WeakForm(phaseflow.core.WeakForm):
 
     def __init__(self,
-            mesh,
-            boundary_conditions = None, 
+            solutions,
+            integration_metric = fenics.dx,
             buoyancy = None,
             semi_phasefield_mapping = None,
-            timestep_bounds = (1.e-4, 1., 1.e12),
+            timestep_size = 1.,
             quadrature_degree = None,
             prandtl_number = 1.,
             stefan_number = 1.,
             liquid_viscosity = 1.,
             solid_viscosity = 1.e8,
-            penalty_parameter = 1.e-7,
-            automatic_jacobian = False):
-        """
-        Parameters
-        ----------
-        state : phaseflow.State
-        
-        timestep_size : float
-        
-        boundary_conditions : [fenics.DirichletBoundaryCondition,]
-        
-        buoyancy : phaseflow.ContinuousFunctionOfTemperature
-        
-        semi_phasefield_mapping : phaseflow.ContinuousFunctionOfTemperature
-        """
+            penalty_parameter = 1.e-7):
+
+            
+        #  Handle arguments.
         if semi_phasefield_mapping is None:
         
             semi_phasefield_mapping = phaseflow.pure.ConstantFunction(0.)
@@ -42,34 +31,46 @@ class Model(phaseflow.core.Model):
         if buoyancy is None:
         
             buoyancy = phaseflow.pure.ConstantFunction((0.,)*mesh.type().dim())
+            
+        buoyancy = self.buoyancy
         
+        Delta_t = fenics.Constant(timestep_size)
         
-        self.semi_phasefield_mapping = semi_phasefield_mapping
+        self.Delta_t = Delta_t
         
-        self.buoyancy = buoyancy
+        Pr = fenics.Constant(self.prandtl_number)
         
-        self.prandtl_number = prandtl_number
+        Ste = fenics.Constant(self.stefan_number)
         
-        self.stefan_number = stefan_number
+        f_B = self.buoyancy.function
         
-        self.liquid_viscosity = liquid_viscosity
+        phi = self.semi_phasefield_mapping
         
-        self.solid_viscosity = solid_viscosity
+        gamma = fenics.Constant(self.penalty_parameter)
         
-        self.penalty_parameter = penalty_parameter
+        mu_L = fenics.Constant(self.liquid_viscosity)
         
-        self.automatic_jacobian = automatic_jacobian
+        mu_S = fenics.Constant(self.solid_viscosity)
         
-        phaseflow.core.Model.__init__(self,
-            mesh = mesh,
-            element = phaseflow.pure.make_mixed_element(mesh.ufl_cell()),
-            boundary_conditions = boundary_conditions,
-            timestep_bounds = timestep_bounds,
-            quadrature_degree = quadrature_degree)
+        phase_dependent_viscosity = phaseflow.pure.PhaseDependentMaterialProperty(
+            liquid_value = mu_L,
+            solid_value = mu_S)
+            
+        mu = phase_dependent_viscosity.function
         
+        dx = integration_metric
         
-    def setup_variational_form(self):
-        """ Define the nonlinear variational form. """
+        w = solutions[0]
+        
+        w_n = solutions[1]
+        
+        W = w.function_space()
+        
+        p, u, T = fenics.split(w)
+         
+        p_n, u_n, T_n = fenics.split(w_n)
+        
+        psi_p, psi_u, psi_T = fenics.TestFunctions(W)
         
         
         # Set local names for math operators to improve readability.
@@ -97,43 +98,7 @@ class Model(phaseflow.core.Model):
             return dot(dot(grad(z), u), v)  # Convection of the velocity field
         
         
-        Delta_t = self.Delta_t
-        
-        Pr = fenics.Constant(self.prandtl_number)
-        
-        Ste = fenics.Constant(self.stefan_number)
-        
-        f_B = self.buoyancy.function
-        
-        phi = self.semi_phasefield_mapping
-        
-        gamma = fenics.Constant(self.penalty_parameter)
-        
-        mu_L = fenics.Constant(self.liquid_viscosity)
-        
-        mu_S = fenics.Constant(self.solid_viscosity)
-        
-        phase_dependent_viscosity = phaseflow.pure.PhaseDependentMaterialProperty(
-            liquid_value = mu_L,
-            solid_value = mu_S)
-        
-        mu = phase_dependent_viscosity.function
-        
-        W = self.function_space
-        
-        psi_p, psi_u, psi_T = fenics.TestFunctions(W)
-        
-        w = self.state.solution
-        
-        p, u, T = fenics.split(w)
-        
-        w_n = self.old_state.solution
-         
-        p_n, u_n, T_n = fenics.split(w_n)
-        
-        dx = self.integration_metric
-    
-        self.variational_form = (
+        self.fenics_variational_form = (
             b(u, psi_p) - psi_p*gamma*p
             + dot(psi_u, 1./Delta_t*(u - u_n) + f_B(T))
             + c(u, u, psi_u) + b(psi_u, p) + a(mu(phi,T), u, psi_u)
@@ -141,36 +106,8 @@ class Model(phaseflow.core.Model):
             + dot(grad(psi_T), 1./Pr*grad(T) - T*u)        
             )*dx
 
-        
-        # Set the derivative of the variational form for linearizing the nonlinear problem.
-        if self.automatic_jacobian:
-        
-            self.derivative_of_variational_form = None
-            
-        else:  # Set the manually derived Gateaux derivative in variational form.
-        
-            delta_w = fenics.TrialFunction(W)
-            
-            df_B = self.buoyancy.derivative_function
-            
-            dphi = self.semi_phasefield_mapping.derivative_function
-            
-            dmu = phase_dependent_viscosity.derivative_function
-            
-            delta_p, delta_u, delta_T = fenics.split(delta_w)
-            
-            w_k = w
-            
-            p_k, u_k, T_k = fenics.split(w_k)
-            
-            self.derivative_of_variational_form = (
-                b(delta_u, psi_p) - psi_p*gamma*delta_p 
-                + dot(psi_u, 1./Delta_t*delta_u + delta_T*df_B(T_k))
-                + c(u_k, delta_u, psi_u) + c(delta_u, u_k, psi_u) 
-                + b(psi_u, delta_p) 
-                + a(delta_T*dmu(phi, T_k), u_k, psi_u) + a(mu(phi, T_k), delta_u, psi_u) 
-                + 1./Delta_t*psi_T*delta_T*(1. - 1./Ste*dphi(T_k))
-                + dot(grad(psi_T), 1./Pr*grad(delta_T) - T_k*delta_u - delta_T*u_k)
-                )*dx
                 
-                
+    def set_timestep_size(self, value):
+        """ Set the time step size such that the new value will be used in the weak form."""
+        self.Delta_t.assign(value)
+        

@@ -4,6 +4,7 @@ import h5py
 import numpy
 import phaseflow.helpers
 import tempfile
+import pickle
 
 
 class SolutionFile(fenics.XDMFFile):
@@ -75,6 +76,18 @@ class State:
             file.write(var, self.time)
         
     
+class WeakForm:
+
+    def __init__(self, solutions, integration_metric):
+    
+        self.setup(solutions, integration_metric)
+        
+        
+    def setup(self):
+        """ This must be overloaded. """
+        assert(False)
+    
+    
 class Model:
     
     def __init__(self,
@@ -132,6 +145,8 @@ class Model:
         
         self.setup_problem()
         
+        self.setup_adaptive_goal_integrand()
+        
         
     def setup_problem(self):
         
@@ -159,6 +174,11 @@ class Model:
             self.derivative_of_variational_form)
     
 
+    def setup_adaptive_goal_integrand(self):
+        """ This must be overloaded for adaptive problems. """
+        pass
+    
+    
     def setup_variational_form(self):
         """ Define the fenics.NonlinearVariationalForm.
         
@@ -450,6 +470,62 @@ class TimeStepper:
                 str(self.unsteadiness))
         
 
+class Simulation():
+
+    def __init__(model, timestepper):
+    
+        self.model = model
+        
+        self.timestepper = timestepper
+        
+        self.adaptive_goal_integrand = None
+        
+        self.adaptive_solver_tolerance = 1.e-4
+        
+        self.output_dir_suffix = "benchmarks/"
+        
+        self.output_dir = None
+        
+        self.end_time = None
+        
+        self.stop_when_steady = False
+        
+        self.steady_relative_tolerance = 1.e-4
+        
+        self.adapt_timestep_to_unsteadiness = False
+        
+        self.adaptive_time_power = 1.
+        
+        self.initial_guess = None
+        
+        self.prefix_output_dir_with_tempdir = False
+        
+    
+    def run(self):
+    
+        solver = phaseflow.core.Solver(
+            model = self.model, 
+            adaptive_goal_integrand = self.adaptive_goal_integrand, 
+            adaptive_solver_tolerance = self.adaptive_solver_tolerance,
+            initial_guess = self.initial_guess)
+        
+        timestepper = phaseflow.core.TimeStepper(
+            model = self.model,
+            solver = solver,
+            output_dir_suffix = self.output_dir_suffix,
+            prefix_output_dir_with_tempdir = self.prefix_output_dir_with_tempdir,
+            end_time = self.end_time,
+            stop_when_steady = self.stop_when_steady,
+            steady_relative_tolerance = self.steady_relative_tolerance,
+            adapt_timestep_to_unsteadiness = self.adapt_timestep_to_unsteadiness,
+            adaptive_time_power = self.adaptive_time_power)
+        
+        self.output_dir = timestepper.output_dir
+        
+        timestepper.run_until_end_time()
+        
+        
+        
 class ContinuousFunction:
 
     def __init__(self, function, derivative_function):
