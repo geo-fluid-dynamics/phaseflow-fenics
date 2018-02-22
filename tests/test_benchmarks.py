@@ -22,7 +22,12 @@ def test_adaptive_lid_driven_cavity_benchmark__ci__():
     BenchmarkTest(phaseflow.benchmarks.AdaptiveLidDrivenCavity()).run()
     
 
-def test_adaptive_lid_driven_cavity_with_solid_subdomain_benchmark__ci__():
+def test_lid_driven_cavity_with_solid_subdomain_benchmark__ci__():
+    
+    BenchmarkTest(phaseflow.benchmarks.LidDrivenCavityWithSolidSubdomain()).run()
+    
+    
+def test_adaptive_lid_driven_cavity_with_solid_subdomain_benchmark__failing__():
     
     BenchmarkTest(phaseflow.benchmarks.AdaptiveLidDrivenCavityWithSolidSubdomain()).run()
     
