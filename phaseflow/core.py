@@ -75,46 +75,6 @@ class State:
             file.write(var, self.time)
         
     
-    def write_checkpoint(self, output_dir):
-        """Write the checkpoint file (with solution and time)."""        
-        filepath = output_dir + "/checkpoint_t" + str(self.time) + ".h5"
-         
-        phaseflow.helpers.print_once("Writing checkpoint file to " + filepath)
-        
-        with fenics.HDF5File(fenics.mpi_comm_world(), filepath, "w") as h5:
-                    
-            h5.write(self.solution.function_space().mesh().leaf_node(), "mesh")
-        
-            h5.write(self.solution.leaf_node(), "solution")
-            
-        if fenics.MPI.rank(fenics.mpi_comm_world()) is 0:
-        
-            with h5py.File(filepath, "r+") as h5:
-                
-                h5.create_dataset("time", data=self.time)
-        
-        
-    def read_checkpoint(self, filepath):
-        """Read the checkpoint file (with solution and time)."""
-        mesh = fenics.Mesh()
-            
-        with fenics.HDF5File(mesh.mpi_comm(), filepath, "r") as h5:
-        
-            h5.read(mesh, "mesh", True)
-        
-        function_space = fenics.FunctionSpace(mesh, self.element)
-
-        self.solution = fenics.Function(function_space)
-
-        with fenics.HDF5File(mesh.mpi_comm(), filepath, "r") as h5:
-        
-            h5.read(self.solution, "solution")
-            
-        with h5py.File(filepath, "r") as h5:
-                
-            self.time = h5["time"].value
-        
-    
 class Model:
     
     def __init__(self,
@@ -204,17 +164,36 @@ class Model:
         
         The derived Model class must overload this method. """
         assert(False)
-        
-        
+    
+    
     def set_timestep_size_value(self, value):
         """ Set the value of the time step size."""
         self.timestep_size.set(value)
                         
         self.Delta_t.assign(self.timestep_size.value)
         
+    
+    def write_checkpoint(self, output_dir):
+        """Write the checkpoint file (with solution and time for the latest state)."""        
+        filepath = output_dir + "/checkpoint_t" + str(self.state.time) + ".h5"
+         
+        phaseflow.helpers.print_once("Writing checkpoint file to " + filepath)
+        
+        with fenics.HDF5File(fenics.mpi_comm_world(), filepath, "w") as h5:
+                    
+            h5.write(self.state.solution.function_space().mesh().leaf_node(), "mesh")
+        
+            h5.write(self.state.solution.leaf_node(), "solution")
+            
+        if fenics.MPI.rank(fenics.mpi_comm_world()) is 0:
+        
+            with h5py.File(filepath, "r+") as h5:
+                
+                h5.create_dataset("time", data=self.state.time)
+
         
     def read_checkpoint(self, filepath):
-        """Read checkpoint file."""
+        """Read the checkpoint file (with solution and time)."""
         phaseflow.helpers.print_once("Reading checkpoint file from " + filepath)
         
         self.mesh = fenics.Mesh()
@@ -224,11 +203,23 @@ class Model:
             h5.read(self.mesh, "mesh", True)
         
         self.function_space = fenics.FunctionSpace(self.mesh, self.element)
+
+        self.old_state.solution = fenics.Function(self.function_space)
         
-        self.old_state.read_checkpoint(filepath)
+        self.state.solution = fenics.Function(self.function_space)
+
+        with fenics.HDF5File(self.mesh.mpi_comm(), filepath, "r") as h5:
         
-        self.state.read_checkpoint(filepath)  # @todo This duplicates some work.
+            h5.read(self.old_state.solution, "solution")
+            
+        with h5py.File(filepath, "r") as h5:
+                
+            self.old_state.time = h5["time"].value
+            
+        self.state.solution.vector()[:] = self.old_state.solution.vector()
         
+        self.state.time = 0. + self.old_state.time
+            
         self.setup_problem()
         
 
@@ -405,7 +396,7 @@ class TimeStepper:
                 
                 self.state.write_solution_to_xdmf(self.solution_file)
 
-                self.state.write_checkpoint(output_dir = self.output_dir)
+                self.model.write_checkpoint(output_dir = self.output_dir)
                 
                 
                 # Check for steady state.

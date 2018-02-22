@@ -209,7 +209,7 @@ class AdaptiveLidDrivenCavity(LidDrivenCavity):
         self.adaptive_solver_tolerance = 1.e-4
         
         self.output_dir_suffix += "adaptive/"
-
+        
         
 class LidDrivenCavityWithSolidSubdomain(LidDrivenCavity):
     """ Similar to the lid-driven cavity, but extended with a solid subdomain to test variable viscosity.
@@ -298,17 +298,17 @@ class AdaptiveLidDrivenCavityWithSolidSubdomain(LidDrivenCavityWithSolidSubdomai
         LidDrivenCavityWithSolidSubdomain.__init__(self, mesh_size = (4, 5), pci_refinement_cycles = 0,
             automatic_jacobian = automatic_jacobian)
         
-        self.end_time = 2.*self.timestep_size
-        
         p, u, T = fenics.split(self.model.state.solution)
         
         self.adaptive_goal_integrand = u[0]*u[0]
+        
+        self.end_time = 2.*self.timestep_size
         
         self.adaptive_solver_tolerance = 1.e-5
         
         self.output_dir_suffix += "adaptive/"
     
-    
+
 class HeatDrivenCavity(Cavity):
 
     def __init__(self, mesh_size = 20, automatic_jacobian = False):
@@ -346,6 +346,8 @@ class HeatDrivenCavity(Cavity):
         
         self.output_dir_suffix += "heat_driven_cavity/"
         
+        self.setup_problem()
+        
         
     def verify(self):
         """ Verify against the result published in \cite{wang2010comprehensive}. """
@@ -364,11 +366,11 @@ class AdaptiveHeatDrivenCavity(HeatDrivenCavity):
     
         HeatDrivenCavity.__init__(self, mesh_size = mesh_size, automatic_jacobian = automatic_jacobian)
         
-        self.output_dir_suffix += "adaptive/"
-        
         p, u, T = fenics.split(self.model.state.solution)
         
         self.adaptive_goal_integrand = u[0]*T
+        
+        self.output_dir_suffix += "adaptive/"
         
         self.adaptive_solver_tolerance = 1.e-2
         
@@ -442,11 +444,11 @@ class AdaptiveHeatDrivenCavityWithWater(HeatDrivenCavityWithWater):
         HeatDrivenCavityWithWater.__init__(self, mesh_size = mesh_size, 
             automatic_jacobian = automatic_jacobian)
         
-        self.output_dir_suffix += "adaptive/"
-        
         p, u, T = fenics.split(self.model.state.solution)
         
         self.adaptive_goal_integrand = u[0]*T
+        
+        self.output_dir_suffix += "adaptive/"
         
         self.adaptive_solver_tolerance = 1.e-2
         
@@ -574,7 +576,7 @@ class AdaptiveStefanProblem(StefanProblem):
         """ This test fails with the usual initial guess of w^0 = w_n, but passes with w^0 = 0. """
         self.initial_guess = ("0.", "0.", "0.")
         
-            
+        
 class AdaptiveConvectionCoupledMeltingOctadecanePCM(Cavity):
 
     def __init__(self, 
@@ -654,19 +656,6 @@ class AdaptiveConvectionCoupledMeltingOctadecanePCM(Cavity):
         
             
         # Set up the model.
-        if initial_pci_position == None:
-        
-            initial_pci_position = \
-                1./float(initial_mesh_size[0])/2.**(initial_hot_wall_refinement_cycles - 1)
-        
-        initial_temperature = "(T_hot - T_cold)*(x[0] < initial_pci_position) + T_cold"
-        
-        initial_temperature = initial_temperature.replace("initial_pci_position", str(initial_pci_position))
-        
-        initial_temperature = initial_temperature.replace("T_hot", str(T_hot))
-        
-        initial_temperature = initial_temperature.replace("T_cold", str(T_cold))
-
         self.model = phaseflow.pure_with_constant_properties.Model(
             mesh = self.mesh,
             boundary_conditions = [
@@ -686,15 +675,32 @@ class AdaptiveConvectionCoupledMeltingOctadecanePCM(Cavity):
             automatic_jacobian = automatic_jacobian,
             quadrature_degree = quadrature_degree)
         
-        self.model.old_state.interpolate(
-            ["0.",] + ["0.",]*self.spatial_dimensionality + [initial_temperature,])
-            
         phi = self.model.semi_phasefield_mapping.function
         
         p, u, T = fenics.split(self.model.state.solution)
         
         self.adaptive_goal_integrand = phi(T)
         
+        
+        # Set initial values.
+        if initial_pci_position == None:
+        
+            initial_pci_position = \
+                1./float(initial_mesh_size[0])/2.**(initial_hot_wall_refinement_cycles - 1)
+        
+        initial_temperature = "(T_hot - T_cold)*(x[0] < initial_pci_position) + T_cold"
+        
+        initial_temperature = initial_temperature.replace("initial_pci_position", str(initial_pci_position))
+        
+        initial_temperature = initial_temperature.replace("T_hot", str(T_hot))
+        
+        initial_temperature = initial_temperature.replace("T_cold", str(T_cold))
+        
+        self.model.old_state.interpolate(
+            ["0.",] + ["0.",]*self.spatial_dimensionality + [initial_temperature,])
+            
+        
+        #
         self.adaptive_solver_tolerance = adaptive_solver_tolerance
         
         self.end_time = end_time
@@ -703,6 +709,3 @@ class AdaptiveConvectionCoupledMeltingOctadecanePCM(Cavity):
         
         self.output_dir_suffix += "adaptive_convection_coupled_melting_octadecane_pcm/"
         
-        self.regularization_central_temperature = regularization_central_temperature
-        
-    
