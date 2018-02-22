@@ -37,7 +37,18 @@ class State:
         
         self.time = time
         
+        self.function_space = function_space
+        
         self.element = element
+        
+    
+    def interpolate(self, expression_strings):
+        """Interpolate the solution from mathematical expressions. """
+        interpolated_solution = fenics.interpolate(
+            fenics.Expression(expression_strings, element = self.element), 
+            self.function_space.leaf_node())
+        
+        self.solution.leaf_node().vector()[:] = interpolated_solution.leaf_node().vector() 
         
     
     def write_solution_to_xdmf(self, file):
@@ -109,7 +120,6 @@ class Model:
     def __init__(self,
             mesh, 
             element,
-            initial_values,
             boundary_conditions = None, 
             timestep_bounds = (1.e-4, 1., 1.e12),
             quadrature_degree = None):
@@ -124,16 +134,6 @@ class Model:
         self.mesh = mesh
         
         self.element = element
-        
-        self.function_space = fenics.FunctionSpace(mesh, element)
-        
-        self.state = State(self.function_space, self.element)
-
-        self.old_state = State(self.function_space, self.element)
-        
-        self.old_state.solution = fenics.interpolate(
-            fenics.Expression(initial_values, element = element), 
-            self.function_space)
         
         if type(timestep_bounds) == type(1.):
         
@@ -160,27 +160,54 @@ class Model:
         
             self.integration_metric = fenics.dx(metadata={'quadrature_degree': quadrature_degree})
         
+        self.boundary_condition_dicts = boundary_conditions
+        
         self.boundary_conditions = []
         
-        for bc in boundary_conditions:
+        self.function_space = fenics.FunctionSpace(self.mesh, self.element)
         
-            self.boundary_conditions.append(
-                fenics.DirichletBC(self.function_space.sub(bc["subspace"]), 
-                    bc["value"], 
-                    bc["location"]))
+        self.state = State(self.function_space, self.element)
+
+        self.old_state = State(self.function_space, self.element)
+        
+        self.setup_problem()
         
         
     def setup_problem(self):
-        """ This must be called after setting the variational form and its derivative. """
+        
+        self.setup_variational_form()
+        
+        if self.derivative_of_variational_form is None:
+        
+            self.derivative_of_variational_form = fenics.derivative(self.variational_form, 
+                self.state.solution, 
+                fenics.TrialFunction(self.function_space))
+        
+        boundary_conditions = []
+        
+        for dict in self.boundary_condition_dicts:
+        
+            boundary_conditions.append(
+                fenics.DirichletBC(self.function_space.sub(dict["subspace"]), 
+                    dict["value"], 
+                    dict["location"]))
+                    
         self.problem = fenics.NonlinearVariationalProblem( 
             self.variational_form, 
             self.state.solution, 
-            self.boundary_conditions, 
+            boundary_conditions, 
             self.derivative_of_variational_form)
+    
+
+    def setup_variational_form(self):
+        """ Define the fenics.NonlinearVariationalForm.
+        
+        The derived Model class must overload this method. """
+        assert(False)
         
         
     def set_timestep_size_value(self, value):
-    
+        """ Set the value of the time step size."""
         self.timestep_size.set(value)
                         
         self.Delta_t.assign(self.timestep_size.value)
@@ -201,6 +228,8 @@ class Model:
         self.old_state.read_checkpoint(filepath)
         
         self.state.read_checkpoint(filepath)  # @todo This duplicates some work.
+        
+        self.setup_problem()
         
 
 class Solver():

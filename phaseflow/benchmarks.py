@@ -167,13 +167,14 @@ class LidDrivenCavity(Cavity):
         self.timestep_size = timestep_size
         
         self.model = phaseflow.pure_with_constant_properties.Model(self.mesh,
-            initial_values = ("0.", self.top_wall, "0.", "1."),
             boundary_conditions = [
                 {"subspace": 1, "location": self.top_wall, "value": (1., 0.)},
                 {"subspace": 1, "location": self.fixed_walls, "value": (0., 0.)}],
             timestep_bounds = timestep_size,
             liquid_viscosity = 0.01,
             automatic_jacobian = automatic_jacobian)
+        
+        self.model.old_state.interpolate(("0.", self.top_wall, "0.", "1."))
         
         self.end_time = timestep_size
         
@@ -261,11 +262,6 @@ class LidDrivenCavityWithSolidSubdomain(LidDrivenCavity):
     def setup_model(self, timestep_size = 20., automatic_jacobian = False):
     
         self.model = phaseflow.pure_with_constant_properties.Model(self.mesh,
-            initial_values = (
-                "0.", 
-                self.top_wall, 
-                "0.", 
-                "1. - 2.*(x[1] <= y_pci)".replace("y_pci", str(LidDrivenCavityWithSolidSubdomain.y_pci))),
             boundary_conditions = [
                 {"subspace": 1, "location": self.top_wall, "value": (1., 0.)},
                 {"subspace": 1, "location": self.fixed_walls, "value": (0., 0.)}],
@@ -280,6 +276,12 @@ class LidDrivenCavityWithSolidSubdomain(LidDrivenCavity):
             quadrature_degree = 3,
             automatic_jacobian = automatic_jacobian)
         
+        self.model.old_state.interpolate((
+            "0.", 
+            self.top_wall, 
+            "0.", 
+            "1. - 2.*(x[1] <= y_pci)".replace("y_pci", str(LidDrivenCavityWithSolidSubdomain.y_pci))))
+        
         self.output_dir_suffix += "with_solid_subdomain/"
         
         
@@ -293,7 +295,7 @@ class AdaptiveLidDrivenCavityWithSolidSubdomain(LidDrivenCavityWithSolidSubdomai
     """
     def __init__(self, automatic_jacobian = False):
     
-        LidDrivenCavityWithSolidSubdomain.__init__(self, mesh_size = (4, 5), pci_refinement_cycles = 4,
+        LidDrivenCavityWithSolidSubdomain.__init__(self, mesh_size = (4, 5), pci_refinement_cycles = 0,
             automatic_jacobian = automatic_jacobian)
         
         self.end_time = 2.*self.timestep_size
@@ -321,11 +323,7 @@ class HeatDrivenCavity(Cavity):
         
         self.Pr = 0.71
     
-        initial_values = ("0.", "0.", "0.",
-            "T_hot + x[0]*(T_cold - T_hot)".replace("T_hot", str(T_hot)).replace("T_cold", str(T_cold)))
-        
         self.model = phaseflow.pure_with_constant_properties.Model(self.mesh,
-            initial_values = initial_values,
             boundary_conditions = [
                 {"subspace": 1, "location": self.walls, "value": (0., 0.)},
                 {"subspace": 2, "location": self.left_wall, "value": T_hot},
@@ -336,6 +334,9 @@ class HeatDrivenCavity(Cavity):
                 prandtl_number = self.Pr),
             timestep_bounds = (1.e-4, 1.e-3, 1.e12),
             automatic_jacobian = automatic_jacobian)
+            
+        self.model.old_state.interpolate(("0.", "0.", "0.",
+            "T_hot + x[0]*(T_cold - T_hot)".replace("T_hot", str(T_hot)).replace("T_cold", str(T_cold))))
             
         self.stop_when_steady = True
         
@@ -390,14 +391,7 @@ class HeatDrivenCavityWithWater(Cavity):
         
         scaled_T_cold = 0.
         
-        initial_temperature = "scaled_T_hot + x[0]*(scaled_T_cold - scaled_T_hot)"
-        
-        initial_temperature = initial_temperature.replace("scaled_T_hot", str(scaled_T_hot))
-        
-        initial_temperature = initial_temperature.replace("scaled_T_cold", str(scaled_T_cold))
-        
         self.model = phaseflow.pure_with_constant_properties.Model(self.mesh,
-            initial_values = ("0.", "0.", "0.", initial_temperature),
             boundary_conditions = [
                 {"subspace": 1, "location": self.walls, "value": (0., 0.)},
                 {"subspace": 2, "location": self.left_wall, "value": scaled_T_hot},
@@ -410,6 +404,14 @@ class HeatDrivenCavityWithWater(Cavity):
                 prandtl_number = self.Pr),
             timestep_bounds = (1.e-4, 1.e-3, 1.e-2),
             automatic_jacobian = automatic_jacobian)
+        
+        initial_temperature = "scaled_T_hot + x[0]*(scaled_T_cold - scaled_T_hot)"
+        
+        initial_temperature = initial_temperature.replace("scaled_T_hot", str(scaled_T_hot))
+        
+        initial_temperature = initial_temperature.replace("scaled_T_cold", str(scaled_T_cold))
+        
+        self.model.old_state.interpolate(("0.", "0.", "0.", initial_temperature))
             
         self.output_dir_suffix += "heat_driven_cavity_with_water/"
 
@@ -520,7 +522,6 @@ class StefanProblem(Benchmark):
         
         self.model = phaseflow.pure_with_constant_properties.Model(
             mesh = mesh,
-            initial_values = ("0.", "0.", initial_temperature),
             boundary_conditions = [
                 {"subspace": 2, "location": "near(x[0],  0.)", "value": T_hot},
                 {"subspace": 2, "location": "near(x[0],  1.)", "value": T_cold}],
@@ -532,6 +533,8 @@ class StefanProblem(Benchmark):
             automatic_jacobian = automatic_jacobian,
             quadrature_degree = quadrature_degree)
 
+        self.model.old_state.interpolate(("0.", "0.", initial_temperature))
+        
         self.end_time = end_time
         
         self.output_dir_suffix += "stefan_problem/"
@@ -666,7 +669,6 @@ class AdaptiveConvectionCoupledMeltingOctadecanePCM(Cavity):
 
         self.model = phaseflow.pure_with_constant_properties.Model(
             mesh = self.mesh,
-            initial_values = ["0.",] + ["0.",]*self.spatial_dimensionality + [initial_temperature,],
             boundary_conditions = [
                 {"subspace": 1, "location": self.walls, "value": (0.,)*self.spatial_dimensionality},
                 {"subspace": 2, "location": self.left_wall, "value": T_hot},
@@ -684,6 +686,9 @@ class AdaptiveConvectionCoupledMeltingOctadecanePCM(Cavity):
             automatic_jacobian = automatic_jacobian,
             quadrature_degree = quadrature_degree)
         
+        self.model.old_state.interpolate(
+            ["0.",] + ["0.",]*self.spatial_dimensionality + [initial_temperature,])
+            
         phi = self.model.semi_phasefield_mapping.function
         
         p, u, T = fenics.split(self.model.state.solution)

@@ -11,19 +11,17 @@ class Model(phaseflow.core.Model):
 
     def __init__(self,
             mesh,
-            initial_values,
             boundary_conditions = None, 
             buoyancy = None,
             semi_phasefield_mapping = None,
             timestep_bounds = (1.e-4, 1., 1.e12),
+            quadrature_degree = None,
             prandtl_number = 1.,
             stefan_number = 1.,
             liquid_viscosity = 1.,
             solid_viscosity = 1.e8,
-            gravity = None,
             penalty_parameter = 1.e-7,
-            automatic_jacobian = False,
-            quadrature_degree = None):
+            automatic_jacobian = False):
         """
         Parameters
         ----------
@@ -37,16 +35,6 @@ class Model(phaseflow.core.Model):
         
         semi_phasefield_mapping : phaseflow.ContinuousFunctionOfTemperature
         """
-        phaseflow.core.Model.__init__(self,
-            mesh = mesh,
-            element = phaseflow.pure.make_mixed_element(mesh.ufl_cell()),
-            initial_values = initial_values,
-            boundary_conditions = boundary_conditions,
-            timestep_bounds = timestep_bounds,
-            quadrature_degree = quadrature_degree)
-        
-        
-        ## Handle default arguments.    
         if semi_phasefield_mapping is None:
         
             semi_phasefield_mapping = phaseflow.pure.ConstantFunction(0.)
@@ -55,19 +43,40 @@ class Model(phaseflow.core.Model):
         
             buoyancy = phaseflow.pure.ConstantFunction((0.,)*mesh.type().dim())
         
+        
         self.semi_phasefield_mapping = semi_phasefield_mapping
         
         self.buoyancy = buoyancy
         
+        self.prandtl_number = prandtl_number
         
-        ## Set the variational form.
-        """Set local names for math operators to improve readability."""
+        self.stefan_number = stefan_number
+        
+        self.liquid_viscosity = liquid_viscosity
+        
+        self.solid_viscosity = solid_viscosity
+        
+        self.penalty_parameter = penalty_parameter
+        
+        self.automatic_jacobian = automatic_jacobian
+        
+        phaseflow.core.Model.__init__(self,
+            mesh = mesh,
+            element = phaseflow.pure.make_mixed_element(mesh.ufl_cell()),
+            boundary_conditions = boundary_conditions,
+            timestep_bounds = timestep_bounds,
+            quadrature_degree = quadrature_degree)
+        
+        
+    def setup_variational_form(self):
+        """ Define the nonlinear variational form. """
+        
+        
+        # Set local names for math operators to improve readability.
         inner, dot, grad, div, sym = fenics.inner, fenics.dot, fenics.grad, fenics.div, fenics.sym
         
-        """The linear, bilinear, and trilinear forms b, a, and c, follow the common notation 
-        for applying the finite element method to the incompressible Navier-Stokes equations,
-        e.g. from danaila2014newton and huerta2003fefluids.
-        """
+        
+        #The forms a, b, and c follow the common notation from  huerta2003fefluids.
         def b(u, p):
         
             return -div(u)*p  # Divergence
@@ -87,21 +96,22 @@ class Model(phaseflow.core.Model):
             
             return dot(dot(grad(z), u), v)  # Convection of the velocity field
         
+        
         Delta_t = self.Delta_t
         
-        Pr = fenics.Constant(prandtl_number)
+        Pr = fenics.Constant(self.prandtl_number)
         
-        Ste = fenics.Constant(stefan_number)
+        Ste = fenics.Constant(self.stefan_number)
         
-        f_B = buoyancy.function
+        f_B = self.buoyancy.function
         
-        phi = semi_phasefield_mapping
+        phi = self.semi_phasefield_mapping
         
-        gamma = fenics.Constant(penalty_parameter)
+        gamma = fenics.Constant(self.penalty_parameter)
         
-        mu_L = fenics.Constant(liquid_viscosity)
+        mu_L = fenics.Constant(self.liquid_viscosity)
         
-        mu_S = fenics.Constant(solid_viscosity)
+        mu_S = fenics.Constant(self.solid_viscosity)
         
         phase_dependent_viscosity = phaseflow.pure.PhaseDependentMaterialProperty(
             liquid_value = mu_L,
@@ -133,19 +143,17 @@ class Model(phaseflow.core.Model):
 
         
         # Set the derivative of the variational form for linearizing the nonlinear problem.
-        delta_w = fenics.TrialFunction(W)
+        if self.automatic_jacobian:
         
-        if automatic_jacobian:
-        
-            self.derivative_of_variational_form = fenics.derivative(self.variational_form, w, delta_w)
-        
-        else:
-        
-        
-            # Set the manually derived Gateaux derivative in variational form.
-            df_B = buoyancy.derivative_function
+            self.derivative_of_variational_form = None
             
-            dphi = semi_phasefield_mapping.derivative_function
+        else:  # Set the manually derived Gateaux derivative in variational form.
+        
+            delta_w = fenics.TrialFunction(W)
+            
+            df_B = self.buoyancy.derivative_function
+            
+            dphi = self.semi_phasefield_mapping.derivative_function
             
             dmu = phase_dependent_viscosity.derivative_function
             
@@ -164,8 +172,5 @@ class Model(phaseflow.core.Model):
                 + 1./Delta_t*psi_T*delta_T*(1. - 1./Ste*dphi(T_k))
                 + dot(grad(psi_T), 1./Pr*grad(delta_T) - T_k*delta_u - delta_T*u_k)
                 )*dx
-        
-        
-        #
-        self.setup_problem()
-        
+                
+                
