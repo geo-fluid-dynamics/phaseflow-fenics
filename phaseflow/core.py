@@ -85,8 +85,6 @@ class State:
         
     def read_checkpoint(self, filepath):
         """Read the checkpoint file (with solution and time)."""
-        phaseflow.helpers.print_once("Reading checkpoint file from " + filepath)
-        
         mesh = fenics.Mesh()
             
         with fenics.HDF5File(mesh.mpi_comm(), filepath, "r") as h5:
@@ -186,7 +184,24 @@ class Model:
         self.timestep_size.set(value)
                         
         self.Delta_t.assign(self.timestep_size.value)
- 
+        
+        
+    def read_checkpoint(self, filepath):
+        """Read checkpoint file."""
+        phaseflow.helpers.print_once("Reading checkpoint file from " + filepath)
+        
+        self.mesh = fenics.Mesh()
+            
+        with fenics.HDF5File(self.mesh.mpi_comm(), filepath, "r") as h5:
+        
+            h5.read(self.mesh, "mesh", True)
+        
+        self.function_space = fenics.FunctionSpace(self.mesh, self.element)
+        
+        self.old_state.read_checkpoint(filepath)
+        
+        self.state.read_checkpoint(filepath)  # @todo This duplicates some work.
+        
 
 class Solver():
 

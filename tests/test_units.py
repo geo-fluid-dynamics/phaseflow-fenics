@@ -60,7 +60,7 @@ def test_checkpoint_and_restart__ci__():
     
     benchmark2.prefix_output_dir_with_tempdir = True
     
-    benchmark2.model.state.read_checkpoint(
+    benchmark2.model.read_checkpoint(
         benchmark.output_dir + "/checkpoint_t" + str(benchmark.end_time) + ".h5")
     
     assert(benchmark.model.state.time == benchmark2.model.state.time)
@@ -72,4 +72,8 @@ def test_checkpoint_and_restart__ci__():
     assert(fenics.errornorm(solution, solution2) < 1.e-15)
     
     assert(all(solution.vector() == solution2.vector()))
+    
+    benchmark2.end_time *= 2.
+    
+    benchmark2.run()
     
