@@ -9,43 +9,31 @@ import phaseflow.simulation
     
 class Simulation(phaseflow.simulation.Simulation):
 
-    def __init__(self,
-            timestep_size = 1.,
-            rayleigh_numer = 1.,
-            prandtl_number = 1.,
-            stefan_number = 1.,
-            gravity = [0., -1.],
-            liquid_viscosity = 1.,
-            solid_viscosity = 1.e8,
-            penalty_parameter = 1.e-7,
-            regularization_central_temperature = 0.,
-            regularization_smoothing_parameter = 0.01,
-            pressure_element_degree = 1,
-            temperature_element_degree = 1):
+    def __init__(self):
 
-        self.timestep_size = timestep_size
+        self.timestep_size = 1.
         
-        self.rayleigh_numer = rayleigh_numer
+        self.rayleigh_numer = 1.
         
-        self.prandtl_number = prandtl_number
+        self.prandtl_number = 1.
         
-        self.stefan_number = stefan_number
+        self.stefan_number = 1.
         
-        self.gravity = gravity
+        self.gravity = (0., -1.)
         
-        self.liquid_viscosity = liquid_viscosity
+        self.liquid_viscosity = 1.
         
-        self.solid_viscosity = solid_viscosity
+        self.solid_viscosity = 1.e-8
         
-        self.penalty_parameter = penalty_parameter
+        self.penalty_parameter = 1.e-7
         
-        self.regularization_central_temperature = regularization_central_temperature
+        self.regularization_central_temperature = 0.
         
-        self.regularization_smoothing_parameter = regularization_smoothing_parameter
+        self.regularization_smoothing_parameter = 0.01
         
-        self.pressure_element_degree = pressure_element_degree
+        self.pressure_element_degree = 1
         
-        self.temperature_element_degree = temperature_element_degree
+        self.temperature_element_degree = 1
         
         self.semi_phasefield_mapping = None
         

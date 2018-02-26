@@ -8,7 +8,7 @@ class BenchmarkSimulationTest:
     
         self.benchmark_simulation = benchmark_simulation
         
-        self.benchmark_simulation.prefix_output_dir_with_tempdir = True
+        #self.benchmark_simulation.prefix_output_dir_with_tempdir = True
         
         
     def run(self):
@@ -19,7 +19,7 @@ class BenchmarkSimulationTest:
 
 def test_lid_driven_cavity_benchmark__ci__():
     
-    BenchmarkSimulationTestt(phaseflow.octadecane_benchmarks.LidDrivenCavityBenchmarkSimulation()).run()
+    BenchmarkSimulationTest(phaseflow.octadecane_benchmarks.LidDrivenCavityBenchmarkSimulation()).run()
     
 
 def test_lid_driven_cavity_with_solid_subdomain_benchmark__ci__():
@@ -30,7 +30,11 @@ def test_lid_driven_cavity_with_solid_subdomain_benchmark__ci__():
     
 def test_heat_driven_cavity_benchmark__ci__():
     
-    BenchmarkSimulationTest(phaseflow.octadecane_benchmarks.HeatDrivenCavityBenchmarkSimulation()).run()
+    benchmark = phaseflow.octadecane_benchmarks.HeatDrivenCavityBenchmarkSimulation()
+    
+    benchmark.end_time = 0. + benchmark.timestep_size
+    
+    BenchmarkSimulationTest(benchmark).run()
 
     
 def test_stefan_problem_benchmark__ci__():

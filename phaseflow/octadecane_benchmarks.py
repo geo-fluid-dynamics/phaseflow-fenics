@@ -128,8 +128,8 @@ class LidDrivenCavityBenchmarkSimulation(CavityBenchmarkSimulation):
         self.timestep_size = timestep_size
         
         self.boundary_conditions = [
-                {"subspace": 1, "location": self.top_wall, "value": (1., 0.)},
-                {"subspace": 1, "location": self.fixed_walls, "value": (0., 0.)}],
+            {"subspace": 1, "location": self.top_wall, "value": (1., 0.)},
+            {"subspace": 1, "location": self.fixed_walls, "value": (0., 0.)}]
             
         self.timestep_size = timestep_size
         
@@ -256,31 +256,24 @@ class LDCBenchmarkSimulationWithSolidSubdomain(LidDrivenCavityBenchmarkSimulatio
 
 class HeatDrivenCavityBenchmarkSimulation(CavityBenchmarkSimulation):
 
-    def __init__(self, mesh_size = 20):
+    def __init__(self, mesh_size = 2):
     
         CavityBenchmarkSimulation.__init__(self, mesh_size = mesh_size)
         
-        T_hot = 0.5
+        self.T_hot = 0.5
     
-        T_cold = -T_hot
+        self.T_cold = -self.T_hot
         
-        self.Ra = 1.e6
-        
-        self.Pr = 0.71
-    
-        self.model = phaseflow.pure_with_constant_properties.Model(self.mesh,
-            boundary_conditions = [
-                {"subspace": 1, "location": self.walls, "value": (0., 0.)},
-                {"subspace": 2, "location": self.left_wall, "value": T_hot},
-                {"subspace": 2, "location": self.right_wall, "value": T_cold}],
-            prandtl_number = self.Pr,
-            buoyancy = phaseflow.pure.IdealizedLinearBoussinesqBuoyancy(
-                rayleigh_numer = self.Ra, 
-                prandtl_number = self.Pr),
-            timestep_bounds = (1.e-4, 1.e-3, 1.e12))
+        self.boundary_conditions = [
+            {"subspace": 1, "location": self.walls, "value": (0., 0.)},
+            {"subspace": 2, "location": self.left_wall, "value": self.T_hot},
+            {"subspace": 2, "location": self.right_wall, "value": self.T_cold}]
             
-        self.model.old_state.interpolate(("0.", "0.", "0.",
-            "T_hot + x[0]*(T_cold - T_hot)".replace("T_hot", str(T_hot)).replace("T_cold", str(T_cold))))
+        self.rayleigh_number = 1.e6
+        
+        self.prandtl_number = 0.71
+        
+        self.timestep_size = 1.e-3
             
         self.stop_when_steady = True
         
@@ -288,9 +281,17 @@ class HeatDrivenCavityBenchmarkSimulation(CavityBenchmarkSimulation):
         
         self.adapt_timestep_to_unsteadiness = True
         
-        self.output_dir_suffix += "heat_driven_cavity/"
+        self.output_dir += "heat_driven_cavity/"
         
         self.adaptive_goal_tolerance = 1.e-2
+        
+        
+    def update_initial_values(self):
+    
+        self.old_state.interpolate(("0.", "0.", "0.",
+            "T_hot + x[0]*(T_cold - T_hot)".replace(
+                "T_hot", str(self.T_hot)).replace(
+                    "T_cold", str(self.T_cold))))
         
         
     def update_adaptive_goal_form(self):
@@ -305,10 +306,10 @@ class HeatDrivenCavityBenchmarkSimulation(CavityBenchmarkSimulation):
         self.verify_scalar_solution_component(
             component = 1,
             points = [((self.xmin + self.xmax)/2., y) for y in [0., 0.15, 0.35, 0.5, 0.65, 0.85, 1.]],
-            verified_values = [val*self.Ra**0.5/self.Pr 
+            verified_values = [val*self.rayleigh_number**0.5/self.prandtl_number
                 for val in [0.0000, -0.0649, -0.0194, 0.0000, 0.0194, 0.0649, 0.0000]],
             relative_tolerance = 2.e-2,
-            absolute_tolerance = 1.e-2*0.0649*self.Ra**0.5/self.Pr)
+            absolute_tolerance = 1.e-2*0.0649*self.rayleigh_number**0.5/self.prandtl_number)
     
 
 class StefanProblemBenchmarkSimulation(BenchmarkSimulation):

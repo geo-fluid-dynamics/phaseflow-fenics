@@ -16,7 +16,7 @@ class ConvectionCoupledMeltingOctadecanePCM_RegressionTest(
             quadrature_degree = 8,
             adaptive_goal_tolerance = 1.e-5):
     
-        phaseflow.benchmarks.AdaptiveConvectionCoupledMeltingOctadecanePCM.__init__(self, 
+        phaseflow.benchmarks.ConvectionCoupledMeltingOctadecanePCM.__init__(self, 
             timestep_size = 10., 
             end_time = end_time, 
             automatic_jacobian = automatic_jacobian,
@@ -55,12 +55,12 @@ class ConvectionCoupledMeltingOctadecanePCM_RegressionTest(
         assert(abs(pci_x_position - reference_pci_x_position) < 1.e-2)
         
         
-class AdaptiveConvectionCoupledMeltingOctadecanePCM_3D_RegressionTest(
-        AdaptiveConvectionCoupledMeltingOctadecanePCM_RegressionTest):
+class ConvectionCoupledMeltingOctadecanePCM_3D_RegressionTest(
+        ConvectionCoupledMeltingOctadecanePCM_RegressionTest):
 
     def __init__(self, automatic_jacobian = False):
     
-        AdaptiveConvectionCoupledMeltingOctadecanePCM_Regression.__init__(self, 
+        ConvectionCoupledMeltingOctadecanePCM_RegressionTest.__init__(self, 
             end_time = 10., 
             automatic_jacobian = automatic_jacobian,
             quadrature_degree = 7,
@@ -90,11 +90,11 @@ class AdaptiveConvectionCoupledMeltingOctadecanePCM_3D_RegressionTest(
         assert(abs(pci_x_position - reference_pci_x_position) < 1.e-2)
         
 
-def test_adaptive_convection_coupled_melting_octadecane_pcm_regression__ci__():
+def test_convection_coupled_melting_octadecane_pcm_regression__ci__():
 
-    AdaptiveConvectionCoupledMeltingOctadecanePCM_RegressionTest().run()
+    ConvectionCoupledMeltingOctadecanePCM_RegressionTest().run()
 
 
-def test_adaptive_convection_coupled_melting_octadecane_pcm_3d_regression():
+def test_convection_coupled_melting_octadecane_pcm_3d_regression():
 
-    AdaptiveConvectionCoupledMeltingOctadecanePCM_3D_RegressionTest().run()    
+    ConvectionCoupledMeltingOctadecanePCM_3D_RegressionTest().run()    
