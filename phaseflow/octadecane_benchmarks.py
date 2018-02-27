@@ -14,7 +14,7 @@ class BenchmarkSimulation(phaseflow.octadecane.Simulation):
     
     def run(self, verify = True):
         
-        phaseflow.simulation.Simulation.run(self)
+        phaseflow.octadecane.Simulation.run(self)
         
         if verify:
         
@@ -77,8 +77,6 @@ class CavityBenchmarkSimulation(BenchmarkSimulation):
         self.ymax = 1.
         
         self.zmax = None
-        
-        self.update_derived_attributes()
         
         
     def validate_attributes(self):
@@ -308,11 +306,6 @@ class HeatDrivenCavityBenchmarkSimulation(CavityBenchmarkSimulation):
         self.T_hot = 0.5
     
         self.T_cold = -self.T_hot
-        
-        self.boundary_conditions = [
-            {"subspace": 1, "location": self.walls, "value": (0., 0.)},
-            {"subspace": 2, "location": self.left_wall, "value": self.T_hot},
-            {"subspace": 2, "location": self.right_wall, "value": self.T_cold}]
             
         self.rayleigh_number = 1.e6
         
@@ -331,16 +324,29 @@ class HeatDrivenCavityBenchmarkSimulation(CavityBenchmarkSimulation):
         self.adaptive_goal_tolerance = 1.e-2
         
         
+    def update_derived_attributes(self):
+    
+        CavityBenchmarkSimulation.update_derived_attributes(self)
+        
+        self.boundary_conditions = [
+            {"subspace": 1, "location": self.walls, "value": (0., 0.)},
+            {"subspace": 2, "location": self.left_wall, "value": self.T_hot},
+            {"subspace": 2, "location": self.right_wall, "value": self.T_cold}]
+            
+        self.initial_temperature = "T_hot + x[0]*(T_cold - T_hot)"
+        
+        self.initial_temperature = self.initial_temperature.replace("T_hot", str(self.T_hot))
+        
+        self.initial_temperature = self.initial_temperature.replace("T_cold", str(self.T_cold))
+        
+        
     def update_initial_values(self):
     
-        self.old_state.interpolate(("0.", "0.", "0.",
-            "T_hot + x[0]*(T_cold - T_hot)".replace(
-                "T_hot", str(self.T_hot)).replace(
-                    "T_cold", str(self.T_cold))))
+        self.old_state.interpolate(("0.", "0.", "0.", self.initial_temperature))
         
         
     def update_adaptive_goal_form(self):
-    
+        
         p, u, T = fenics.split(self.state.solution)
         
         self.adaptive_goal_form = u[0]*T*self.integration_metric
