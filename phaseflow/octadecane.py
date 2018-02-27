@@ -101,13 +101,11 @@ class Simulation(phaseflow.simulation.Simulation):
         
         w_n = self.old_state.solution
         
-        W = w.function_space()
-        
         p, u, T = fenics.split(w)
          
         p_n, u_n, T_n = fenics.split(w_n)
         
-        psi_p, psi_u, psi_T = fenics.TestFunctions(W)
+        psi_p, psi_u, psi_T = fenics.TestFunctions(w.function_space())
         
         
         # Set local names for math operators to improve readability.

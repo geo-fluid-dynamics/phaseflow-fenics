@@ -6,18 +6,20 @@ import tempfile
 
 def test_1d_output_unit__ci__():
 
-    mesh = fenics.UnitIntervalMesh(5)
+    sim = phaseflow.octadecane.Simulation()
     
-    mixed_element = phaseflow.pure.make_mixed_element(mesh.ufl_cell())
-        
-    function_space = fenics.FunctionSpace(mesh, mixed_element)
+    sim.mesh = fenics.UnitIntervalMesh(5)
     
-    state = phaseflow.core.State(function_space, mixed_element)
+    sim.update_element()
     
-    with phaseflow.core.SolutionFile(tempfile.mkdtemp() + "/output/test_1D_output/solution.xdmf") \
+    function_space = fenics.FunctionSpace(sim.mesh, sim.element)
+    
+    state = phaseflow.state.State(function_space, sim.element)
+    
+    with phaseflow.helpers.SolutionFile(tempfile.mkdtemp() + "/output/test_1D_output/solution.xdmf") \
             as solution_file:
      
-        state.write_solution_to_xdmf(solution_file)
+        state.write_solution(solution_file)
     
         
 def test_1d_velocity_unit__ci__():
@@ -48,24 +50,37 @@ def test_xdmf_context_unit__ci__():
         return
 
 
+def test_time_dependent_unit():
+
+    benchmark = phaseflow.octadecane_benchmarks.HeatDrivenCavityBenchmarkSimulation()
+    
+    benchmark.end_time = 0. + 2.*benchmark.timestep_size
+    
+    benchmark.run(verify = False)
+    
+    assert(not (benchmark.state.time == benchmark.old_state.time))
+    
+    assert(not all(benchmark.state.solution.vector() == benchmark.old_state.solution.vector()))
+
+    
 def test_checkpoint_and_restart__ci__():
 
-    benchmark = phaseflow.benchmarks.LidDrivenCavity()
+    benchmark = phaseflow.octadecane_benchmarks.LidDrivenCavityBenchmarkSimulation()
     
     benchmark.prefix_output_dir_with_tempdir = True
     
     benchmark.run()
     
-    benchmark2 = phaseflow.benchmarks.LidDrivenCavity()
+    benchmark2 = phaseflow.octadecane_benchmarks.LidDrivenCavityBenchmarkSimulation()
     
-    benchmark2.model.read_checkpoint(
+    benchmark2.read_checkpoint(
         benchmark.output_dir + "/checkpoint_t" + str(benchmark.end_time) + ".h5")
     
     assert(benchmark.model.state.time == benchmark2.model.state.time)
     
-    solution = benchmark.model.state.solution.leaf_node()
+    solution = benchmark.state.solution.leaf_node()
     
-    solution2 = benchmark2.model.state.solution.leaf_node()
+    solution2 = benchmark2.state.solution.leaf_node()
     
     assert(fenics.errornorm(solution, solution2) < 1.e-15)
     
@@ -76,34 +91,3 @@ def test_checkpoint_and_restart__ci__():
     benchmark2.prefix_output_dir_with_tempdir = True
     
     benchmark2.run()
-
-    
-def test_checkpoint_and_restart_adaptive__ci__():
-
-    benchmark = phaseflow.benchmarks.AdaptiveLidDrivenCavity()
-    
-    benchmark.prefix_output_dir_with_tempdir = True
-    
-    benchmark.run()
-    
-    benchmark2 = phaseflow.benchmarks.AdaptiveLidDrivenCavity()
-    
-    benchmark2.model.read_checkpoint(
-        benchmark.output_dir + "/checkpoint_t" + str(benchmark.end_time) + ".h5")
-    
-    assert(benchmark.model.state.time == benchmark2.model.state.time)
-    
-    solution = benchmark.model.state.solution.leaf_node()
-    
-    solution2 = benchmark2.model.state.solution.leaf_node()
-    
-    assert(fenics.errornorm(solution, solution2) < 1.e-15)
-    
-    assert(all(solution.vector() == solution2.vector()))
-    
-    benchmark2.end_time *= 2.
-    
-    benchmark2.prefix_output_dir_with_tempdir = True
-    
-    benchmark2.run()
-    

@@ -21,6 +21,12 @@ def test_lid_driven_cavity_benchmark__ci__():
     
     BenchmarkSimulationTest(phaseflow.octadecane_benchmarks.LidDrivenCavityBenchmarkSimulation()).run()
     
+    
+def test_lid_driven_cavity_benchmark_without_amr():
+
+    BenchmarkSimulationTest(
+        phaseflow.octadecane_benchmarks.LidDrivenCavityBenchmarkSimulationWithoutAMR()).run()
+    
 
 def test_lid_driven_cavity_with_solid_subdomain_benchmark__ci__():
     
@@ -30,11 +36,7 @@ def test_lid_driven_cavity_with_solid_subdomain_benchmark__ci__():
     
 def test_heat_driven_cavity_benchmark__ci__():
     
-    benchmark = phaseflow.octadecane_benchmarks.HeatDrivenCavityBenchmarkSimulation()
-    
-    benchmark.end_time = 0. + benchmark.timestep_size
-    
-    BenchmarkSimulationTest(benchmark).run()
+    BenchmarkSimulationTest(phaseflow.octadecane_benchmarks.HeatDrivenCavityBenchmarkSimulation()).run()
 
     
 def test_stefan_problem_benchmark__ci__():

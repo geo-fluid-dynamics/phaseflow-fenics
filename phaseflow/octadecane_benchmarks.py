@@ -13,11 +13,13 @@ class BenchmarkSimulation(phaseflow.octadecane.Simulation):
         self.output_dir += "benchmark/"
 
     
-    def run(self):
+    def run(self, verify = True):
         
         phaseflow.simulation.Simulation.run(self)
         
-        self.verify()
+        if verify:
+        
+            self.verify()
         
         
     def verify(self):
@@ -165,7 +167,16 @@ class LidDrivenCavityBenchmarkSimulation(CavityBenchmarkSimulation):
             verified_values = [1.0000, 0.8412, -0.0643, -0.0372, 0.0000],
             relative_tolerance = self.relative_tolerance,
             absolute_tolerance = self.absolute_tolerance)
+ 
+
+class LidDrivenCavityBenchmarkSimulationWithoutAMR(LidDrivenCavityBenchmarkSimulation):
+
+    def __init__(self):
+        
+        LidDrivenCavityBenchmarkSimulation.__init__(self, mesh_size = 20)
     
+        self.adaptive_goal_tolerance = 1.e32  # Set arbitrarily high to disable adaptation.
+
         
 class LDCBenchmarkSimulationWithSolidSubdomain(LidDrivenCavityBenchmarkSimulation):
     """ Similar to the lid-driven cavity, but extended with a solid subdomain to test variable viscosity.
@@ -371,23 +382,24 @@ class StefanProblemBenchmarkSimulation(BenchmarkSimulation):
         
         initial_temperature = initial_temperature.replace("T_cold", str(T_cold))
         
-        mesh = fenics.UnitIntervalMesh(initial_uniform_cell_count)
+        self.mesh = fenics.UnitIntervalMesh(initial_uniform_cell_count)
 
-        mesh = StefanProblem.refine_near_left_boundary(mesh, initial_hot_wall_refinement_cycles)
+        self.mesh = StefanProblemBenchmarkSimulation.refine_near_left_boundary(self.mesh, 
+            initial_hot_wall_refinement_cycles)
         
         self.boundary_conditions = [
             {"subspace": 2, "location": "near(x[0],  0.)", "value": T_hot},
             {"subspace": 2, "location": "near(x[0],  1.)", "value": T_cold}]
 
-        self.stefan_number = stefan_number = 0.045
+        self.stefan_number = 0.045
+        
+        self.gravity = (0.,)
         
         self.regularization_smoothing_parameter = regularization_smoothing_parameter
         
         self.timestep_size = timestep_size
         
         self.quadrature_degree = quadrature_degree
-        
-        self.model.old_state.interpolate(("0.", "0.", initial_temperature))
         
         self.end_time = end_time
         
@@ -397,10 +409,17 @@ class StefanProblemBenchmarkSimulation(BenchmarkSimulation):
         
         self.adaptive_goal_tolerance = 1.e-6
         
+        self.initial_temperature = initial_temperature
+        
+    
+    def update_initial_values(self):
+        
+        self.old_state.interpolate(("0.", "0.", self.initial_temperature))
+        
         
     def update_adaptive_goal_form(self):
     
-        p, u, T = fenics.split(self.model.state.solution)
+        p, u, T = fenics.split(self.state.solution)
         
         phi = self.semi_phasefield_mapping
         
@@ -450,7 +469,7 @@ class ConvectionCoupledMeltingOctadecanePCMBenchmarkSimulation(CavityBenchmarkSi
             
             self.spatial_dimensionality = 2
             
-            Cavity.__init__(self, mesh_size = initial_mesh_size)
+            CavityBenchmarkSimulation.__init__(self, mesh_size = initial_mesh_size)
             
             class HotWall(fenics.SubDomain):
         
@@ -475,7 +494,8 @@ class ConvectionCoupledMeltingOctadecanePCMBenchmarkSimulation(CavityBenchmarkSi
 
             self.spatial_dimensionality = 3
             
-            Cavity.__init__(self, mesh_size = initial_mesh_size, zmin = -depth_3d/2., zmax = depth_3d/2.)
+            CavityBenchmarkSimulation.__init__(self, 
+                mesh_size = initial_mesh_size, zmin = -depth_3d/2., zmax = depth_3d/2.)
             
             for i in range(initial_hot_wall_refinement_cycles):
             
@@ -524,40 +544,53 @@ class ConvectionCoupledMeltingOctadecanePCMBenchmarkSimulation(CavityBenchmarkSi
         
         self.quadrature_degree = quadrature_degree
         
+        self.T_hot = T_hot
         
-        # Set initial values.
-        if initial_pci_position == None:
+        self.T_cold = T_cold
         
-            initial_pci_position = \
-                1./float(initial_mesh_size[0])/2.**(initial_hot_wall_refinement_cycles - 1)
+        self.initial_hot_wall_refinement_cycles = initial_hot_wall_refinement_cycles
         
-        initial_temperature = "(T_hot - T_cold)*(x[0] < initial_pci_position) + T_cold"
+        self.initial_mesh_size = initial_mesh_size
         
-        initial_temperature = initial_temperature.replace("initial_pci_position", str(initial_pci_position))
+        self.initial_pci_position = initial_pci_position
         
-        initial_temperature = initial_temperature.replace("T_hot", str(T_hot))
-        
-        initial_temperature = initial_temperature.replace("T_cold", str(T_cold))
-        
-        self.model.old_state.interpolate(
-            ["0.",] + ["0.",]*self.spatial_dimensionality + [initial_temperature,])
-            
-        
-        #
         self.adaptive_goal_tolerance = adaptive_goal_tolerance
         
         self.end_time = end_time
         
         self.stop_when_steady = False
         
-        self.output_dir_suffix += "adaptive_convection_coupled_melting_octadecane_pcm/"
+        self.output_dir += "adaptive_convection_coupled_melting_octadecane_pcm/"
         
+        
+    def update_initial_values(self):
+        
+        if self.initial_pci_position == None:
+        
+            initial_pci_position = \
+                1./float(self.initial_mesh_size[0])/2.**(self.initial_hot_wall_refinement_cycles - 1)
+        
+        else:
+        
+            initial_pci_position = 0. + self.initial_pci_position
+        
+        initial_temperature = "(T_hot - T_cold)*(x[0] < initial_pci_position) + T_cold"
+        
+        initial_temperature = initial_temperature.replace("initial_pci_position", str(initial_pci_position))
+        
+        initial_temperature = initial_temperature.replace("T_hot", str(self.T_hot))
+        
+        initial_temperature = initial_temperature.replace("T_cold", str(self.T_cold))
+        
+        self.old_state.interpolate(
+            ["0.",] + ["0.",]*self.spatial_dimensionality + [initial_temperature,])
+            
         
     def update_adaptive_goal_form(self):
     
         phi = self.semi_phasefield_mapping
         
-        p, u, T = fenics.split(self.model.state.solution)
+        p, u, T = fenics.split(self.state.solution)
         
         self.adaptive_goal_form = phi(T)*self.integration_metric
         

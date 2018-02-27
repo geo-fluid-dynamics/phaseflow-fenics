@@ -290,3 +290,8 @@ class Simulation:
     def write_checkpoint(self):
     
         pass
+        
+        
+    def read_checkpoint(self, filepath):
+    
+        assert(False)

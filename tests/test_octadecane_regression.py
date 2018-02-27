@@ -4,7 +4,7 @@ import scipy.optimize
 import fenics
 
 
-class ConvectionCoupledMeltingOctadecanePCM_RegressionTest(
+class CCMOctadecanePCM_RegressionTest(
         phaseflow.octadecane_benchmarks.ConvectionCoupledMeltingOctadecanePCMBenchmarkSimulation):
 
     def __init__(self, 
@@ -12,21 +12,20 @@ class ConvectionCoupledMeltingOctadecanePCM_RegressionTest(
             initial_mesh_size = (1, 1),
             initial_hot_wall_refinement_cycles = 6,
             end_time = 30.,
-            automatic_jacobian = False,
             quadrature_degree = 8,
             adaptive_goal_tolerance = 1.e-5):
     
-        phaseflow.benchmarks.ConvectionCoupledMeltingOctadecanePCM.__init__(self, 
+        phaseflow.octadecane_benchmarks.ConvectionCoupledMeltingOctadecanePCMBenchmarkSimulation.__init__(
+            self, 
             timestep_size = 10., 
             end_time = end_time, 
-            automatic_jacobian = automatic_jacobian,
             quadrature_degree = quadrature_degree,
             depth_3d = depth_3d, 
             initial_mesh_size = initial_mesh_size, 
             initial_hot_wall_refinement_cycles = initial_hot_wall_refinement_cycles,
             adaptive_goal_tolerance = adaptive_goal_tolerance)
     
-        self.output_dir_suffix += "regression/"
+        self.output_dir += "regression/"
         
         self.prefix_output_dir_with_tempdir = True
         
@@ -55,14 +54,13 @@ class ConvectionCoupledMeltingOctadecanePCM_RegressionTest(
         assert(abs(pci_x_position - reference_pci_x_position) < 1.e-2)
         
         
-class ConvectionCoupledMeltingOctadecanePCM_3D_RegressionTest(
-        ConvectionCoupledMeltingOctadecanePCM_RegressionTest):
+class CCMOctadecanePCM_3D_RegressionTest(
+        CCMOctadecanePCM_RegressionTest):
 
-    def __init__(self, automatic_jacobian = False):
+    def __init__(self):
     
-        ConvectionCoupledMeltingOctadecanePCM_RegressionTest.__init__(self, 
+        CCMOctadecanePCM_RegressionTest.__init__(self, 
             end_time = 10., 
-            automatic_jacobian = automatic_jacobian,
             quadrature_degree = 7,
             depth_3d = 0.5, 
             initial_mesh_size = (1, 1, 1), 
@@ -92,9 +90,9 @@ class ConvectionCoupledMeltingOctadecanePCM_3D_RegressionTest(
 
 def test_convection_coupled_melting_octadecane_pcm_regression__ci__():
 
-    ConvectionCoupledMeltingOctadecanePCM_RegressionTest().run()
+    CCMOctadecanePCM_RegressionTest().run()
 
 
 def test_convection_coupled_melting_octadecane_pcm_3d_regression():
 
-    ConvectionCoupledMeltingOctadecanePCM_3D_RegressionTest().run()    
+    CCMOctadecanePCM_3D_RegressionTest().run()    
