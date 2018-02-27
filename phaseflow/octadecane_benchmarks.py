@@ -1,6 +1,5 @@
 """**benchmarks.py** applies Phaseflow to a variety of benchmark problems."""
 import phaseflow
-import phaseflow.octadecane
 import fenics
 
  
@@ -61,89 +60,115 @@ class BenchmarkSimulation(phaseflow.octadecane.Simulation):
     
 class CavityBenchmarkSimulation(BenchmarkSimulation):
 
-    def __init__(self, mesh_size = (20, 20), 
-            xmin = 0., ymin = 0., zmin = None, xmax = 1., ymax = 1., zmax = None):
+    def __init__(self):
     
         BenchmarkSimulation.__init__(self)
         
-        if type(mesh_size) is type(20):
+        self.mesh_size = (2, 2)
+
+        self.xmin = 0.
         
-            mesh_size = [mesh_size, mesh_size]
+        self.ymin = 0.
+        
+        self.zmin = None
+        
+        self.xmax = 1.
+        
+        self.ymax = 1.
+        
+        self.zmax = None
+        
+        self.update_derived_attributes()
+        
+        
+    def validate_attributes(self):
     
-        if len(mesh_size) == 2:
+        if type(self.mesh_size) is type(20):
+        
+            self.mesh_size = (self.mesh_size, self.mesh_size)
+        
+        
+    def update_derived_attributes(self):
     
-            if (xmin, ymin, xmax, ymax) == (0., 0., 1., 1.):
-    
-                self.mesh = fenics.UnitSquareMesh(fenics.mpi_comm_world(), 
-                    mesh_size[0], mesh_size[1], "crossed")
+        BenchmarkSimulation.update_derived_attributes(self)
         
-            else:
-            
-                self.mesh = fenics.RectangleMesh(fenics.mpi_comm_world(), 
-                    fenics.Point(xmin, ymin), fenics.Point(xmax, ymax),
-                    mesh_size[0], mesh_size[1], "crossed")
-    
-        elif len(mesh_size) == 3:
+        self.left_wall = "near(x[0],  xmin)".replace("xmin", str(self.xmin))
         
-            self.mesh = fenics.BoxMesh(fenics.mpi_comm_world(), 
-                fenics.Point(xmin, ymin, zmin), fenics.Point(xmax, ymax, zmax),
-                mesh_size[0], mesh_size[1], mesh_size[2])
+        self.right_wall = "near(x[0],  xmax)".replace("xmax", str(self.xmax))
         
-        self.left_wall = "near(x[0],  xmin)".replace("xmin", str(xmin))
+        self.bottom_wall = "near(x[1],  ymin)".replace("ymin",  str(self.ymin))
         
-        self.right_wall = "near(x[0],  xmax)".replace("xmax", str(xmax))
-        
-        self.bottom_wall = "near(x[1],  ymin)".replace("ymin",  str(ymin))
-        
-        self.top_wall = "near(x[1],  ymax)".replace("ymax", str(ymax))
+        self.top_wall = "near(x[1],  ymax)".replace("ymax", str(self.ymax))
         
         self.walls = \
                 self.top_wall + " | " + self.bottom_wall + " | " + self.left_wall + " | " + self.right_wall
         
-        if len(mesh_size) == 3:
+        if len(self.mesh_size) == 3:
         
-            self.back_wall = "near(x[2],  zmin)".replace("zmin",  str(zmin))
+            self.back_wall = "near(x[2],  zmin)".replace("zmin",  str(self.zmin))
         
-            self.front_wall = "near(x[2],  zmax)".replace("zmax", str(zmax))
+            self.front_wall = "near(x[2],  zmax)".replace("zmax", str(self.zmax))
         
             self.walls += " | " + self.back_wall + " | " + self.front_wall
-            
-        self.xmin, self.ymin, self.zmin, self.xmax, self.ymax, self.zmax = \
-            xmin, ymin, zmin, xmax, ymax, zmax
+        
+        
+    def update_mesh(self):
     
+        if len(self.mesh_size) == 2:
+    
+            if (self.xmin, self.ymin, self.xmax, self.ymax) == (0., 0., 1., 1.):
+    
+                self.mesh = fenics.UnitSquareMesh(fenics.mpi_comm_world(), 
+                    self.mesh_size[0], self.mesh_size[1], "crossed")
+        
+            else:
+            
+                self.mesh = fenics.RectangleMesh(fenics.mpi_comm_world(), 
+                    fenics.Point(self.xmin, self.ymin), fenics.Point(self.xmax, self.ymax),
+                    self.mesh_size[0], self.mesh_size[1], "crossed")
+    
+        elif len(self.mesh_size) == 3:
+        
+            self.mesh = fenics.BoxMesh(fenics.mpi_comm_world(), 
+                fenics.Point(self.xmin, self.ymin, self.zmin),
+                fenics.Point(self.xmax, self.ymax, self.zmax),
+                self.mesh_size[0], self.mesh_size[1], self.mesh_size[2])
+  
   
 class LidDrivenCavityBenchmarkSimulation(CavityBenchmarkSimulation):
 
-    def __init__(self, 
-            mesh_size = 2, 
-            ymin = 0., 
-            timestep_size = 1.e12):
+    def __init__(self):
     
-        CavityBenchmarkSimulation.__init__(self, mesh_size = mesh_size, ymin = ymin)
+        CavityBenchmarkSimulation.__init__(self)
         
         self.relative_tolerance = 3.e-2
         
         self.absolute_tolerance = 1.e-2
         
-        self.fixed_walls = self.bottom_wall + " | " + self.left_wall + " | " + self.right_wall
-        
-        self.timestep_size = timestep_size
-        
-        self.boundary_conditions = [
-            {"subspace": 1, "location": self.top_wall, "value": (1., 0.)},
-            {"subspace": 1, "location": self.fixed_walls, "value": (0., 0.)}]
-            
-        self.timestep_size = timestep_size
+        self.timestep_size = 1.e12
         
         self.liquid_viscosity = 0.01
         
-        self.end_time = timestep_size
+        self.end_time = 0. + self.timestep_size
         
         self.output_dir += "lid_driven_cavity/"
         
         self.adaptive_goal_tolerance = 1.e-4
+  
     
-    
+    def update_derived_attributes(self):
+  
+        CavityBenchmarkSimulation.update_derived_attributes(self)
+        
+        self.fixed_walls = self.bottom_wall + " | " + self.left_wall + " | " + self.right_wall
+        
+        self.boundary_conditions = [
+            {"subspace": 1, "location": self.top_wall, "value": (1., 0.)},
+            {"subspace": 1, 
+             "location": self.fixed_walls, 
+             "value": (0., 0.)}]
+  
+  
     def update_initial_values(self):
     
         self.old_state.interpolate(("0.", self.top_wall, "0.", "1."))
@@ -173,7 +198,9 @@ class LidDrivenCavityBenchmarkSimulationWithoutAMR(LidDrivenCavityBenchmarkSimul
 
     def __init__(self):
         
-        LidDrivenCavityBenchmarkSimulation.__init__(self, mesh_size = 20)
+        LidDrivenCavityBenchmarkSimulation.__init__(self)
+    
+        self.mesh_size = (20, 20)
     
         self.adaptive_goal_tolerance = 1.e32  # Set arbitrarily high to disable adaptation.
 
@@ -184,27 +211,25 @@ class LDCBenchmarkSimulationWithSolidSubdomain(LidDrivenCavityBenchmarkSimulatio
     The unit square from the original benchmark is prescribed a temperature which makes it fluid,
     while below the original bottom wall, a cold temperature is prescribed, making it solid.
     """
-    y_pci = 0.
+    def __init__(self):
     
-    def __init__(self, 
-            mesh_size = [4, 5], 
-            pci_refinement_cycles = 4, 
-            timestep_size = 20.):
-    
-        LidDrivenCavityBenchmarkSimulation.__init__(self, 
-            mesh_size = mesh_size, ymin = -0.25, timestep_size = timestep_size)
+        LidDrivenCavityBenchmarkSimulation.__init__(self)
+        
+        self.ymin = -0.25
+        
+        self.y_pci = 0.
+        
+        self.mesh_size = (4, 5)
+        
+        self.pci_refinement_cycles = 4
+        
+        self.timestep_size = 20.
         
         self.relative_tolerance = 8.e-2  # @todo This is quite large.
         
         self.absolute_tolerance = 2.e-2
         
-        self.refine_near_y_pci(pci_refinement_cycles = pci_refinement_cycles)
-        
         self.adaptive_goal_tolerance = 1.e-5
-        
-        self.boundary_conditions = [
-                {"subspace": 1, "location": self.top_wall, "value": (1., 0.)},
-                {"subspace": 1, "location": self.fixed_walls, "value": (0., 0.)}]
                 
         self.prandtl_number = 1.e16
         
@@ -218,19 +243,51 @@ class LDCBenchmarkSimulationWithSolidSubdomain(LidDrivenCavityBenchmarkSimulatio
         
         self.regularization_smoothing_parameter = 0.01
         
-        self.timestep_size = timestep_size
-        
-        self.end_time = 2.*timestep_size
+        self.end_time = 2.*self.timestep_size
         
         self.quadrature_degree = 3
         
         self.output_dir += "with_solid_subdomain/"
         
     
+    def update_derived_attributes(self):
+    
+        LidDrivenCavityBenchmarkSimulation.update_derived_attributes(self)
+    
+        self.boundary_conditions = [
+                {"subspace": 1, "location": self.top_wall, "value": (1., 0.)},
+                {"subspace": 1, "location": self.fixed_walls, "value": (0., 0.)}]
+    
+    
+    def update_mesh(self):
+        
+        LidDrivenCavityBenchmarkSimulation.update_mesh(self)
+
+        y_pci = self.y_pci
+        
+        class PhaseInterface(fenics.SubDomain):
+            
+            def inside(self, x, on_boundary):
+            
+                return fenics.near(x[1], y_pci)
+        
+        
+        phase_interface = PhaseInterface()
+        
+        for i in range(self.pci_refinement_cycles):
+            
+            edge_markers = fenics.EdgeFunction("bool", self.mesh)
+            
+            phase_interface.mark(edge_markers, True)
+
+            fenics.adapt(self.mesh, edge_markers)
+            
+            self.mesh = self.mesh.child()
+    
+    
     def update_initial_values(self):
     
-        temperature_string = "1. - 2.*(x[1] <= y_pci)".replace("y_pci", 
-                str(LDCBenchmarkSimulationWithSolidSubdomain.y_pci))
+        temperature_string = "1. - 2.*(x[1] <= y_pci)".replace("y_pci", str(self.y_pci))
                 
         self.old_state.interpolate(("0.",  self.top_wall, "0.", temperature_string))
     
@@ -240,36 +297,13 @@ class LDCBenchmarkSimulationWithSolidSubdomain(LidDrivenCavityBenchmarkSimulatio
         p, u, T = fenics.split(self.state.solution)
     
         self.adaptive_goal_form = u[0]*u[0]*self.integration_metric
-        
-        
-    def refine_near_y_pci(self, pci_refinement_cycles = 4):   
-        
-        class PhaseInterface(fenics.SubDomain):
             
-            def inside(self, x, on_boundary):
-            
-                return fenics.near(x[1], LDCBenchmarkSimulationWithSolidSubdomain.y_pci)
-        
-        
-        phase_interface = PhaseInterface()
-        
-        for i in range(pci_refinement_cycles):
-            
-            edge_markers = fenics.EdgeFunction("bool", self.mesh)
-            
-            phase_interface.mark(edge_markers, True)
-
-            fenics.adapt(self.mesh, edge_markers)
-            
-            self.mesh = self.mesh.child()
-        
-        
 
 class HeatDrivenCavityBenchmarkSimulation(CavityBenchmarkSimulation):
 
-    def __init__(self, mesh_size = 2):
+    def __init__(self):
     
-        CavityBenchmarkSimulation.__init__(self, mesh_size = mesh_size)
+        CavityBenchmarkSimulation.__init__(self)
         
         self.T_hot = 0.5
     
@@ -325,18 +359,76 @@ class HeatDrivenCavityBenchmarkSimulation(CavityBenchmarkSimulation):
 
 class StefanProblemBenchmarkSimulation(BenchmarkSimulation):
 
-    def refine_near_left_boundary(mesh, cycles):
-        """ Refine mesh near the left boundary.
-        The usual approach of using SubDomain and EdgeFunction isn't appearing to work
-        in 1D, so I'm going to just loop through the cells of the mesh and set markers manually.
-        """
-        for i in range(cycles):
+    def __init__(self):
+    
+        BenchmarkSimulation.__init__(self)
+        
+        self.initial_uniform_cell_count = 4
+        
+        self.initial_hot_boundary_refinement_cycles = 8
+        
+        self.initial_pci_position = None
+        
+        self.T_hot = 1.
+        
+        self.T_cold = -0.01
+        
+        self.stefan_number = 0.045
+        
+        self.gravity = (0.,)
+        
+        self.regularization_smoothing_parameter = 0.005
+        
+        self.timestep_size = 1.e-3
+        
+        self.quadrature_degree = None
+        
+        self.end_time = 0.1
+        
+        self.output_dir += "stefan_problem/"
+    
+        self.stop_when_steady = False
+        
+        self.adaptive_goal_tolerance = 1.e-6
+        
+        
+    def update_derived_attributes(self):
+    
+        BenchmarkSimulation.update_derived_attributes(self)
+        
+        self.boundary_conditions = [
+            {"subspace": 2, "location": "near(x[0],  0.)", "value": self.T_hot},
+            {"subspace": 2, "location": "near(x[0],  1.)", "value": self.T_cold}]
+        
+        if self.initial_pci_position is None:
+        
+            initial_pci_position = 1./float(self.initial_uniform_cell_count)/2.**( \
+                self.initial_hot_boundary_refinement_cycles - 1)
+                
+        else:
+        
+            initial_pci_position = self.initial_pci_position
+        
+        initial_temperature = "(T_hot - T_cold)*(x[0] < initial_pci_position) + T_cold"
+        
+        initial_temperature = initial_temperature.replace("initial_pci_position", str(initial_pci_position))
+        
+        initial_temperature = initial_temperature.replace("T_hot", str(self.T_hot))
+        
+        self.initial_temperature = initial_temperature.replace("T_cold", str(self.T_cold))
+        
+    
+    def update_mesh(self):
+    
+        self.mesh = fenics.UnitIntervalMesh(self.initial_uniform_cell_count)
+        
+        for i in range(self.initial_hot_boundary_refinement_cycles):
             
-            cell_markers = fenics.CellFunction("bool", mesh)
+            cell_markers = fenics.CellFunction("bool", self.mesh)
             
             cell_markers.set_all(False)
             
-            for cell in fenics.cells(mesh):
+            for cell in fenics.cells(self.mesh):
                 
                 found_left_boundary = False
                 
@@ -354,63 +446,8 @@ class StefanProblemBenchmarkSimulation(BenchmarkSimulation):
                     
                     break # There should only be one such point in 1D.
                     
-            mesh = fenics.refine(mesh, cell_markers)
-            
-        return mesh
-            
-
-    def __init__(self, 
-            T_hot = 1., 
-            T_cold = -0.01, 
-            regularization_smoothing_parameter = 0.005,
-            timestep_size = 1.e-3,
-            end_time = 0.1,
-            initial_uniform_cell_count = 4, 
-            initial_hot_wall_refinement_cycles = 8,
-            quadrature_degree = None):
+            self.mesh = fenics.refine(self.mesh, cell_markers)
     
-        BenchmarkSimulation.__init__(self)
-        
-        initial_pci_position = \
-            1./float(initial_uniform_cell_count)/2.**(initial_hot_wall_refinement_cycles - 1)
-        
-        initial_temperature = "(T_hot - T_cold)*(x[0] < initial_pci_position) + T_cold"
-        
-        initial_temperature = initial_temperature.replace("initial_pci_position", str(initial_pci_position))
-        
-        initial_temperature = initial_temperature.replace("T_hot", str(T_hot))
-        
-        initial_temperature = initial_temperature.replace("T_cold", str(T_cold))
-        
-        self.mesh = fenics.UnitIntervalMesh(initial_uniform_cell_count)
-
-        self.mesh = StefanProblemBenchmarkSimulation.refine_near_left_boundary(self.mesh, 
-            initial_hot_wall_refinement_cycles)
-        
-        self.boundary_conditions = [
-            {"subspace": 2, "location": "near(x[0],  0.)", "value": T_hot},
-            {"subspace": 2, "location": "near(x[0],  1.)", "value": T_cold}]
-
-        self.stefan_number = 0.045
-        
-        self.gravity = (0.,)
-        
-        self.regularization_smoothing_parameter = regularization_smoothing_parameter
-        
-        self.timestep_size = timestep_size
-        
-        self.quadrature_degree = quadrature_degree
-        
-        self.end_time = end_time
-        
-        self.output_dir += "stefan_problem/"
-    
-        self.stop_when_steady = False
-        
-        self.adaptive_goal_tolerance = 1.e-6
-        
-        self.initial_temperature = initial_temperature
-        
     
     def update_initial_values(self):
         
@@ -444,126 +481,79 @@ class StefanProblemBenchmarkSimulation(BenchmarkSimulation):
         
 class ConvectionCoupledMeltingOctadecanePCMBenchmarkSimulation(CavityBenchmarkSimulation):
 
-    def __init__(self, 
-            T_hot = 1.,
-            T_cold = -0.01,
-            stefan_number = 0.045,
-            rayleigh_number = 3.27e5,
-            prandtl_number = 56.2,
-            solid_viscosity = 1.e8,
-            liquid_viscosity = 1.,
-            timestep_size = 1.,
-            initial_mesh_size = (1, 1),
-            initial_hot_wall_refinement_cycles = 6,
-            initial_pci_position = None,
-            regularization_central_temperature = 0.01,
-            regularization_smoothing_parameter = 0.025,
-            end_time = 80.,
-            adaptive_goal_tolerance = 1.e-5,
-            quadrature_degree = 8,
-            depth_3d = None):
+    def __init__(self):
     
+        CavityBenchmarkSimulation.__init__(self)
         
-        # Make the mesh with initial refinements near the hot wall.
-        if depth_3d is None:
-            
-            self.spatial_dimensionality = 2
-            
-            CavityBenchmarkSimulation.__init__(self, mesh_size = initial_mesh_size)
-            
-            class HotWall(fenics.SubDomain):
+        self.T_hot = 1.
         
-                def inside(self, x, on_boundary):
-                
-                    return on_boundary and fenics.near(x[0], 0.)
-
+        self.T_cold = -0.01
         
-            hot_wall = HotWall()
-            
-            for i in range(initial_hot_wall_refinement_cycles):
-                
-                edge_markers = fenics.EdgeFunction("bool", self.mesh)
-                
-                hot_wall.mark(edge_markers, True)
-
-                fenics.adapt(self.mesh, edge_markers)
-            
-                self.mesh = self.mesh.child()
-            
-        else:
-
-            self.spatial_dimensionality = 3
-            
-            CavityBenchmarkSimulation.__init__(self, 
-                mesh_size = initial_mesh_size, zmin = -depth_3d/2., zmax = depth_3d/2.)
-            
-            for i in range(initial_hot_wall_refinement_cycles):
-            
-                cell_markers = fenics.CellFunction("bool", self.mesh, False)
-                
-                for cell in fenics.cells(self.mesh):
-                    
-                    found_left_boundary = False
-                    
-                    for vertex in fenics.vertices(cell):
-                        
-                        if fenics.near(vertex.x(0), 0.):
-                            
-                            found_left_boundary = True
-                            
-                            break
-                            
-                    if found_left_boundary:
-                        
-                        cell_markers[cell] = True
-                
-                self.mesh = fenics.refine(self.mesh, cell_markers)
-        
-            
-        # Set up the model.
         self.boundary_conditions = [
-                {"subspace": 1, "location": self.walls, "value": (0.,)*self.spatial_dimensionality},
-                {"subspace": 2, "location": self.left_wall, "value": T_hot},
-                {"subspace": 2, "location": self.right_wall, "value": T_cold}]
-
-        self.stefan_number = stefan_number        
+                {"subspace": 1, "location": self.walls, "value": (0., 0.)},
+                {"subspace": 2, "location": self.left_wall, "value": self.T_hot},
+                {"subspace": 2, "location": self.right_wall, "value": self.T_cold}]
         
-        self.prandtl_number = prandtl_number
+        self.stefan_number = 0.045      
         
-        self.rayleigh_numer = rayleigh_number
+        self.prandtl_number = 56.2
         
-        self.prandtl_number = prandtl_number
+        self.rayleigh_numer = 3.27e5
         
-        self.gravity = [0., -1.] + [0.,]*(self.spatial_dimensionality == 3)
-                
-        self.regularization_central_temperature = regularization_central_temperature
+        self.gravity = (0., -1.)
         
-        self.regularization_smoothing_parameter = regularization_smoothing_parameter
+        self.solid_viscosity = 1.e8
         
-        self.timestep_size = timestep_size
+        self.liquid_viscosity = 1.
         
-        self.quadrature_degree = quadrature_degree
+        self.regularization_central_temperature = 0.01
         
-        self.T_hot = T_hot
+        self.regularization_smoothing_parameter = 0.025
         
-        self.T_cold = T_cold
+        self.timestep_size = 1.
         
-        self.initial_hot_wall_refinement_cycles = initial_hot_wall_refinement_cycles
+        self.quadrature_degree = 8
         
-        self.initial_mesh_size = initial_mesh_size
+        self.initial_hot_wall_refinement_cycles = 6
         
-        self.initial_pci_position = initial_pci_position
+        self.initial_mesh_size = (1, 1)
         
-        self.adaptive_goal_tolerance = adaptive_goal_tolerance
+        self.initial_pci_position = None
         
-        self.end_time = end_time
+        self.adaptive_goal_tolerance = 1.e-5
+        
+        self.end_time = 80.
         
         self.stop_when_steady = False
         
         self.output_dir += "adaptive_convection_coupled_melting_octadecane_pcm/"
         
         
-    def update_initial_values(self):
+    def update_mesh(self):
+        
+        class HotWall(fenics.SubDomain):
+    
+            def inside(self, x, on_boundary):
+            
+                return on_boundary and fenics.near(x[0], 0.)
+
+    
+        hot_wall = HotWall()
+        
+        for i in range(self.initial_hot_wall_refinement_cycles):
+            
+            edge_markers = fenics.EdgeFunction("bool", self.mesh)
+            
+            hot_wall.mark(edge_markers, True)
+
+            fenics.adapt(self.mesh, edge_markers)
+        
+            self.mesh = self.mesh.child()
+
+        
+    def update_derived_attributes(self):
+    
+        CavityBenchmarkSimulation.update_derived_attributes(self)
         
         if self.initial_pci_position == None:
         
@@ -582,9 +572,11 @@ class ConvectionCoupledMeltingOctadecanePCMBenchmarkSimulation(CavityBenchmarkSi
         
         initial_temperature = initial_temperature.replace("T_cold", str(self.T_cold))
         
-        self.old_state.interpolate(
-            ["0.",] + ["0.",]*self.spatial_dimensionality + [initial_temperature,])
-            
+        
+    def update_initial_values(self):
+        
+        self.old_state.interpolate((0., 0., 0., self.initial_temperature))
+        
         
     def update_adaptive_goal_form(self):
     
@@ -594,3 +586,55 @@ class ConvectionCoupledMeltingOctadecanePCMBenchmarkSimulation(CavityBenchmarkSi
         
         self.adaptive_goal_form = phi(T)*self.integration_metric
         
+     
+class CCMOctadecanePCMBenchmarkSimulation3D(CavityBenchmarkSimulation):
+
+    def __init__(self):
+    
+        ConvectionCoupledMeltingOctadecanePCMBenchmarkSimulation.__init__(self)
+        
+        self.mesh_size = (1, 1, 1)
+        
+        self.gravity = (0., -1., 0.)
+        
+        self.boundary_conditions = [
+                {"subspace": 1, "location": self.walls, "value": (0., 0., 0.)},
+                {"subspace": 2, "location": self.left_wall, "value": self.T_hot},
+                {"subspace": 2, "location": self.right_wall, "value": self.T_cold}]
+        
+        self.depth_3d = 0.5
+        
+        
+    def update_mesh(self):
+
+        self.zmin = -depth_3d/2.
+        
+        self.zmax = depth_3d/2.
+        
+        for i in range(self.initial_hot_wall_refinement_cycles):
+        
+            cell_markers = fenics.CellFunction("bool", self.mesh, False)
+            
+            for cell in fenics.cells(self.mesh):
+                
+                found_left_boundary = False
+                
+                for vertex in fenics.vertices(cell):
+                    
+                    if fenics.near(vertex.x(0), 0.):
+                        
+                        found_left_boundary = True
+                        
+                        break
+                        
+                if found_left_boundary:
+                    
+                    cell_markers[cell] = True
+            
+            self.mesh = fenics.refine(self.mesh, cell_markers)
+            
+            
+    def update_initial_values(self):
+        
+        self.old_state.interpolate((0., 0., 0., 0., self.initial_temperature))
+            

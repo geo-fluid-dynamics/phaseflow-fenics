@@ -13,35 +13,9 @@ class Simulation:
 
     def __init__(self):
     
-        self.mesh = None
-        
-        self.element = None
-        
-        self.function_space = None
-        
-        self.state = None
-        
-        self.old_state = None
-        
-        self.governing_form = None
-        
-        self.boundary_conditions = None
-        
-        self.problem = None
-        
-        self.adaptive_goal_form = None
-        
-        self.solver = None
-        
-        self.solution_file = None
-        
-        self.end_time = None
-        
-        self.unsteadiness = None
+        self.end_time = 1.
         
         self.quadrature_degree = None
-        
-        self.integration_metric = fenics.dx
         
         self.timestep_size = 1.
         
@@ -78,6 +52,12 @@ class Simulation:
         
     def update(self):
     
+        self.validate_attributes()
+        
+        self.update_derived_attributes()
+    
+        self.update_mesh()
+        
         self.update_element()
     
         self.function_space = fenics.FunctionSpace(self.mesh, self.element)
@@ -92,10 +72,6 @@ class Simulation:
         
         self.update_problem()
         
-        if self.quadrature_degree is not None:
-        
-            self.integration_metric = fenics.dx(metadata={'quadrature_degree': self.quadrature_degree})
-        
         self.update_adaptive_goal_form()
         
         self.update_solver()
@@ -103,9 +79,30 @@ class Simulation:
         self.update_initial_guess()
     
     
+    def validate_attributes(self):
+    
+        pass
+
+        
+    def update_derived_attributes(self):
+        """ This is a nice place to set attributes which shouldn't be touched by the user. """
+        if self.quadrature_degree is None:
+        
+            self.integration_metric = fenics.dx
+        
+        else:
+        
+            self.integration_metric = fenics.dx(metadata={'quadrature_degree': self.quadrature_degree})
+    
+    
+    def update_mesh(self):
+        """ This must be overloaded. """
+        assert(False)
+        
+    
     def update_element(self):
         """ This must be overloaded. """
-        assert(self.element is not None)
+        assert(False)
     
     
     def update_initial_values(self):
@@ -121,7 +118,7 @@ class Simulation:
         Optionally, self.derivative_of_governing_form can be set here.
         Otherwise, the derivative will be computed automatically.
         """
-        assert(type(self.governing_form) is type(fenics.NonlinearVariationalForm))
+        assert(False)
         
         
     def update_problem(self):

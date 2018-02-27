@@ -59,15 +59,17 @@ class CCMOctadecanePCM_3D_RegressionTest(
 
     def __init__(self):
     
-        CCMOctadecanePCM_RegressionTest.__init__(self, 
-            end_time = 10., 
-            quadrature_degree = 7,
-            depth_3d = 0.5, 
-            initial_mesh_size = (1, 1, 1), 
-            initial_hot_wall_refinement_cycles = 4,
-            adaptive_goal_tolerance = 5.e-4)
+        CCMOctadecanePCM_RegressionTest.__init__(self)
+        
+        self.end_time = 10.
+        
+        self.quadrature_degree = 7
+        
+        self.initial_hot_wall_refinement_cycles = 4
+        
+        self.adaptive_goal_tolerance = 5.e-4
     
-        self.output_dir_suffix += "3d/"
+        self.output_dir += "3d/"
         
         
     def verify(self):

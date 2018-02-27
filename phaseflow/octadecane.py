@@ -4,7 +4,6 @@ For example, this is useful for an octadecane phase-change material.
 """
 import fenics
 import phaseflow
-import phaseflow.simulation
 
     
 class Simulation(phaseflow.simulation.Simulation):
