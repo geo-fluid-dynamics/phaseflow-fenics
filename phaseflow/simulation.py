@@ -25,7 +25,7 @@ class Simulation:
         
         self.governing_form = None
         
-        self.boundary_conditions = [{},]
+        self.boundary_conditions = None
         
         self.problem = None
         
@@ -44,6 +44,10 @@ class Simulation:
         self.integration_metric = fenics.dx
         
         self.timestep_size = 1.
+        
+        self.minimum_timestep_size = 1.e-4
+        
+        self.maximum_timestep_size = 1.e12
         
         self.adaptive_goal_tolerance = 1.e12
 
@@ -239,7 +243,18 @@ class Simulation:
                         
                     if self.adapt_timestep_to_unsteadiness:
 
-                        self.timestep_size /= self.unsteadiness**self.adaptive_time_power
+                        new_timestep_size = self.timestep_size/self.unsteadiness**self.adaptive_time_power
+                        
+                        if new_timestep_size > self.maximum_timestep_size:
+                        
+                            new_timestep_size = self.maximum_timestep_size
+                            
+                        if new_timestep_size < self.minimum_timestep_size:
+                        
+                            new_timestep_size = self.minimum_timestep_size
+                        
+                        self.timestep_size = 0. + new_timestep_size
+                        
                             
                 if self.end_time is not None:
                 
@@ -274,6 +289,4 @@ class Simulation:
                 
     def write_checkpoint(self):
     
-        with open(self.output_dir + "/checkpoint_t" + str(self.state.time) + ".pickle", "wb") as file:
-        
-            pickle.dump(self, file)
+        pass
