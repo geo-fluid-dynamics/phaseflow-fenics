@@ -2,46 +2,25 @@
 from .context import phaseflow
 
 
-class BenchmarkSimulationTest:
-
-    def __init__(self, benchmark_simulation):
-    
-        self.benchmark_simulation = benchmark_simulation
-        
-        #self.benchmark_simulation.prefix_output_dir_with_tempdir = True
-        
-        
-    def run(self):
-    
-        self.benchmark_simulation.run()
-    
-        
-
 def test_lid_driven_cavity_benchmark__ci__():
     
-    BenchmarkSimulationTest(
-        phaseflow.octadecane_benchmarks.LidDrivenCavityBenchmarkSimulation()).run()
-    
-    
-def test_lid_driven_cavity_benchmark_without_amr():
-
-    BenchmarkSimulationTest(
-        phaseflow.octadecane_benchmarks.LidDrivenCavityBenchmarkSimulationWithoutAMR()).run()
+    phaseflow.helpers.run_simulation_with_temporary_output(
+        phaseflow.octadecane_benchmarks.LidDrivenCavityBenchmarkSimulation())
     
 
-def test_lid_driven_cavity_with_solid_subdomain_benchmark__ci__():
+def test_lid_driven_cavity_benchmark_with_solid_subdomain__ci__():
     
-    BenchmarkSimulationTest(
-        phaseflow.octadecane_benchmarks.LDCBenchmarkSimulationWithSolidSubdomain()).run()
+    phaseflow.helpers.run_simulation_with_temporary_output(
+        phaseflow.octadecane_benchmarks.LDCBenchmarkSimulationWithSolidSubdomain())
     
     
 def test_heat_driven_cavity_benchmark__ci__():
     
-    BenchmarkSimulationTest(
-        phaseflow.octadecane_benchmarks.HeatDrivenCavityBenchmarkSimulation()).run()
+    phaseflow.helpers.run_simulation_with_temporary_output(
+        phaseflow.octadecane_benchmarks.HeatDrivenCavityBenchmarkSimulation())
 
     
 def test_stefan_problem_benchmark__ci__():
 
-    BenchmarkSimulationTest(
-        phaseflow.octadecane_benchmarks.StefanProblemBenchmarkSimulation()).run()
+    phaseflow.helpers.run_simulation_with_temporary_output(
+        phaseflow.octadecane_benchmarks.StefanProblemBenchmarkSimulation())

@@ -13,9 +13,9 @@ class Simulation:
 
     def __init__(self):
     
-        self.end_time = 1.
+        self.end_time = None 
         
-        self.quadrature_degree = None
+        self.quadrature_degree = None  # This by default will use the exact quadrature rule.
         
         self.timestep_size = 1.
         
@@ -70,6 +70,8 @@ class Simulation:
         
         self.update_governing_form()
         
+        self.update_boundary_conditions()
+        
         self.update_problem()
         
         self.update_adaptive_goal_form()
@@ -121,25 +123,28 @@ class Simulation:
         assert(False)
         
         
+    def update_boundary_conditions(self):
+    
+        self.fenics_bcs = []
+        
+        for dict in self.boundary_conditions:
+        
+            self.fenics_bcs.append(
+                fenics.DirichletBC(self.function_space.sub(dict["subspace"]), 
+                    dict["value"], 
+                    dict["location"]))
+        
+        
     def update_problem(self):
 
         derivative_of_governing_form = fenics.derivative(self.governing_form, 
             self.state.solution, 
             fenics.TrialFunction(self.function_space))
-        
-        fenics_bcs = []
-        
-        for dict in self.boundary_conditions:
-        
-            fenics_bcs.append(
-                fenics.DirichletBC(self.function_space.sub(dict["subspace"]), 
-                    dict["value"], 
-                    dict["location"]))
                     
         self.problem = fenics.NonlinearVariationalProblem( 
             self.governing_form, 
             self.state.solution, 
-            fenics_bcs, 
+            self.fenics_bcs, 
             derivative_of_governing_form)
         
     
@@ -179,6 +184,12 @@ class Simulation:
         if self.prefix_output_dir_with_tempdir:
         
             self.output_dir = tempfile.mkdtemp() + "/" + self.output_dir
+            
+        if fenics.MPI.rank(fenics.mpi_comm_world()) is 0:
+        
+            with open(self.output_dir + '/simulation_vars.txt', 'w') as simulation_vars_file:
+            
+                simulation_vars_file.write(str(vars(self)))
         
         solution_filepath = self.output_dir + "/solution.xdmf"
     
@@ -249,8 +260,12 @@ class Simulation:
                         if new_timestep_size < self.minimum_timestep_size:
                         
                             new_timestep_size = self.minimum_timestep_size
+                            
+                        if abs(new_timestep_size - self.timestep_size) > self.time_epsilon:
                         
-                        self.timestep_size = 0. + new_timestep_size
+                            self.timestep_size = 0. + new_timestep_size
+                            
+                            print("Set the time step size to " + str(self.timestep_size))
                         
                             
                 if self.end_time is not None:

@@ -113,18 +113,11 @@ class CavityBenchmarkSimulation(BenchmarkSimulation):
     def update_mesh(self):
     
         if len(self.mesh_size) == 2:
-    
-            if (self.xmin, self.ymin, self.xmax, self.ymax) == (0., 0., 1., 1.):
-    
-                self.mesh = fenics.UnitSquareMesh(fenics.mpi_comm_world(), 
-                    self.mesh_size[0], self.mesh_size[1], "crossed")
         
-            else:
-            
-                self.mesh = fenics.RectangleMesh(fenics.mpi_comm_world(), 
-                    fenics.Point(self.xmin, self.ymin), fenics.Point(self.xmax, self.ymax),
-                    self.mesh_size[0], self.mesh_size[1], "crossed")
-    
+            self.mesh = fenics.RectangleMesh(fenics.mpi_comm_world(), 
+                fenics.Point(self.xmin, self.ymin), fenics.Point(self.xmax, self.ymax),
+                self.mesh_size[0], self.mesh_size[1], "crossed")
+
         elif len(self.mesh_size) == 3:
         
             self.mesh = fenics.BoxMesh(fenics.mpi_comm_world(), 
@@ -191,17 +184,6 @@ class LidDrivenCavityBenchmarkSimulation(CavityBenchmarkSimulation):
             relative_tolerance = self.relative_tolerance,
             absolute_tolerance = self.absolute_tolerance)
  
-
-class LidDrivenCavityBenchmarkSimulationWithoutAMR(LidDrivenCavityBenchmarkSimulation):
-
-    def __init__(self):
-        
-        LidDrivenCavityBenchmarkSimulation.__init__(self)
-    
-        self.mesh_size = (20, 20)
-    
-        self.adaptive_goal_tolerance = 1.e32  # Set arbitrarily high to disable adaptation.
-
         
 class LDCBenchmarkSimulationWithSolidSubdomain(LidDrivenCavityBenchmarkSimulation):
     """ Similar to the lid-driven cavity, but extended with a solid subdomain to test variable viscosity.
@@ -306,13 +288,17 @@ class HeatDrivenCavityBenchmarkSimulation(CavityBenchmarkSimulation):
         self.T_hot = 0.5
     
         self.T_cold = -self.T_hot
-            
+        
+        self.solid_viscosity = 1.
+        
+        self.stefan_number = 1.e32
+        
         self.rayleigh_number = 1.e6
         
         self.prandtl_number = 0.71
         
         self.timestep_size = 1.e-3
-            
+        
         self.stop_when_steady = True
         
         self.steady_relative_tolerance = 1.e-4

@@ -4,30 +4,27 @@ import scipy.optimize
 import fenics
 
 
-class CCMOctadecanePCM_RegressionTest(
+class CCMOctadecanePCMRegressionSimulation(
         phaseflow.octadecane_benchmarks.ConvectionCoupledMeltingOctadecanePCMBenchmarkSimulation):
 
-    def __init__(self, 
-            depth_3d = None, 
-            initial_mesh_size = (1, 1),
-            initial_hot_wall_refinement_cycles = 6,
-            end_time = 30.,
-            quadrature_degree = 8,
-            adaptive_goal_tolerance = 1.e-5):
-    
+    def __init__(self):
+        
         phaseflow.octadecane_benchmarks.ConvectionCoupledMeltingOctadecanePCMBenchmarkSimulation.__init__(
-            self, 
-            timestep_size = 10., 
-            end_time = end_time, 
-            quadrature_degree = quadrature_degree,
-            depth_3d = depth_3d, 
-            initial_mesh_size = initial_mesh_size, 
-            initial_hot_wall_refinement_cycles = initial_hot_wall_refinement_cycles,
-            adaptive_goal_tolerance = adaptive_goal_tolerance)
+            self)
+        
+        self.timestep_size = 10.
+        
+        self.end_time = 30.
+        
+        self.quadrature_degree = 8
+        
+        self.mesh_size = (1, 1)
+        
+        self.initial_hot_wall_refinement_cycles = 6
+        
+        self.adaptive_goal_tolerance = 1.e-5
     
         self.output_dir += "regression/"
-        
-        self.prefix_output_dir_with_tempdir = True
         
         
     def verify(self):
@@ -54,8 +51,8 @@ class CCMOctadecanePCM_RegressionTest(
         assert(abs(pci_x_position - reference_pci_x_position) < 1.e-2)
         
         
-class CCMOctadecanePCM_3D_RegressionTest(
-        CCMOctadecanePCM_RegressionTest):
+class CCMOctadecanePCMRegressionSimulation3D(
+        CCMOctadecanePCMRegressionSimulation):
 
     def __init__(self):
     
@@ -92,9 +89,9 @@ class CCMOctadecanePCM_3D_RegressionTest(
 
 def test_convection_coupled_melting_octadecane_pcm_regression__ci__():
 
-    CCMOctadecanePCM_RegressionTest().run()
+    phaseflow.helpers.run_simulation_with_temporary_output(CCMOctadecanePCMRegressionSimulation())
 
 
 def test_convection_coupled_melting_octadecane_pcm_3d_regression():
 
-    CCMOctadecanePCM_3D_RegressionTest().run()    
+    CCMOctadecanePCM_3D_RegressionTest(CCMOctadecanePCMRegressionSimulation3D()) 

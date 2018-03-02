@@ -8,6 +8,13 @@ import os
 import fenics
 
 
+def run_simulation_with_temporary_output(simulation):
+    """ This is needed to run the test suite with Travis-CI. """
+    simulation.prefix_output_dir_with_tempdir = True
+    
+    simulation.run()
+
+
 class Point(fenics.Point):
 
     def __init__(self, coordinates):
