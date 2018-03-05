@@ -307,7 +307,7 @@ class HeatDrivenCavityBenchmarkSimulation(CavityBenchmarkSimulation):
         
         self.output_dir += "heat_driven_cavity/"
         
-        self.adaptive_goal_tolerance = 1.e-2
+        self.adaptive_goal_tolerance = 4.e-2
         
         
     def update_derived_attributes(self):
@@ -345,7 +345,7 @@ class HeatDrivenCavityBenchmarkSimulation(CavityBenchmarkSimulation):
             points = [((self.xmin + self.xmax)/2., y) for y in [0., 0.15, 0.35, 0.5, 0.65, 0.85, 1.]],
             verified_values = [val*self.rayleigh_number**0.5/self.prandtl_number
                 for val in [0.0000, -0.0649, -0.0194, 0.0000, 0.0194, 0.0649, 0.0000]],
-            relative_tolerance = 2.e-2,
+            relative_tolerance = 1.e-2,
             absolute_tolerance = 1.e-2*0.0649*self.rayleigh_number**0.5/self.prandtl_number)
     
 
