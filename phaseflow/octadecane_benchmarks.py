@@ -481,16 +481,11 @@ class ConvectionCoupledMeltingOctadecanePCMBenchmarkSimulation(CavityBenchmarkSi
         
         self.T_cold = -0.01
         
-        self.boundary_conditions = [
-                {"subspace": 1, "location": self.walls, "value": (0., 0.)},
-                {"subspace": 2, "location": self.left_wall, "value": self.T_hot},
-                {"subspace": 2, "location": self.right_wall, "value": self.T_cold}]
-        
         self.stefan_number = 0.045      
         
         self.prandtl_number = 56.2
         
-        self.rayleigh_numer = 3.27e5
+        self.rayleigh_number = 3.27e5
         
         self.gravity = (0., -1.)
         
@@ -521,7 +516,38 @@ class ConvectionCoupledMeltingOctadecanePCMBenchmarkSimulation(CavityBenchmarkSi
         self.output_dir += "adaptive_convection_coupled_melting_octadecane_pcm/"
         
         
+    def update_derived_attributes(self):
+    
+        CavityBenchmarkSimulation.update_derived_attributes(self)
+        
+        self.boundary_conditions = [
+                {"subspace": 1, "location": self.walls, "value": (0., 0.)},
+                {"subspace": 2, "location": self.left_wall, "value": self.T_hot},
+                {"subspace": 2, "location": self.right_wall, "value": self.T_cold}]
+                
+        if self.initial_pci_position == None:
+        
+            initial_pci_position = \
+                1./float(self.initial_mesh_size[0])/2.**(self.initial_hot_wall_refinement_cycles - 1)
+        
+        else:
+        
+            initial_pci_position = 0. + self.initial_pci_position
+        
+        initial_temperature = "(T_hot - T_cold)*(x[0] < initial_pci_position) + T_cold"
+        
+        initial_temperature = initial_temperature.replace("initial_pci_position", str(initial_pci_position))
+        
+        initial_temperature = initial_temperature.replace("T_hot", str(self.T_hot))
+        
+        initial_temperature = initial_temperature.replace("T_cold", str(self.T_cold))
+        
+        self.initial_temperature = initial_temperature
+        
+    
     def update_mesh(self):
+    
+        CavityBenchmarkSimulation.update_mesh(self)
         
         class HotWall(fenics.SubDomain):
     
@@ -541,33 +567,11 @@ class ConvectionCoupledMeltingOctadecanePCMBenchmarkSimulation(CavityBenchmarkSi
             fenics.adapt(self.mesh, edge_markers)
         
             self.mesh = self.mesh.child()
-
-        
-    def update_derived_attributes(self):
+            
     
-        CavityBenchmarkSimulation.update_derived_attributes(self)
-        
-        if self.initial_pci_position == None:
-        
-            initial_pci_position = \
-                1./float(self.initial_mesh_size[0])/2.**(self.initial_hot_wall_refinement_cycles - 1)
-        
-        else:
-        
-            initial_pci_position = 0. + self.initial_pci_position
-        
-        initial_temperature = "(T_hot - T_cold)*(x[0] < initial_pci_position) + T_cold"
-        
-        initial_temperature = initial_temperature.replace("initial_pci_position", str(initial_pci_position))
-        
-        initial_temperature = initial_temperature.replace("T_hot", str(self.T_hot))
-        
-        initial_temperature = initial_temperature.replace("T_cold", str(self.T_cold))
-        
-        
     def update_initial_values(self):
         
-        self.old_state.interpolate((0., 0., 0., self.initial_temperature))
+        self.old_state.interpolate(("0.", "0.", "0.", self.initial_temperature))
         
         
     def update_adaptive_goal_form(self):

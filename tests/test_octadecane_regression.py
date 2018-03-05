@@ -41,7 +41,7 @@ class CCMOctadecanePCMRegressionSimulation(
         
         def T_minus_T_r(x):
             
-            values = self.model.state.solution.leaf_node()(fenics.Point(x, pci_y_position_to_check))
+            values = self.state.solution.leaf_node()(fenics.Point(x, pci_y_position_to_check))
             
             return values[3] - self.regularization_central_temperature
 
@@ -56,7 +56,7 @@ class CCMOctadecanePCMRegressionSimulation3D(
 
     def __init__(self):
     
-        CCMOctadecanePCM_RegressionTest.__init__(self)
+        CCMOctadecanePCMBenchmarkSimulation3D.__init__(self)
         
         self.end_time = 10.
         
@@ -77,7 +77,7 @@ class CCMOctadecanePCMRegressionSimulation3D(
         
         def T_minus_T_r(x):
             
-            values = self.model.state.solution.leaf_node()(fenics.Point(x, pci_y_position_to_check, 0.))
+            values = self.state.solution.leaf_node()(fenics.Point(x, pci_y_position_to_check, 0.))
             
             return values[4] - self.regularization_central_temperature
 
@@ -89,9 +89,11 @@ class CCMOctadecanePCMRegressionSimulation3D(
 
 def test_convection_coupled_melting_octadecane_pcm_regression__ci__():
 
-    phaseflow.helpers.run_simulation_with_temporary_output(CCMOctadecanePCMRegressionSimulation())
+    phaseflow.helpers.run_simulation_with_temporary_output(
+        CCMOctadecanePCMRegressionSimulation().run())
 
 
 def test_convection_coupled_melting_octadecane_pcm_3d_regression():
 
-    CCMOctadecanePCM_3D_RegressionTest(CCMOctadecanePCMRegressionSimulation3D()) 
+    phaseflow.helpers.run_simulation_with_temporary_output(
+        CCMOctadecanePCM_3D_RegressionTest(CCMOctadecanePCMRegressionSimulation3D
