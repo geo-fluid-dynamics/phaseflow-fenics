@@ -305,6 +305,8 @@ class HeatDrivenCavityBenchmarkSimulation(CavityBenchmarkSimulation):
         
         self.adapt_timestep_to_unsteadiness = True
         
+        self.minimum_timestep_size = 1.e-3
+        
         self.output_dir += "heat_driven_cavity/"
         
         self.adaptive_goal_tolerance = 1.e-2

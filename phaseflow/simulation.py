@@ -52,6 +52,8 @@ class Simulation:
         
         self.restarted = False
         
+        self.latest_checkpoint_filepath = ""
+        
         
     def setup_initial_state(self):    
     
@@ -211,7 +213,7 @@ class Simulation:
             """
             self.old_state.write_solution(self.solution_file)
         
-            start_time = 0. + self.state.time
+            start_time = 0. + self.old_state.time
 
             if self.end_time is not None:
             
@@ -235,10 +237,17 @@ class Simulation:
                     if(self.state.time > self.end_time - self.time_epsilon):
                         
                         break
+                        
+                if it > 1:  # Set initial values based on previous solution.
+
+                    self.old_state.solution.leaf_node().vector()[:] = \
+                        self.state.solution.leaf_node().vector()
+                    
+                    self.old_state.time = 0. + self.state.time
                 
                 self.solver.solve(self.adaptive_goal_tolerance)
             
-                self.state.time += self.timestep_size
+                self.state.time = self.old_state.time + self.timestep_size
 
                 phaseflow.helpers.print_once("Reached time t = " + str(self.state.time))
                 
@@ -289,13 +298,7 @@ class Simulation:
                         phaseflow.helpers.print_once("Reached end time, t = " + str(self.end_time))
                     
                         break
-                    
-                    
-                # Set initial values for next time step.
-                self.old_state.solution.leaf_node().vector()[:] = self.state.solution.leaf_node().vector()
                 
-                self.old_state.time = 0. + self.state.time
-    
         
     def set_unsteadiness(self):
     
@@ -315,6 +318,8 @@ class Simulation:
         """Write checkpoint file (with solution and time) to disk."""
         checkpoint_filepath = self.output_dir + "checkpoint_t" + str(self.state.time) + ".h5"
         
+        self.latest_checkpoint_filepath = checkpoint_filepath
+        
         phaseflow.helpers.print_once("Writing checkpoint file to " + checkpoint_filepath)
         
         with fenics.HDF5File(fenics.mpi_comm_world(), checkpoint_filepath, "w") as h5:
@@ -328,10 +333,14 @@ class Simulation:
             with h5py.File(checkpoint_filepath, "r+") as h5:
                 
                 h5.create_dataset("time", data = self.state.time)
+                
+                h5.create_dataset("timestep_size", data = self.timestep_size)
         
         
     def read_checkpoint(self, checkpoint_filepath):
         """Read the checkpoint solution and time, perhaps to restart."""
+        phaseflow.helpers.print_once("Reading checkpoint file from " + checkpoint_filepath)
+        
         self.setup_initial_state()
         
         self.mesh = fenics.Mesh()
@@ -351,6 +360,8 @@ class Simulation:
         with h5py.File(checkpoint_filepath, "r") as h5:
                 
             self.old_state.time = h5["time"].value
+            
+            self.timestep_size = h5["timestep_size"].value
         
         self.restarted = True
         
