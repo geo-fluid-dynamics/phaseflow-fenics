@@ -20,6 +20,8 @@ def test_stefan_problem_benchmark_with_restart__ci__():
     
     sim.end_time = 0.01
     
+    sim.prefix_output_dir_with_tempdir = True
+    
     sim.run(verify = False)
     
     sim2 = phaseflow.octadecane_benchmarks.StefanProblemBenchmarkSimulation()
