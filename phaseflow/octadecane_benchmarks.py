@@ -307,7 +307,7 @@ class HeatDrivenCavityBenchmarkSimulation(CavityBenchmarkSimulation):
         
         self.output_dir += "heat_driven_cavity/"
         
-        self.adaptive_goal_tolerance = 4.e-2
+        self.adaptive_goal_tolerance = 40.
         
         
     def update_derived_attributes(self):
@@ -335,7 +335,7 @@ class HeatDrivenCavityBenchmarkSimulation(CavityBenchmarkSimulation):
         
         p, u, T = fenics.split(self.state.solution)
         
-        self.adaptive_goal_form = u[0]*T*self.integration_metric
+        self.adaptive_goal_form = u[0]*u[0]*self.integration_metric
         
         
     def verify(self):
