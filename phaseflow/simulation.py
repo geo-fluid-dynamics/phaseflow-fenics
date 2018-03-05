@@ -306,12 +306,12 @@ class Simulation:
         
         time_residual.assign(self.state.solution.leaf_node() - self.old_state.solution.leaf_node())
         
-        self.unsteadiness = fenics.norm(time_residual, "L2")/ \
+        self.unsteadiness = fenics.norm(time_residual.leaf_node(), "L2")/ \
             fenics.norm(self.old_state.solution.leaf_node(), "L2")
         
         phaseflow.helpers.print_once(
-            "Unsteadiness (L2 norm of relative time residual), || w_{n+1} || / || w_n || = " + 
-                str(self.unsteadiness))
+            "Unsteadiness (L2 norm of relative time residual), L2_norm(w - w_n) / L2_norm(w_n) = " 
+            + str(self.unsteadiness))
                 
                 
     def write_checkpoint(self):
