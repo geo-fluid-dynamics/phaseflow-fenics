@@ -90,10 +90,10 @@ class CCMOctadecanePCMRegressionSimulation3D(
 def test_convection_coupled_melting_octadecane_pcm_regression__ci__():
 
     phaseflow.helpers.run_simulation_with_temporary_output(
-        CCMOctadecanePCMRegressionSimulation().run())
+        CCMOctadecanePCMRegressionSimulation())
 
 
 def test_convection_coupled_melting_octadecane_pcm_3d_regression():
 
     phaseflow.helpers.run_simulation_with_temporary_output(
-        CCMOctadecanePCM_3D_RegressionTest(CCMOctadecanePCMRegressionSimulation3D
+        CCMOctadecanePCMRegressionSimulation3D())
