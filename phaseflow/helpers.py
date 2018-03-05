@@ -8,6 +8,45 @@ import os
 import fenics
 
 
+def run_simulation_with_temporary_output(simulation):
+    """ This is needed to run the test suite with Travis-CI. """
+    simulation.prefix_output_dir_with_tempdir = True
+    
+    simulation.run()
+
+
+class Point(fenics.Point):
+
+    def __init__(self, coordinates):
+    
+        if type(coordinates) is type(0.):
+        
+            coordinates = (coordinates,)
+        
+        if len(coordinates) == 1:
+        
+            fenics.Point.__init__(self, coordinates[0])
+            
+        elif len(coordinates) == 2:
+        
+            fenics.Point.__init__(self, coordinates[0], coordinates[1])
+            
+        elif len(coordinates) == 3:
+        
+            fenics.Point.__init__(self, coordinates[0], coordinates[1], coordinates[2])
+            
+
+class SolutionFile(fenics.XDMFFile):
+
+    def __init__(self, filepath):
+
+        fenics.XDMFFile.__init__(self, filepath)
+        
+        self.parameters["functions_share_mesh"] = True  
+        
+        self.path = filepath
+        
+
 def arguments():
     """ Returns tuple containing dictionary of calling function's
     named arguments and a list of calling function's unnamed
