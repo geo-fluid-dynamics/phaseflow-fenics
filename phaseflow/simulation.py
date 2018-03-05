@@ -201,6 +201,25 @@ class Simulation:
         self.state.solution.leaf_node().vector()[:] = self.old_state.solution.leaf_node().vector()
 
         
+    def update_timestep_size(self, new_timestep_size):
+    
+        if new_timestep_size > self.maximum_timestep_size:
+                        
+            new_timestep_size = self.maximum_timestep_size
+            
+        if new_timestep_size < self.minimum_timestep_size:
+        
+            new_timestep_size = self.minimum_timestep_size
+            
+        if abs(new_timestep_size - self.timestep_size) > self.time_epsilon:
+        
+            self.timestep_size = 0. + new_timestep_size
+            
+            print("Set the time step size to " + str(self.timestep_size))
+    
+            self.fenics_timestep_size.assign(new_timestep_size)
+        
+        
     def run(self):
         
         self.setup()
@@ -271,23 +290,9 @@ class Simulation:
                         break
                         
                     if self.adapt_timestep_to_unsteadiness:
-
-                        new_timestep_size = self.timestep_size/self.unsteadiness**self.adaptive_time_power
                         
-                        if new_timestep_size > self.maximum_timestep_size:
-                        
-                            new_timestep_size = self.maximum_timestep_size
-                            
-                        if new_timestep_size < self.minimum_timestep_size:
-                        
-                            new_timestep_size = self.minimum_timestep_size
-                            
-                        if abs(new_timestep_size - self.timestep_size) > self.time_epsilon:
-                        
-                            self.timestep_size = 0. + new_timestep_size
-                            
-                            print("Set the time step size to " + str(self.timestep_size))
-                        
+                        self.update_timestep_size(
+                            self.timestep_size/self.unsteadiness**self.adaptive_time_power)
                             
                 if self.end_time is not None:
                 

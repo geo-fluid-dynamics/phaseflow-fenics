@@ -107,6 +107,8 @@ class Simulation(phaseflow.simulation.Simulation):
             + dot(grad(psi_T), 1./Pr*grad(T) - T*u)
             )*self.integration_metric
             
-        self.semi_phasefield_mapping = phi  # $phi$ will also be needed for AMR settings.
+        self.semi_phasefield_mapping = phi  # This must be shared for adaptive mesh refinement.
+        
+        self.fenics_timestep_size = Delta_t  # This must be shared for adaptive time stepping.
 
         
