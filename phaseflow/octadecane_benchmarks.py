@@ -303,7 +303,7 @@ class HeatDrivenCavityBenchmarkSimulation(CavityBenchmarkSimulation):
         
         self.steady_relative_tolerance = 1.e-4
         
-        self.adapt_timestep_to_unsteadiness = True
+        self.adapt_timestep_to_residual = True
         
         self.output_dir += "heat_driven_cavity/"
         

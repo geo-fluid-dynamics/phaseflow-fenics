@@ -52,8 +52,6 @@ class Simulation:
         
         self.restarted = False
         
-        self.latest_checkpoint_filepath = ""
-        
         
     def setup_initial_state(self):    
     
@@ -289,10 +287,10 @@ class Simulation:
                         
                         break
                         
-                    if self.adapt_timestep_to_unsteadiness:
+                    if self.adapt_timestep_to_residual:
                         
                         self.update_timestep_size(
-                            self.timestep_size/self.unsteadiness**self.adaptive_time_power)
+                            self.timestep_size/self.time_norm_relative_residual**self.adaptive_time_power)
                             
                 if self.end_time is not None:
                 
@@ -311,12 +309,14 @@ class Simulation:
         
         time_residual.assign(self.state.solution.leaf_node() - self.old_state.solution.leaf_node())
         
-        self.unsteadiness = fenics.norm(time_residual.leaf_node(), "L2")/ \
+        self.time_norm_relative_residual = fenics.norm(time_residual.leaf_node(), "L2")/ \
             fenics.norm(self.old_state.solution.leaf_node(), "L2")
         
+        self.unsteadiness = self.time_norm_relative_residual/self.timestep_size
+        
         phaseflow.helpers.print_once(
-            "Unsteadiness (L2 norm of relative time residual), L2_norm(w - w_n) / L2_norm(w_n) = " 
-            + str(self.unsteadiness))
+            "Unsteadiness L2_norm(w - w_n) / L2_norm(w_n) / Delta_t = " + str(self.unsteadiness)
+            + " (Stopping at " + str(self.steady_relative_tolerance) + ")")
                 
                 
     def write_checkpoint(self):
