@@ -307,7 +307,7 @@ class HeatDrivenCavityBenchmarkSimulation(CavityBenchmarkSimulation):
         
         self.output_dir += "heat_driven_cavity/"
         
-        self.adaptive_goal_tolerance = 40.
+        self.adaptive_goal_tolerance = 20.
         
         
     def update_derived_attributes(self):
