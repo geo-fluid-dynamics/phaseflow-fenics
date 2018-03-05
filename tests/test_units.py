@@ -67,7 +67,7 @@ def test_checkpoint_and_restart__ci__():
 
     benchmark = phaseflow.octadecane_benchmarks.LidDrivenCavityBenchmarkSimulation()
     
-    benchmark.prefix_output_dir_with_tempdir = True
+    benchmark.prefix_output_dir_with_tempdir = False
     
     benchmark.run()
     
@@ -76,11 +76,11 @@ def test_checkpoint_and_restart__ci__():
     benchmark2.read_checkpoint(
         benchmark.output_dir + "/checkpoint_t" + str(benchmark.end_time) + ".h5")
     
-    assert(benchmark.model.state.time == benchmark2.model.state.time)
+    assert(benchmark.state.time == benchmark2.old_state.time)
     
     solution = benchmark.state.solution.leaf_node()
     
-    solution2 = benchmark2.state.solution.leaf_node()
+    solution2 = benchmark2.old_state.solution.leaf_node()
     
     assert(fenics.errornorm(solution, solution2) < 1.e-15)
     

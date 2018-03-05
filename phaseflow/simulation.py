@@ -7,12 +7,13 @@ import numpy
 import phaseflow.helpers
 import tempfile
 import pprint
+import h5py
 
 
 class Simulation:
 
     def __init__(self):
-    
+        
         self.end_time = None 
         
         self.quadrature_degree = None  # This by default will use the exact quadrature rule.
@@ -49,24 +50,33 @@ class Simulation:
     
         self.max_timesteps = 1000000000000
         
+        self.restarted = False
         
-    def update(self):
-    
-        self.validate_attributes()
         
-        self.update_derived_attributes()
+    def setup_initial_state(self):    
     
         self.update_mesh()
         
         self.update_element()
-    
+        
         self.function_space = fenics.FunctionSpace(self.mesh, self.element)
         
-        self.state = phaseflow.state.State(self.function_space, self.element)
-
         self.old_state = phaseflow.state.State(self.function_space, self.element)
+       
+       
+    def setup(self):
         
-        self.update_initial_values()
+        self.validate_attributes()
+        
+        self.update_derived_attributes()
+        
+        if not self.restarted:
+            
+            self.setup_initial_state()
+            
+            self.update_initial_values()
+        
+        self.state = phaseflow.state.State(self.function_space, self.element)
         
         self.update_governing_form()
         
@@ -79,6 +89,18 @@ class Simulation:
         self.update_solver()
         
         self.update_initial_guess()
+        
+        if self.prefix_output_dir_with_tempdir:
+        
+            self.output_dir = tempfile.mkdtemp() + "/" + self.output_dir
+            
+        phaseflow.helpers.mkdir_p(self.output_dir)
+            
+        if fenics.MPI.rank(fenics.mpi_comm_world()) is 0:
+        
+            with open(self.output_dir + '/simulation_vars.txt', 'w') as simulation_vars_file:
+            
+                pprint.pprint(vars(self), simulation_vars_file)
     
     
     def validate_attributes(self):
@@ -179,20 +201,7 @@ class Simulation:
         
     def run(self):
         
-        self.update()
-        
-        if self.prefix_output_dir_with_tempdir:
-        
-            self.output_dir = tempfile.mkdtemp() + "/" + self.output_dir
-            
-            
-        phaseflow.helpers.mkdir_p(self.output_dir)
-            
-        if fenics.MPI.rank(fenics.mpi_comm_world()) is 0:
-        
-            with open(self.output_dir + '/simulation_vars.txt', 'w') as simulation_vars_file:
-            
-                pprint.pprint(vars(self), simulation_vars_file)
+        self.setup()
         
         solution_filepath = self.output_dir + "/solution.xdmf"
     
@@ -303,10 +312,47 @@ class Simulation:
                 
                 
     def write_checkpoint(self):
-    
-        pass
+        """Write checkpoint file (with solution and time) to disk."""
+        checkpoint_filepath = self.output_dir + "checkpoint_t" + str(self.state.time) + ".h5"
+        
+        phaseflow.helpers.print_once("Writing checkpoint file to " + checkpoint_filepath)
+        
+        with fenics.HDF5File(fenics.mpi_comm_world(), checkpoint_filepath, "w") as h5:
+            
+            h5.write(self.state.solution.function_space().mesh().leaf_node(), "mesh")
+        
+            h5.write(self.state.solution.leaf_node(), "solution")
+            
+        if fenics.MPI.rank(fenics.mpi_comm_world()) is 0:
+        
+            with h5py.File(checkpoint_filepath, "r+") as h5:
+                
+                h5.create_dataset("time", data = self.state.time)
         
         
-    def read_checkpoint(self, filepath):
-    
-        assert(False)
+    def read_checkpoint(self, checkpoint_filepath):
+        """Read the checkpoint solution and time, perhaps to restart."""
+        self.setup_initial_state()
+        
+        self.mesh = fenics.Mesh()
+            
+        with fenics.HDF5File(self.mesh.mpi_comm(), checkpoint_filepath, "r") as h5:
+        
+            h5.read(self.mesh, "mesh", True)
+        
+        self.function_space = fenics.FunctionSpace(self.mesh, self.element)
+
+        self.old_state.solution = fenics.Function(self.function_space)
+
+        with fenics.HDF5File(self.mesh.mpi_comm(), checkpoint_filepath, "r") as h5:
+        
+            h5.read(self.old_state.solution, "solution")
+            
+        with h5py.File(checkpoint_filepath, "r") as h5:
+                
+            self.old_state.time = h5["time"].value
+        
+        self.restarted = True
+        
+        self.output_dir += "restarted_t" + str(self.old_state.time) + "/"
+        
