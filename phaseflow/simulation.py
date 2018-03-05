@@ -6,7 +6,7 @@ import fenics
 import numpy
 import phaseflow.helpers
 import tempfile
-import pickle
+import pprint
 
 
 class Simulation:
@@ -185,11 +185,14 @@ class Simulation:
         
             self.output_dir = tempfile.mkdtemp() + "/" + self.output_dir
             
+            
+        phaseflow.helpers.mkdir_p(self.output_dir)
+            
         if fenics.MPI.rank(fenics.mpi_comm_world()) is 0:
         
             with open(self.output_dir + '/simulation_vars.txt', 'w') as simulation_vars_file:
             
-                simulation_vars_file.write(str(vars(self)))
+                pprint.pprint(vars(self), simulation_vars_file)
         
         solution_filepath = self.output_dir + "/solution.xdmf"
     
