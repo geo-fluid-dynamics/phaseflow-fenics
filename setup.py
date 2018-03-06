@@ -25,7 +25,5 @@ setuptools.setup(
     ],
     install_requires=[
         "fenics>=2017.1.0",
-        "h5py",
-        "numpy",
     ],
 )
