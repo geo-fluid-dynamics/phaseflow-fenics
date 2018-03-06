@@ -31,7 +31,7 @@ class Mock(MagicMock):
     
             return MagicMock()
 
-MOCK_MODULES = ["numpy", "h5py"]
+MOCK_MODULES = ["fenics", "numpy", "h5py"]
 
 sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
