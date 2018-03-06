@@ -1,2 +1,1 @@
-fenics>=2017.1.0
 numpydoc
