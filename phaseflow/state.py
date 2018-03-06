@@ -1,11 +1,18 @@
+""" **state.py** contains the State class. """
 import fenics
 import phaseflow
 
 
 class State:
-
+    """ Contain a time-dependent `solution` which is a `fenics.Function` and an associated time,
+    along with associated methods, e.g. for interpolating mathematical expressions onto the solution,
+    and writing the solution to a file.
+    
+    References to the function space and element are saved as attributes, since they are needed for the
+    `self.interpolate` method.
+    """
     def __init__(self, function_space, element, time = 0.):
-        """ **State** collects the solution and associated time.
+        """
         
         Parameters
         ----------

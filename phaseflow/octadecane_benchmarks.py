@@ -1,4 +1,4 @@
-"""**benchmarks.py** applies Phaseflow to a variety of benchmark problems."""
+"""**octadecane_benchmarks.py** applies the octadecane model to a variety of benchmark problems."""
 import phaseflow
 import fenics
 
@@ -6,14 +6,21 @@ import fenics
 class BenchmarkSimulation(phaseflow.octadecane.Simulation):
  
     def __init__(self):
-    
+        """ This extends the `Simulation.__init__` method to append the output directory. """
         phaseflow.octadecane.Simulation.__init__(self)
         
         self.output_dir += "benchmark/"
 
     
     def run(self, verify = True):
+        """ This extends the `Simulation.run` method to add a final verification step. 
         
+        Parameters
+        ----------
+        verify : bool
+        
+            This will only call the `self.verify` method if True.
+        """
         phaseflow.octadecane.Simulation.run(self)
         
         if verify:
@@ -22,7 +29,10 @@ class BenchmarkSimulation(phaseflow.octadecane.Simulation):
         
         
     def verify(self):
-        """ This must be overloaded. """
+        """ Verify the result.
+        
+        This base method is written so fail, so this must be overloaded with an benchmark specific method.
+        """
         assert(False)
         
     

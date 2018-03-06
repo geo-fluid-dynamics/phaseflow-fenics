@@ -1,7 +1,4 @@
-"""**pure_with_constant_properties.py** contains code specific to pure materials with constant properties.
-
-For example, this is useful for an octadecane phase-change material.
-"""
+""" **octadecane.py** implements the convection-coupled melting of octadecane phase-change materials. """
 import fenics
 import phaseflow
 
@@ -9,7 +6,7 @@ import phaseflow
 class Simulation(phaseflow.simulation.Simulation):
 
     def __init__(self):
-
+        """ This extends `Simulation.__init__` with attributes needed for the octadecane model. """
         phaseflow.simulation.Simulation.__init__(self)
         
         self.timestep_size = 1.
@@ -38,7 +35,7 @@ class Simulation(phaseflow.simulation.Simulation):
         
         
     def update_element(self):
-        
+        """ Set the mixed element from @cite{danaila2014newton}. """
         pressure_element = fenics.FiniteElement("P", self.mesh.ufl_cell(), self.pressure_element_degree)
         
         velocity_element_degree = self.pressure_element_degree + 1
@@ -52,7 +49,7 @@ class Simulation(phaseflow.simulation.Simulation):
         
         
     def update_governing_form(self):
-    
+        """ Implement the variational form from @cite{zimmerman2018monolithic}. """
         Delta_t = fenics.Constant(self.timestep_size)
         
         Pr = fenics.Constant(self.prandtl_number)
