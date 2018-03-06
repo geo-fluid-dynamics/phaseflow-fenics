@@ -19,8 +19,14 @@ setuptools.setup(
     author_email = "zimmerman@aices.rwth-aachen.de",
     url = "https://github.com/geo-fluid-dynamics/phaseflow-fenics",
     license = license,
-    packages = setuptools.find_packages(exclude=("tests", "docs", "examples")),
+    packages = ["phaseflow"],
     classifiers=[
         "Programming Language :: Python :: 3.5",
+    ],
+    install_requires=[
+        "fenics>=2017.1.0",
+        "h5py",
+        "scipy",
+        "numpy",
     ],
 )
