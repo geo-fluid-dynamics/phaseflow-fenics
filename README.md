@@ -12,7 +12,7 @@ The model system is composed of
 
 Phaseflow spatially discretizes the PDE's with the finite element method, and to this end uses the Python/C++ finite element library [FEniCS](https://fenicsproject.org/). Many other features are provided by FEniCS, including the nonlinear (Newton) solver, goal-oriented adaptive mesh refinement, and solution output to HDF5, among others.
 
-We present the mathematical model, the numerical methods, the Phaseflow implementation and its verification in a submitted proceedings paper, [*Monolithic simulation of convection-coupled phase-change - verification and reproducibility*](https://arxiv.org/abs/1801.03429).
+We present the mathematical model, the numerical methods, the Phaseflow implementation and its verification in an accepted proceedings paper, [*Monolithic simulation of convection-coupled phase-change - verification and reproducibility*](https://arxiv.org/abs/1801.03429).
 
 Author: Alexander G. Zimmerman <zimmerman@aices.rwth-aachen.de>
 
