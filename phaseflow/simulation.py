@@ -1,7 +1,4 @@
-"""**simulation.py** contains the Simulation class.
-
-This is a 'God class' which collects all of Phaseflow's primary data and methods.
-"""
+""" **simulation.py** contains the Simulation class. """
 import fenics
 import numpy
 import phaseflow.helpers
@@ -11,9 +8,13 @@ import h5py
 
 
 class Simulation:
-
+    """ This is a 'god class' which acts as an API for writing Phaseflow models and applications. 
+    
+    For an example model, see `phaseflow.octadecane`, 
+    with corresponding example applications in `phaseflow.octadecane_benchmarks`.
+    """
     def __init__(self):
-        
+        """ Initialize attributes which should be modified by the user before calling `self.run`."""
         self.end_time = None 
         
         self.quadrature_degree = None  # This by default will use the exact quadrature rule.
@@ -54,7 +55,7 @@ class Simulation:
         
         
     def setup_initial_state(self):    
-    
+        """ Set up objects needed before the initial solution can be stored. """
         self.update_mesh()
         
         self.update_element()
@@ -65,7 +66,7 @@ class Simulation:
        
        
     def setup(self):
-        
+        """ Set up objects needed before the simulation can run. """
         self.validate_attributes()
         
         self.update_derived_attributes()
@@ -81,6 +82,8 @@ class Simulation:
         self.update_governing_form()
         
         self.update_boundary_conditions()
+        
+        self.update_derivative()
         
         self.update_problem()
         
@@ -104,12 +107,25 @@ class Simulation:
     
     
     def validate_attributes(self):
+        """ Overload this to validate attributes set by the user. 
+        
+        For example, phaseflow.octadecane_benchmarks.CavityBenchmarkSimulation overloads
+        .. code-block::python
+        
+            def validate_attributes(self):
     
+                if type(self.mesh_size) is type(20):
+                
+                    self.mesh_size = (self.mesh_size, self.mesh_size)
+        
+        
+        since the domain is a unit square which is often refined uniformly in both directions.
+        """
         pass
 
         
     def update_derived_attributes(self):
-        """ This is a nice place to set attributes which shouldn't be touched by the user. """
+        """ Set attributes which shouldn't be touched by the user. """
         if self.quadrature_degree is None:
         
             self.integration_metric = fenics.dx
@@ -120,17 +136,20 @@ class Simulation:
     
     
     def update_mesh(self):
-        """ This must be overloaded. """
+        """ This must be overloaded to instantiate a `fenics.Mesh` at `self.mesh`. """
         assert(False)
         
     
     def update_element(self):
-        """ This must be overloaded. """
+        """ This must be overloaded to instantiate a `fenics.MixedElement` at `self.element`. """
         assert(False)
     
     
     def update_initial_values(self):
-        """ This must be overloaded. """
+        """ This must be overloaded to set `self.old_state.solution`. 
+        
+        Often this might involve calling the `self.old_state.interpolate` method.
+        """
         assert(False)
         
         
@@ -146,7 +165,11 @@ class Simulation:
         
         
     def update_boundary_conditions(self):
-    
+        """ Set the collection of `fenics.DirichetBC` 
+        based on the user's provided collection of boundary condition dictionaries.
+        This format allows the user to specify boundary conditions abstractly,
+        without referencing the actual `fenics.FunctionSpace` at `self.function_space`.
+        """
         self.fenics_bcs = []
         
         for dict in self.boundary_conditions:
@@ -157,26 +180,32 @@ class Simulation:
                     dict["location"]))
         
         
-    def update_problem(self):
-
-        derivative_of_governing_form = fenics.derivative(self.governing_form, 
+    def update_derivative(self):
+        """ Set the derivative of the governing form, needed for the nonlinear solver. """
+        self.derivative_of_governing_form = fenics.derivative(self.governing_form, 
             self.state.solution, 
             fenics.TrialFunction(self.function_space))
-                    
+        
+        
+    def update_problem(self):
+        """ Set the `fenics.NonlinearVariationalProblem`. """
         self.problem = fenics.NonlinearVariationalProblem( 
             self.governing_form, 
             self.state.solution, 
             self.fenics_bcs, 
-            derivative_of_governing_form)
+            self.derivative_of_governing_form)
         
     
     def update_adaptive_goal_form(self):
-        """ Overload this to set the goal for adaptive mesh refinement. """
+        """ Set the goal for adaptive mesh refinement.
+        
+        This should be overloaded for most applications.
+        """
         self.adaptive_goal_form = self.state.solution[0]*self.integration_metric
         
         
     def update_solver(self):
-    
+        """ Set up the solver, which is a `fenics.AdaptiveNonlinearVariationalSolver`. """
         self.solver = fenics.AdaptiveNonlinearVariationalSolver(
             problem = self.problem,
             goal = self.adaptive_goal_form)
@@ -195,12 +224,21 @@ class Simulation:
 
     
     def update_initial_guess(self):
-        """ Overload this to set a different initial guess for the Newton solver. """
+        """ Set the initial guess for the Newton solver.
+        
+        Using the latest solution as the initial guess should be fine for most applications.
+        Otherwise, this must be overloaded.
+        """
         self.state.solution.leaf_node().vector()[:] = self.old_state.solution.leaf_node().vector()
-
+        
         
     def update_timestep_size(self, new_timestep_size):
-    
+        """ When using adaptive time stepping, this sets the time step size.
+        
+        This requires that `self.update_governing_form` sets `self.fenics_timestep_size`,
+        which must be a `fenics.Constant`. Given that, this calls the `fenics.Constant.assign` 
+        method so that the change affects `self.governing_form`.
+        """
         if new_timestep_size > self.maximum_timestep_size:
                         
             new_timestep_size = self.maximum_timestep_size
@@ -219,7 +257,7 @@ class Simulation:
         
         
     def run(self):
-        
+        """ Run the time-dependent simulation. """
         self.setup()
         
         solution_filepath = self.output_dir + "/solution.xdmf"
@@ -304,7 +342,7 @@ class Simulation:
                 
         
     def set_unsteadiness(self):
-    
+        """ Set an 'unsteadiness' metric used for adaptive time stepping. """
         time_residual = fenics.Function(self.state.solution.leaf_node().function_space())
         
         time_residual.assign(self.state.solution.leaf_node() - self.old_state.solution.leaf_node())
