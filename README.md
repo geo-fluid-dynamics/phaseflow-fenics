@@ -2,7 +2,7 @@
 [![Build Status](https://travis-ci.org/geo-fluid-dynamics/phaseflow-fenics.svg?branch=master)](https://travis-ci.org/geo-fluid-dynamics/phaseflow-fenics)
 [![Documentation Status](https://readthedocs.org/projects/phaseflow/badge/?version=latest)](http://phaseflow.readthedocs.io/?badge=latest)
 
-<img src="./docs/images/MeltingPCM.png" width="320">
+<img src="./docs/images/OrthogonalMelting.gif" width="320"> <img src="./docs/images/OrthogonalMelting_AMR.gif" width="320">
 
 Phaseflow simulates the convection-coupled melting and solidification of phase-change materials (PCM's). We adopt an enthalpy-based, single-domain semi-phase-field, finite element method, with monolithic system coupling and global Newton linearization.
 
@@ -16,7 +16,7 @@ We present the mathematical model, the numerical methods, the Phaseflow implemen
 
 Author: Alexander G. Zimmerman <zimmerman@aices.rwth-aachen.de>
 
-## Current capabilities
+## Benchmark results
 - Incompressible flow
 
     Benchmark: Lid-driven cavity
