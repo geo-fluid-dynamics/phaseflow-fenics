@@ -9,14 +9,27 @@ import fenics
 
 
 def run_simulation_with_temporary_output(simulation):
-    """ This is needed to run the test suite with Travis-CI. """
+    """ This is needed to run the test suite with Travis-CI. 
+    
+    Otherwise, the process will attempt to write outputs to the working directory,
+    resulting in a permission error.
+    
+    Parameters
+    ----------
+    simulation : phaseflow.Simulation
+    """
     simulation.prefix_output_dir_with_tempdir = True
     
     simulation.run()
 
 
 class Point(fenics.Point):
-
+    """ This class extends `fenics.Point` with a more convenient constructor for 1D/2D/3D. 
+    
+    Parameters
+    ----------
+    coordinates : tuple of floats
+    """
     def __init__(self, coordinates):
     
         if type(coordinates) is type(0.):
@@ -37,41 +50,45 @@ class Point(fenics.Point):
             
 
 class SolutionFile(fenics.XDMFFile):
-
+    """ This class extends `fenics.XDMFFile` with some minor changes for convenience. 
+    
+    Parameters
+    ----------
+    filepath : string
+    """
     def __init__(self, filepath):
 
         fenics.XDMFFile.__init__(self, filepath)
         
-        self.parameters["functions_share_mesh"] = True  
+        self.parameters["functions_share_mesh"] = True  # Efficiently handles time-dependent solutions
         
-        self.path = filepath
-        
+        self.path = filepath  # Mimic the file path attribute from a `file` returned by `open` 
+    
 
-def arguments():
-    """ Returns tuple containing dictionary of calling function's
-    named arguments and a list of calling function's unnamed
-    positional arguments.
+def print_once(message):
+    """ Print only if the process has MPI rank 0.
+    
+    This is called throughout Phaseflow instead of `print` so that MPI runs don't duplicate messages.
+    
+    Parameters
+    ----------
+    message : string
     """
-    posname, kwname, args = inspect.getargvalues(inspect.stack()[1][0])[-3:]
-    
-    posargs = args.pop(posname, [])
-    
-    args.update(args.pop(kwname, []))
-    
-    return args, posargs
-    
-
-def print_once(string):
-
     if fenics.dolfin.MPI.rank(fenics.dolfin.mpi_comm_world()) is 0:
     
-        print(string)
+        print(message)
     
     
-
 def mkdir_p(path):
     """ Make a directory if it doesn't exist.
+    
+    This is needed because `open` does not create directories.
+    
     Code from https://stackoverflow.com/questions/600268/mkdir-p-functionality-in-python 
+    
+    Parameters
+    ----------
+    path : string
     """
     try:
     

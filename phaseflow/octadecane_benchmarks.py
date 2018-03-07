@@ -4,16 +4,16 @@ import fenics
 
  
 class BenchmarkSimulation(phaseflow.octadecane.Simulation):
- 
+    """ This extends `phaseflow.octadecane.Simulation` with verification methods. """
     def __init__(self):
-        """ This extends the `Simulation.__init__` method to append the output directory. """
+        """ This extends the `__init__` method to append the output directory. """
         phaseflow.octadecane.Simulation.__init__(self)
         
         self.output_dir += "benchmark/"
 
     
     def run(self, verify = True):
-        """ This extends the `Simulation.run` method to add a final verification step. 
+        """ Extend the `phaseflow.octadecane.Simulation.run` method to add a final verification step. 
         
         Parameters
         ----------
@@ -38,20 +38,46 @@ class BenchmarkSimulation(phaseflow.octadecane.Simulation):
     
     def verify_scalar_solution_component(self, 
             component, 
-            points, 
+            coordinates, 
             verified_values, 
             relative_tolerance, 
             absolute_tolerance):
-    
-        assert(len(verified_values) == len(points))
+        """ Verify the scalar values of a specified solution component.
+        
+        Parameters
+        ----------
+        component : integer
+        
+            The solution is often vector-valued and based on a mixed formulation.
+            By having the user specify a component to verify with this function,
+            we can write the rest of the function quite generally.
+            
+        coordinates : list of tuples, where each tuple contains a float for each spatial dimension.
+        
+            Each tuple will be converted to a `Point`.
+            
+        verified_values : tuple of floats
+        
+           Point-wise verified values from a benchmark publication.
+           
+        relative_tolerance : float   
+           
+           This will be used for asserting that the relative error is not too large.
+           
+        absolute_tolerance : float
+        
+            For small values, the absolute error will be checked against this tolerance,
+            instead of considering the relative error.
+        """
+        assert(len(verified_values) == len(coordinates))
         
         for i, verified_value in enumerate(verified_values):
         
-            p = phaseflow.helpers.Point(points[i])
+            point = phaseflow.helpers.Point(coordinates[i])
             
-            if self.mesh.bounding_box_tree().collides_entity(p):
+            if self.mesh.bounding_box_tree().collides_entity(point):
             
-                values = self.state.solution.leaf_node()(p)
+                values = self.state.solution.leaf_node()(point)
                 
                 value = values[component]
                 
@@ -69,9 +95,13 @@ class BenchmarkSimulation(phaseflow.octadecane.Simulation):
         
     
 class CavityBenchmarkSimulation(BenchmarkSimulation):
-
-    def __init__(self):
+    """ This extends the BenchmarkSimulation class with attributes and methods specific to 
+        rectangular cavity benchmarks.
     
+    This extension focuses on sizing the cavity and making the corresponding mesh.
+    """
+    def __init__(self):
+        """ Extend the `init` method with attributes needed for sizing the cavity. """
         BenchmarkSimulation.__init__(self)
         
         self.mesh_size = (2, 2)
@@ -90,14 +120,22 @@ class CavityBenchmarkSimulation(BenchmarkSimulation):
         
         
     def validate_attributes(self):
-    
+        """ Validate attributes to improve user friendliness. 
+        
+        When working with a unit square domain and uniform initial refinement, 
+        often it is more intuitive to only specify a single integer for the grid sizing.
+        """
         if type(self.mesh_size) is type(20):
         
             self.mesh_size = (self.mesh_size, self.mesh_size)
         
         
     def update_derived_attributes(self):
-    
+        """ Set attributes which should not be touched by the user. 
+        
+        These are mostly strings which are used as arguments to `fenics.DirichletBC`
+        for specifying where the boundary conditions should be applied.
+        """
         BenchmarkSimulation.update_derived_attributes(self)
         
         self.left_wall = "near(x[0],  xmin)".replace("xmin", str(self.xmin))
@@ -121,7 +159,7 @@ class CavityBenchmarkSimulation(BenchmarkSimulation):
         
         
     def update_mesh(self):
-    
+        """ This creates the rectangular mesh, or rectangular prism in 3D. """
         if len(self.mesh_size) == 2:
         
             self.mesh = fenics.RectangleMesh(fenics.mpi_comm_world(), 
@@ -137,9 +175,12 @@ class CavityBenchmarkSimulation(BenchmarkSimulation):
   
   
 class LidDrivenCavityBenchmarkSimulation(CavityBenchmarkSimulation):
-
+    """ This class implements the lid-driven cavity benchmark. """
     def __init__(self):
-    
+        """ Extend the `init` method with attributes for the lid-driven cavity benchmark.
+
+        The tolerances set here are used for verification testing.
+        """
         CavityBenchmarkSimulation.__init__(self)
         
         self.relative_tolerance = 3.e-2
@@ -158,7 +199,7 @@ class LidDrivenCavityBenchmarkSimulation(CavityBenchmarkSimulation):
   
     
     def update_derived_attributes(self):
-  
+        """ Add attributes for the boundary conditions which should not be modified directly. """
         CavityBenchmarkSimulation.update_derived_attributes(self)
         
         self.fixed_walls = self.bottom_wall + " | " + self.left_wall + " | " + self.right_wall
@@ -171,24 +212,22 @@ class LidDrivenCavityBenchmarkSimulation(CavityBenchmarkSimulation):
   
   
     def update_initial_values(self):
-    
+        """ Set initial values which are consistent with the boundary conditions. """
         self.old_state.interpolate(("0.", self.top_wall, "0.", "1."))
     
     
     def update_adaptive_goal_form(self):
-    
+        """ Set an adaptive goal based on the horizontal velocity. """
         p, u, T = fenics.split(self.state.solution)
-        
-        phi = self.semi_phasefield_mapping
         
         self.adaptive_goal_form = u[0]*u[0]*self.integration_metric
         
     
     def verify(self):
-        """ Verify against \cite{ghia1982}. """
+        """ Verify against @cite{ghia1982}. """
         self.verify_scalar_solution_component(
             component = 1,
-            points = [(0.5, y) 
+            coordinates = [(0.5, y) 
                 for y in [1.0000, 0.9766, 0.1016, 0.0547, 0.0000]],
             verified_values = [1.0000, 0.8412, -0.0643, -0.0372, 0.0000],
             relative_tolerance = self.relative_tolerance,
@@ -196,7 +235,7 @@ class LidDrivenCavityBenchmarkSimulation(CavityBenchmarkSimulation):
  
         
 class LDCBenchmarkSimulationWithSolidSubdomain(LidDrivenCavityBenchmarkSimulation):
-    """ Similar to the lid-driven cavity, but extended with a solid subdomain to test variable viscosity.
+    """ This class extends the lid-driven cavity with a solid subdomain to test variable viscosity.
     
     The unit square from the original benchmark is prescribed a temperature which makes it fluid,
     while below the original bottom wall, a cold temperature is prescribed, making it solid.
@@ -241,7 +280,7 @@ class LDCBenchmarkSimulationWithSolidSubdomain(LidDrivenCavityBenchmarkSimulatio
         
     
     def update_derived_attributes(self):
-    
+        """ Add attributes for the boundary conditions which should not be modified directly. """
         LidDrivenCavityBenchmarkSimulation.update_derived_attributes(self)
     
         self.boundary_conditions = [
@@ -250,7 +289,7 @@ class LDCBenchmarkSimulationWithSolidSubdomain(LidDrivenCavityBenchmarkSimulatio
     
     
     def update_mesh(self):
-        
+        """ Extend the `update_mesh` method with local refinement at the phase-change interface. """
         LidDrivenCavityBenchmarkSimulation.update_mesh(self)
 
         y_pci = self.y_pci
@@ -276,23 +315,21 @@ class LDCBenchmarkSimulationWithSolidSubdomain(LidDrivenCavityBenchmarkSimulatio
     
     
     def update_initial_values(self):
-    
+        """ Set initial values such that the temperature corresponds to 
+            liquid or solid phases on either side of the phase-change interface.
+        """
         temperature_string = "1. - 2.*(x[1] <= y_pci)".replace("y_pci", str(self.y_pci))
                 
         self.old_state.interpolate(("0.",  self.top_wall, "0.", temperature_string))
-    
-    
-    def update_adaptive_goal_form(self):
-    
-        p, u, T = fenics.split(self.state.solution)
-    
-        self.adaptive_goal_form = u[0]*u[0]*self.integration_metric
-            
+
 
 class HeatDrivenCavityBenchmarkSimulation(CavityBenchmarkSimulation):
-
+    """ This class implements the heat-driven cavity benchmark. """
     def __init__(self):
-    
+        """ Extend the `__init__` method for the heat-driven cavity benchmark. 
+        
+        The tolerances set here are used during verification testing.
+        """
         CavityBenchmarkSimulation.__init__(self)
         
         self.T_hot = 0.5
@@ -321,7 +358,9 @@ class HeatDrivenCavityBenchmarkSimulation(CavityBenchmarkSimulation):
         
         
     def update_derived_attributes(self):
-    
+        """ Add attributes which should not be modified directly,
+            related to the boundary conditions and initial values.
+        """
         CavityBenchmarkSimulation.update_derived_attributes(self)
         
         self.boundary_conditions = [
@@ -337,39 +376,40 @@ class HeatDrivenCavityBenchmarkSimulation(CavityBenchmarkSimulation):
         
         
     def update_initial_values(self):
-    
+        """ Set the initial values. """
         self.old_state.interpolate(("0.", "0.", "0.", self.initial_temperature))
         
         
     def update_adaptive_goal_form(self):
-        
-        p, u, T = fenics.split(self.state.solution)
-        
-        self.adaptive_goal_form = u[0]*u[0]*self.integration_metric
+        """ Set the same goal as for the lid-driven cavity benchmark. """
+        LidDrivenCavityBenchmarkSimulation.update_adaptive_goal_form(self)
         
         
     def verify(self):
-        """ Verify against the result published in \cite{wang2010comprehensive}. """
+        """ Verify against the result published in @cite{wang2010comprehensive}. """
         self.verify_scalar_solution_component(
             component = 1,
-            points = [((self.xmin + self.xmax)/2., y) for y in [0., 0.15, 0.35, 0.5, 0.65, 0.85, 1.]],
+            coordinates = [((self.xmin + self.xmax)/2., y) for y in [0., 0.15, 0.35, 0.5, 0.65, 0.85, 1.]],
             verified_values = [val*self.rayleigh_number**0.5/self.prandtl_number
                 for val in [0.0000, -0.0649, -0.0194, 0.0000, 0.0194, 0.0649, 0.0000]],
             relative_tolerance = 1.e-2,
             absolute_tolerance = 1.e-2*0.0649*self.rayleigh_number**0.5/self.prandtl_number)
     
-
-class StefanProblemBenchmarkSimulation(BenchmarkSimulation):
-
-    def __init__(self):
     
+class StefanProblemBenchmarkSimulation(BenchmarkSimulation):
+    """ This class implements the 1D Stefan problem benchmark. """
+    def __init__(self):
+        """ Extend the `__init__` method for the Stefan problem. 
+        
+        The initial mesh refinement and tolerances set here are used during verification testing.
+        """
         BenchmarkSimulation.__init__(self)
         
         self.initial_uniform_cell_count = 4
         
         self.initial_hot_boundary_refinement_cycles = 8
         
-        self.initial_pci_position = None
+        self.initial_pci_position = None  # When None, the position will be set by a rule.
         
         self.T_hot = 1.
         
@@ -377,25 +417,23 @@ class StefanProblemBenchmarkSimulation(BenchmarkSimulation):
         
         self.stefan_number = 0.045
         
-        self.gravity = (0.,)
+        self.gravity = (0.,)  # The Stefan problem does not consider momentum.
         
         self.regularization_smoothing_parameter = 0.005
         
         self.timestep_size = 1.e-3
         
-        self.quadrature_degree = None
-        
         self.end_time = 0.1
         
         self.output_dir += "stefan_problem/"
-    
-        self.stop_when_steady = False
         
         self.adaptive_goal_tolerance = 1.e-6
         
         
     def update_derived_attributes(self):
-    
+        """ Add attributes which should not be modified directly,
+            related to the boundary conditions and initial values.
+        """
         BenchmarkSimulation.update_derived_attributes(self)
         
         self.boundary_conditions = [
@@ -403,7 +441,7 @@ class StefanProblemBenchmarkSimulation(BenchmarkSimulation):
             {"subspace": 2, "location": "near(x[0],  1.)", "value": self.T_cold}]
         
         if self.initial_pci_position is None:
-        
+            """ Set the initial PCI position such that the melted area is covered by one layer of cells. """
             initial_pci_position = 1./float(self.initial_uniform_cell_count)/2.**( \
                 self.initial_hot_boundary_refinement_cycles - 1)
                 
@@ -421,7 +459,7 @@ class StefanProblemBenchmarkSimulation(BenchmarkSimulation):
         
     
     def update_mesh(self):
-    
+        """ Set a 1D mesh with local refinement near the hot boundary. """
         self.mesh = fenics.UnitIntervalMesh(self.initial_uniform_cell_count)
         
         for i in range(self.initial_hot_boundary_refinement_cycles):
@@ -452,12 +490,15 @@ class StefanProblemBenchmarkSimulation(BenchmarkSimulation):
     
     
     def update_initial_values(self):
-        
+        """ Set the initial values. """
         self.old_state.interpolate(("0.", "0.", self.initial_temperature))
         
         
     def update_adaptive_goal_form(self):
-    
+        """ Set the adaptive goal based on the semi-phase-field. 
+        
+        Here the integrated goal is equivalent to the remaining solid area.
+        """
         p, u, T = fenics.split(self.state.solution)
         
         phi = self.semi_phasefield_mapping
@@ -466,7 +507,12 @@ class StefanProblemBenchmarkSimulation(BenchmarkSimulation):
         
         
     def update_initial_guess(self):
-        """ This test fails with the usual initial guess of w^0 = w_n, but passes with w^0 = 0. """
+        """ Set a zero initial guess for the Newton method.
+        
+        By default Phaseflow usually uses the latest solution (or the initial values) as the initial guess.
+        For the special case of the 1D Stefan problem, that approach has failed.
+        One might want to investigate this.
+        """
         self.initial_guess = ("0.", "0.", "0.")
     
 
@@ -474,7 +520,7 @@ class StefanProblemBenchmarkSimulation(BenchmarkSimulation):
         """ Verify against analytical solution. """
         self.verify_scalar_solution_component(
             component = 2,
-            points = [0.00, 0.025, 0.050, 0.075, 0.10, 0.5, 1.],
+            coordinates = [0.00, 0.025, 0.050, 0.075, 0.10, 0.5, 1.],
             verified_values = [1.0, 0.73, 0.47, 0.20, 0.00, -0.01, -0.01],
             relative_tolerance = 2.e-2,
             absolute_tolerance = 1.e-2)
@@ -482,9 +528,14 @@ class StefanProblemBenchmarkSimulation(BenchmarkSimulation):
         
         
 class ConvectionCoupledMeltingOctadecanePCMBenchmarkSimulation(CavityBenchmarkSimulation):
-
+    """ This class implements the convection-coupled octadecane melting benchmark."""
     def __init__(self):
-    
+        """ Extend the `__init__` method for the octadecane melting benchmark. 
+        
+        The initial refinement and tolerances set here are used for verification testing.
+        
+        The test suite includes a regression test which will run this for a shorter simulated time.
+        """
         CavityBenchmarkSimulation.__init__(self)
         
         self.T_hot = 1.
@@ -505,11 +556,11 @@ class ConvectionCoupledMeltingOctadecanePCMBenchmarkSimulation(CavityBenchmarkSi
         
         self.regularization_central_temperature = 0.01
         
-        self.regularization_smoothing_parameter = 0.025
+        self.regularization_smoothing_parameter = 0.025  # This is larger than in @cite{danaila2014newton}
         
         self.timestep_size = 1.
         
-        self.quadrature_degree = 8
+        self.quadrature_degree = 8  # The exact quadrature rule yields too many quadrature points.
         
         self.initial_hot_wall_refinement_cycles = 6
         
@@ -519,15 +570,15 @@ class ConvectionCoupledMeltingOctadecanePCMBenchmarkSimulation(CavityBenchmarkSi
         
         self.adaptive_goal_tolerance = 1.e-5
         
-        self.end_time = 80.
-        
-        self.stop_when_steady = False
+        self.end_time = 80.  # This is close to the time of interest published in @{danaila2014newton}
         
         self.output_dir += "adaptive_convection_coupled_melting_octadecane_pcm/"
         
         
     def update_derived_attributes(self):
-    
+        """ Add attributes which should not be modified directly,
+            related to the boundary conditions and initial values.
+        """
         CavityBenchmarkSimulation.update_derived_attributes(self)
         
         self.boundary_conditions = [
@@ -536,7 +587,7 @@ class ConvectionCoupledMeltingOctadecanePCMBenchmarkSimulation(CavityBenchmarkSi
                 {"subspace": 2, "location": self.right_wall, "value": self.T_cold}]
                 
         if self.initial_pci_position == None:
-        
+            """ Set the initial PCI position such that the melted area is covered by one layer of cells. """
             initial_pci_position = \
                 1./float(self.initial_mesh_size[0])/2.**(self.initial_hot_wall_refinement_cycles - 1)
         
@@ -556,7 +607,7 @@ class ConvectionCoupledMeltingOctadecanePCMBenchmarkSimulation(CavityBenchmarkSi
         
     
     def update_mesh(self):
-    
+        """ Set a cavity mesh with local refinement near the hot wall. """
         CavityBenchmarkSimulation.update_mesh(self)
         
         class HotWall(fenics.SubDomain):
@@ -580,21 +631,17 @@ class ConvectionCoupledMeltingOctadecanePCMBenchmarkSimulation(CavityBenchmarkSi
             
     
     def update_initial_values(self):
-        
+        """ Set the initial values. """
         self.old_state.interpolate(("0.", "0.", "0.", self.initial_temperature))
         
         
     def update_adaptive_goal_form(self):
-    
-        phi = self.semi_phasefield_mapping
-        
-        p, u, T = fenics.split(self.state.solution)
-        
-        self.adaptive_goal_form = phi(T)*self.integration_metric
+        """ Set the same goal as for the Stefan problem benchmark. """
+        StefanProblemBenchmarkSimulation.update_adaptive_goal_form(self)
         
      
-class CCMOctadecanePCMBenchmarkSimulation3D(CavityBenchmarkSimulation):
-
+class CCMOctadecanePCMBenchmarkSimulation3D(ConvectionCoupledMeltingOctadecanePCMBenchmarkSimulation):
+    """ This class extends the octadecane melting benchmark to 3D. """
     def __init__(self):
     
         ConvectionCoupledMeltingOctadecanePCMBenchmarkSimulation.__init__(self)
@@ -603,19 +650,28 @@ class CCMOctadecanePCMBenchmarkSimulation3D(CavityBenchmarkSimulation):
         
         self.gravity = (0., -1., 0.)
         
+        self.depth_3d = 0.5
+        
+    def update_derived_attributes(self):
+        """ Extend the boundary condition definitions to 3D. """
+        ConvectionCoupledMeltingOctadecanePCMBenchmarkSimulation.update_derived_attributes(self)
+        
+        self.zmin = -self.depth_3d/2.
+        
+        self.zmax = self.depth_3d/2.
+        
         self.boundary_conditions = [
                 {"subspace": 1, "location": self.walls, "value": (0., 0., 0.)},
                 {"subspace": 2, "location": self.left_wall, "value": self.T_hot},
                 {"subspace": 2, "location": self.right_wall, "value": self.T_cold}]
-        
-        self.depth_3d = 0.5
-        
+                
         
     def update_mesh(self):
-
-        self.zmin = -depth_3d/2.
+        """ Set a 3D cavity mesh with local refinement near the hot wall. 
         
-        self.zmax = depth_3d/2.
+        The 2D refinement method does not work for 3D. Perhaps one could make an n-dimensional method.
+        """
+        CavityBenchmarkSimulation.update_mesh(self)
         
         for i in range(self.initial_hot_wall_refinement_cycles):
         
@@ -638,9 +694,4 @@ class CCMOctadecanePCMBenchmarkSimulation3D(CavityBenchmarkSimulation):
                     cell_markers[cell] = True
             
             self.mesh = fenics.refine(self.mesh, cell_markers)
-            
-            
-    def update_initial_values(self):
-        
-        self.old_state.interpolate((0., 0., 0., 0., self.initial_temperature))
             
