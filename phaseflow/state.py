@@ -10,21 +10,23 @@ class State:
     
     References to the function space and element are saved as attributes, since they are needed for the
     `self.interpolate` method.
+    
+    Parameters
+    ----------
+    function_space : fenics.FunctionSpace
+    
+        This is the function space on which lives the solution.
+    
+    element : fenics.MixedElement
+    
+        Ideally the function space should already know the element; but the author has failed to find it.
+        So, we store this reference separately.
     """
-    def __init__(self, function_space, element, time = 0.):
-        """
-        
-        Parameters
-        ----------
-        function_space : fenics.FunctionSpace
-        
-        element : fenics.MixedElement
-        
-        time : float
-        """
+    def __init__(self, function_space, element):
+        """ Set the solution, associated time, and associated function space and element. """
         self.solution = fenics.Function(function_space)
         
-        self.time = time
+        self.time = 0.
         
         self.function_space = function_space
         
@@ -32,7 +34,14 @@ class State:
         
     
     def interpolate(self, expression_strings):
-        """Interpolate the solution from mathematical expressions. """
+        """Interpolate the solution from mathematical expressions.
+
+        Parameters
+        ----------
+        expression_strings : tuple of strings 
+            
+            Each string will be an argument to a `fenics.Expression`.
+        """
         interpolated_solution = fenics.interpolate(
             fenics.Expression(expression_strings, element = self.element), 
             self.function_space.leaf_node())
@@ -41,13 +50,17 @@ class State:
         
     
     def write_solution(self, file):
-        """Write the solution to a file.
+        """ Write the solution to a file.
+        
+        This assumes that `self.state.solution` has exactly three parts, including, in order, 
+        the pressure, velocity, and temperature. 
+        For other types of solutions, e.g. with more variables, this method must be overloaded.
         
         Parameters
         ----------
         file : phaseflow.helpers.SolutionFile
         
-            write_solution should have been called from within the context of this open file.
+            This method should have been called from within the context of the open `file`.
         """
         phaseflow.helpers.print_once("Writing solution to " + str(file.path))
         

@@ -25,9 +25,9 @@ Author: Alexander G. Zimmerman <zimmerman@aices.rwth-aachen.de>
 
 - Thermally driven convection
 
-    Benchmarks: Heat-driven cavity with linear buoyancy (left) and with nonlinear density anomaly of water (right)
+    Benchmarks: Heat-driven cavity 
     
-    <img src="./docs/images/NaturalConvectionAir.png" width="360"> <img src="./docs/images/NaturalConvectionWater.png" width="360">
+    <img src="./docs/images/NaturalConvectionAir.png" width="360">
     
 - Phase-change
 

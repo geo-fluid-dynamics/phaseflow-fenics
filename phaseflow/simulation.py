@@ -109,6 +109,8 @@ class Simulation:
     def validate_attributes(self):
         """ Overload this to validate attributes set by the user. 
         
+        The goal should be to improve user friendliness, or otherwise reduce lines of user code.
+        
         For example, phaseflow.octadecane_benchmarks.CavityBenchmarkSimulation overloads
         .. code-block::python
         
@@ -119,7 +121,7 @@ class Simulation:
                     self.mesh_size = (self.mesh_size, self.mesh_size)
         
         
-        since the domain is a unit square which is often refined uniformly in both directions.
+        since the domain is often a unit square discretized uniformly in both directions.
         """
         pass
 
@@ -165,8 +167,9 @@ class Simulation:
         
         
     def update_boundary_conditions(self):
-        """ Set the collection of `fenics.DirichetBC` 
-        based on the user's provided collection of boundary condition dictionaries.
+        """ Set the collection of `fenics.DirichetBC` based on the user's provided collection 
+            of boundary condition dictionaries.
+            
         This format allows the user to specify boundary conditions abstractly,
         without referencing the actual `fenics.FunctionSpace` at `self.function_space`.
         """
@@ -257,13 +260,22 @@ class Simulation:
         
         
     def run(self):
-        """ Run the time-dependent simulation. """
+        """ Run the time-dependent simulation. 
+        
+        This is where everything comes together. As of this writing, this is the longest function 
+        in Phaseflow. Not only does this contain the time loop, but it handles writing solution
+        and checkpoint files, checks stopping criterion, and prints status messages.
+        
+        Eventually we may want to consider other time integration options,
+        which will require redesigning this function.
+        """
         self.setup()
         
         solution_filepath = self.output_dir + "/solution.xdmf"
     
         with phaseflow.helpers.SolutionFile(solution_filepath) as self.solution_file:
             """ Run inside of a file context manager.
+            
             Without this, exceptions are more likely to corrupt the outputs.
             """
             self.old_state.write_solution(self.solution_file)
