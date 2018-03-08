@@ -87,13 +87,3 @@ Enter the running container with an interactive terminal (Note: "-u fenics" spec
 # For developers:
 ## Project structure
 This project mostly follows the structure suggested by [The Hitchhiker's Guide to Python](http://docs.python-guide.org/en/latest/)
-
-    
-## Updating the documentation
-    
-    pip3 install sphinx sphinx-autobuild
-    
-    cd phaseflow-fenics/docs
-    
-    sphinx-quickstart .
-    
