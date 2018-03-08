@@ -1,7 +1,6 @@
 """ **simulation.py** contains the Simulation class. """
 import fenics
-import numpy
-import phaseflow.helpers
+import phaseflow
 import tempfile
 import pprint
 import h5py
