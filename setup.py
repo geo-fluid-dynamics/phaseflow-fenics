@@ -23,7 +23,4 @@ setuptools.setup(
     classifiers=[
         "Programming Language :: Python :: 3.5",
     ],
-    install_requires=[
-        "fenics>=2017.1.0",
-    ],
 )
