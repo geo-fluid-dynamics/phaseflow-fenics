@@ -17,29 +17,21 @@ We present the mathematical model, the numerical methods, the Phaseflow implemen
 Author: Alexander G. Zimmerman <zimmerman@aices.rwth-aachen.de>
 
 ## Benchmark results
-- Incompressible flow
+- Lid-driven cavity
 
-    Benchmark: Lid-driven cavity
-    
-    <img src="./docs/images/LidDrivenCavity.png" width="360">
+<img src="./docs/images/LidDrivenCavity.png" width="360">
 
-- Thermally driven convection
+- Heat-driven cavity
 
-    Benchmarks: Heat-driven cavity 
+<img src="./docs/images/NaturalConvectionAir.png" width="360">
     
-    <img src="./docs/images/NaturalConvectionAir.png" width="360">
-    
-- Phase-change
+- Stefan problem 
 
-    Benchmark: 1D Stefan problem (i.e. melting without convection)
+<img src="./docs/images/StefanProblem.png" width="360">
     
-    <img src="./docs/images/StefanProblem.png" width="360">
-    
-- Convection-coupled melting 
+- Convection-coupled melting of an octadecane PCM
 
-    Benchmark: Convection-coupled melting of an octadecane PCM
-    
-    <img src="./docs/images/MeltingPCM.png" width="480">
+<img src="./docs/images/MeltingPCM.png" width="360">
 
     
 # For users:
