@@ -2,9 +2,15 @@
 [![Build Status](https://travis-ci.org/geo-fluid-dynamics/phaseflow-fenics.svg?branch=master)](https://travis-ci.org/geo-fluid-dynamics/phaseflow-fenics)
 [![Documentation Status](https://readthedocs.org/projects/phaseflow/badge/?version=latest)](http://phaseflow.readthedocs.io/?badge=latest)
 
-<img src="./docs/images/OrthogonalMelting.gif" width="320"> <img src="./docs/images/OrthogonalMelting_AMR.gif" width="320">
+<img src="./docs/images/OrthogonalMelting.gif" width="320">
 
 Phaseflow simulates the convection-coupled melting and solidification of phase-change materials (PCM's). We adopt an enthalpy-based, single-domain semi-phase-field, finite element method, with monolithic system coupling and global Newton linearization.
+
+Features include:
+- An extensible Python class for time-dependent simulations
+- Checkpointing/restarting using HDF5
+- Adaptive mesh refinement, with mesh coarsening via re-meshing and projection
+
 
 The model system is composed of
 - Incompressible flow driven by buoyancy: unsteady Navier-Stokes mass and momentum with Boussinesq approximation
@@ -31,7 +37,7 @@ Author: Alexander G. Zimmerman <zimmerman@aices.rwth-aachen.de>
     
 - Convection-coupled melting of an octadecane PCM
 
-<img src="./docs/images/MeltingPCM.png" width="360">
+<img src="./docs/images/MeltingPCMWithRemeshing.gif" width="320">
 
     
 # For users:
