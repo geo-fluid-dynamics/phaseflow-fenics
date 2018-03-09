@@ -20,7 +20,7 @@ Phaseflow spatially discretizes the PDE's with the finite element method, and to
 
 We present the mathematical model, the numerical methods, the Phaseflow implementation and its verification in an accepted proceedings paper, [*Monolithic simulation of convection-coupled phase-change - verification and reproducibility*](https://arxiv.org/abs/1801.03429).
 
-Author: Alexander G. Zimmerman <zimmerman@aices.rwth-aachen.de>
+Author: Alexander G. Zimmerman <alexander.zimmerman@aices.rwth-aachen.de>
 
 ## Benchmark results
 - Lid-driven cavity
