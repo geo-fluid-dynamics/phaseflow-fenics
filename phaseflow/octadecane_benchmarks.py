@@ -737,13 +737,8 @@ class CCMOctadecanePCMBenchmarkSimulation3D(ConvectionCoupledMeltingOctadecanePC
                 {"subspace": 2, "location": self.right_wall, "value": self.T_cold}]
                 
         
-    def update_mesh(self):
-        """ Set a 3D cavity mesh with local refinement near the hot wall. 
-        
-        The 2D refinement method does not work for 3D. Perhaps one could make an n-dimensional method.
-        """
-        CavityBenchmarkSimulation.update_mesh(self)
-        
+    def refine_initial_mesh(self):
+        """ Replace 2D refinement method with 3D method. Perhaps one could make an n-dimensional method. """
         for i in range(self.initial_hot_wall_refinement_cycles):
         
             cell_markers = fenics.CellFunction("bool", self.mesh, False)
