@@ -52,17 +52,6 @@ class Simulation:
         
         self.restarted = False
         
-        
-    def setup_initial_state(self):    
-        """ Set up objects needed before the initial solution can be stored. """
-        self.update_mesh()
-        
-        self.update_element()
-        
-        self.function_space = fenics.FunctionSpace(self.mesh, self.element)
-        
-        self.old_state = phaseflow.state.State(self.function_space, self.element)
-       
        
     def setup(self):
         """ Set up objects needed before the simulation can run. """
@@ -72,11 +61,17 @@ class Simulation:
         
         if not self.restarted:
             
-            self.setup_initial_state()
+            self.update_coarse_mesh()
+            
+            self.update_element()
+            
+            self.refine_initial_mesh()
+            
+            self.update_function_space()
+            
+            self.update_states()
             
             self.update_initial_values()
-        
-        self.state = phaseflow.state.State(self.function_space, self.element)
         
         self.update_governing_form()
         
@@ -136,14 +131,31 @@ class Simulation:
             self.integration_metric = fenics.dx(metadata={'quadrature_degree': self.quadrature_degree})
     
     
-    def update_mesh(self):
+    def update_coarse_mesh(self):
         """ This must be overloaded to instantiate a `fenics.Mesh` at `self.mesh`. """
         assert(False)
-        
     
+
     def update_element(self):
         """ This must be overloaded to instantiate a `fenics.MixedElement` at `self.element`. """
         assert(False)
+        
+        
+    def refine_initial_mesh(self):
+        """ Overload this to refine the mesh before adaptive mesh refinement. """
+        pass
+        
+        
+    def update_function_space(self):
+        """ Set the function space. """
+        self.function_space = fenics.FunctionSpace(self.mesh, self.element)
+        
+        
+    def update_states(self):    
+        """ Set state objects which contain the solutions. """
+        self.old_state = phaseflow.state.State(self.function_space, self.element)
+        
+        self.state = phaseflow.state.State(self.function_space, self.element)
     
     
     def update_initial_values(self):
@@ -395,17 +407,17 @@ class Simulation:
         """Read the checkpoint solution and time, perhaps to restart."""
         phaseflow.helpers.print_once("Reading checkpoint file from " + checkpoint_filepath)
         
-        self.setup_initial_state()
-        
         self.mesh = fenics.Mesh()
             
         with fenics.HDF5File(self.mesh.mpi_comm(), checkpoint_filepath, "r") as h5:
         
             h5.read(self.mesh, "mesh", True)
         
-        self.function_space = fenics.FunctionSpace(self.mesh, self.element)
-
-        self.old_state.solution = fenics.Function(self.function_space)
+        self.update_element()
+            
+        self.update_function_space()
+            
+        self.update_states()
 
         with fenics.HDF5File(self.mesh.mpi_comm(), checkpoint_filepath, "r") as h5:
         
