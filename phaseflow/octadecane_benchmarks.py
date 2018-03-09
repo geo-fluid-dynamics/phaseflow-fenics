@@ -158,7 +158,7 @@ class CavityBenchmarkSimulation(BenchmarkSimulation):
             self.walls += " | " + self.back_wall + " | " + self.front_wall
         
         
-    def update_mesh(self):
+    def update_coarse_mesh(self):
         """ This creates the rectangular mesh, or rectangular prism in 3D. """
         if len(self.mesh_size) == 2:
         
@@ -288,10 +288,13 @@ class LDCBenchmarkSimulationWithSolidSubdomain(LidDrivenCavityBenchmarkSimulatio
                 {"subspace": 1, "location": self.fixed_walls, "value": (0., 0.)}]
     
     
-    def update_mesh(self):
-        """ Extend the `update_mesh` method with local refinement at the phase-change interface. """
-        LidDrivenCavityBenchmarkSimulation.update_mesh(self)
+    def update_coarse_mesh(self):
+        """ Use the coarse mesh from the lid-driven cavity benchmark. """
+        LidDrivenCavityBenchmarkSimulation.update_coarse_mesh(self)
 
+        
+    def refine_initial_mesh(self):
+        """ Refine near the phase-change interface. """
         y_pci = self.y_pci
         
         class PhaseInterface(fenics.SubDomain):
@@ -311,8 +314,8 @@ class LDCBenchmarkSimulationWithSolidSubdomain(LidDrivenCavityBenchmarkSimulatio
 
             fenics.adapt(self.mesh, edge_markers)
             
-            self.mesh = self.mesh.child()
-    
+            self.mesh = self.mesh.child()  # Does this break references? Can we do this a different way?
+            
     
     def update_initial_values(self):
         """ Set initial values such that the temperature corresponds to 
@@ -429,6 +432,10 @@ class StefanProblemBenchmarkSimulation(BenchmarkSimulation):
         
         self.adaptive_goal_tolerance = 1.e-6
         
+        self.relative_tolerance = 2.e-2
+        
+        self.absolute_tolerance = 1.e-2
+        
         
     def update_derived_attributes(self):
         """ Add attributes which should not be modified directly,
@@ -458,10 +465,13 @@ class StefanProblemBenchmarkSimulation(BenchmarkSimulation):
         self.initial_temperature = initial_temperature.replace("T_cold", str(self.T_cold))
         
     
-    def update_mesh(self):
-        """ Set a 1D mesh with local refinement near the hot boundary. """
+    def update_coarse_mesh(self):
+        """ Set the 1D mesh """
         self.mesh = fenics.UnitIntervalMesh(self.initial_uniform_cell_count)
         
+        
+    def refine_initial_mesh(self):
+        """ Locally refine near the hot boundary """
         for i in range(self.initial_hot_boundary_refinement_cycles):
             
             cell_markers = fenics.CellFunction("bool", self.mesh)
@@ -486,7 +496,7 @@ class StefanProblemBenchmarkSimulation(BenchmarkSimulation):
                     
                     break # There should only be one such point in 1D.
                     
-            self.mesh = fenics.refine(self.mesh, cell_markers)
+            self.mesh = fenics.refine(self.mesh, cell_markers)  # Does this break references?
     
     
     def update_initial_values(self):
@@ -522,8 +532,8 @@ class StefanProblemBenchmarkSimulation(BenchmarkSimulation):
             component = 2,
             coordinates = [0.00, 0.025, 0.050, 0.075, 0.10, 0.5, 1.],
             verified_values = [1.0, 0.73, 0.47, 0.20, 0.00, -0.01, -0.01],
-            relative_tolerance = 2.e-2,
-            absolute_tolerance = 1.e-2)
+            relative_tolerance = self.relative_tolerance,
+            absolute_tolerance = self.absolute_tolerance)
         
         
         
@@ -574,6 +584,14 @@ class ConvectionCoupledMeltingOctadecanePCMBenchmarkSimulation(CavityBenchmarkSi
         
         self.output_dir += "adaptive_convection_coupled_melting_octadecane_pcm/"
         
+        self.coarsen_between_timesteps = True
+        
+        self.coarsening_absolute_tolerance = 1.e-3
+        
+        self.coarsening_maximum_refinement_cycles = 6
+        
+        self.coarsening_scalar_solution_component_index = 3
+        
         
     def update_derived_attributes(self):
         """ Add attributes which should not be modified directly,
@@ -606,10 +624,13 @@ class ConvectionCoupledMeltingOctadecanePCMBenchmarkSimulation(CavityBenchmarkSi
         self.initial_temperature = initial_temperature
         
     
-    def update_mesh(self):
-        """ Set a cavity mesh with local refinement near the hot wall. """
-        CavityBenchmarkSimulation.update_mesh(self)
+    def update_coarse_mesh(self):
+        """ Set a cavity mesh. """
+        CavityBenchmarkSimulation.update_coarse_mesh(self)
         
+    
+    def refine_initial_mesh(self):
+        """ Refine near the hot wall. """
         class HotWall(fenics.SubDomain):
     
             def inside(self, x, on_boundary):
@@ -628,7 +649,7 @@ class ConvectionCoupledMeltingOctadecanePCMBenchmarkSimulation(CavityBenchmarkSi
             fenics.adapt(self.mesh, edge_markers)
         
             self.mesh = self.mesh.child()
-            
+        
     
     def update_initial_values(self):
         """ Set the initial values. """
@@ -639,6 +660,56 @@ class ConvectionCoupledMeltingOctadecanePCMBenchmarkSimulation(CavityBenchmarkSi
         """ Set the same goal as for the Stefan problem benchmark. """
         StefanProblemBenchmarkSimulation.update_adaptive_goal_form(self)
         
+     
+class CCMOctadecanePCMRegressionSimulation(ConvectionCoupledMeltingOctadecanePCMBenchmarkSimulation):
+    """ This modifies the octadecane melting benchmark for quick regression testing. """
+    def __init__(self):
+        
+        ConvectionCoupledMeltingOctadecanePCMBenchmarkSimulation.__init__(self)
+        
+        self.timestep_size = 10.
+        
+        self.end_time = 30.
+        
+        self.quadrature_degree = 8
+        
+        self.mesh_size = (1, 1)
+        
+        self.initial_hot_wall_refinement_cycles = 6
+        
+        self.adaptive_goal_tolerance = 1.e-5
+    
+        self.output_dir += "regression/"
+        
+        
+    def verify(self):
+        """ Test regression based on a previous solution from Phaseflow.
+        
+        In Paraview, the $T = 0.01$ (i.e. the regularization_central_temperature) contour was drawn
+        at time $t = 30.$ (i.e. the end_time).
+        
+        A point from this contour in the upper portion of the domain, 
+        where the PCI has advanced more quickly, was recorded to be (0.278, 0.875).
+        This was checked for commit a8a8a039e5b89d71b6cceaef519dfbf136322639.
+        
+        Here we verify that the temperature is above the melting temperature left of the expected PCI,
+        which is advancing to the right, and is below the melting temperature right of the expected PCI.
+        """
+        pci_y_position_to_check =  0.88
+        
+        reference_pci_x_position = 0.28
+        
+        position_offset = 0.01
+        
+        left_temperature = self.state.solution.leaf_node()(
+            fenics.Point(reference_pci_x_position - position_offset, pci_y_position_to_check))[3]
+        
+        right_temperature = self.state.solution.leaf_node()(
+            fenics.Point(reference_pci_x_position + position_offset, pci_y_position_to_check))[3]
+        
+        assert((left_temperature > self.regularization_central_temperature) 
+            and (self.regularization_central_temperature > right_temperature))
+     
      
 class CCMOctadecanePCMBenchmarkSimulation3D(ConvectionCoupledMeltingOctadecanePCMBenchmarkSimulation):
     """ This class extends the octadecane melting benchmark to 3D. """
@@ -666,13 +737,8 @@ class CCMOctadecanePCMBenchmarkSimulation3D(ConvectionCoupledMeltingOctadecanePC
                 {"subspace": 2, "location": self.right_wall, "value": self.T_cold}]
                 
         
-    def update_mesh(self):
-        """ Set a 3D cavity mesh with local refinement near the hot wall. 
-        
-        The 2D refinement method does not work for 3D. Perhaps one could make an n-dimensional method.
-        """
-        CavityBenchmarkSimulation.update_mesh(self)
-        
+    def refine_initial_mesh(self):
+        """ Replace 2D refinement method with 3D method. Perhaps one could make an n-dimensional method. """
         for i in range(self.initial_hot_wall_refinement_cycles):
         
             cell_markers = fenics.CellFunction("bool", self.mesh, False)
