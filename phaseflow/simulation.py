@@ -52,6 +52,14 @@ class Simulation:
         
         self.restarted = False
         
+        self.coarsen_between_timesteps = False
+        
+        self.coarsening_absolute_tolerance = 1.e-3
+        
+        self.coarsening_maximum_refinement_cycles = 6
+        
+        self.coarsening_scalar_solution_component_index = 3
+        
        
     def setup(self):
         """ Set up objects needed before the simulation can run. """
@@ -322,6 +330,10 @@ class Simulation:
                         self.state.solution.leaf_node().vector()
                     
                     self.old_state.time = 0. + self.state.time
+                    
+                    if self.coarsen_between_timesteps:
+                    
+                        self.coarsen()
                 
                 self.solver.solve(self.adaptive_goal_tolerance)
             
@@ -432,4 +444,70 @@ class Simulation:
         self.restarted = True
         
         self.output_dir += "restarted_t" + str(self.old_state.time) + "/"
+        
+        
+    def coarsen(self):
+        """ Remesh and refine the new mesh until the interpolation error tolerance is met. 
+    
+        For simplicity, for now we'll consider only one scalar component of the solution.
+        """
+        time = 0. + self.old_state.time
+        
+        fine_solution = self.state.solution.copy(deepcopy = True)
+        
+        self.update_coarse_mesh()
+        
+        for refinement_cycle in range(self.coarsening_maximum_refinement_cycles):
+            
+            self.update_function_space()
+            
+            self.update_states()
+            
+            self.old_state.time = 0. + time
+            
+            self.old_state.solution = fenics.project(fine_solution.leaf_node(), self.function_space.leaf_node())
+            
+            if refinement_cycle == self.coarsening_maximum_refinement_cycles:
+            
+                break
+                
+            exceeds_tolerance = fenics.CellFunction("bool", self.mesh.leaf_node())
+
+            exceeds_tolerance.set_all(False)
+        
+            for cell in fenics.cells(self.mesh.leaf_node()):
+                
+                coarse_value = self.old_state.solution.leaf_node()(cell.midpoint())\
+                    [self.coarsening_scalar_solution_component_index]
+                    
+                fine_value = fine_solution.leaf_node()(cell.midpoint())\
+                    [self.coarsening_scalar_solution_component_index]
+                
+                if (abs(coarse_value - fine_value) > self.coarsening_absolute_tolerance):
+                
+                    exceeds_tolerance[cell] = True
+                
+            if any(exceeds_tolerance):
+                
+                self.mesh = fenics.refine(self.mesh, exceeds_tolerance)
+                
+            else:
+            
+                break
+                
+                
+        # We broke important references and so have to run the following setup methods again.
+        self.update_governing_form()
+        
+        self.update_boundary_conditions()
+        
+        self.update_derivative()
+        
+        self.update_problem()
+        
+        self.update_adaptive_goal_form()
+        
+        self.update_solver()
+        
+        self.update_initial_guess()
         

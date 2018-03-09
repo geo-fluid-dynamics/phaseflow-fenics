@@ -584,6 +584,14 @@ class ConvectionCoupledMeltingOctadecanePCMBenchmarkSimulation(CavityBenchmarkSi
         
         self.output_dir += "adaptive_convection_coupled_melting_octadecane_pcm/"
         
+        self.coarsen_between_timesteps = True
+        
+        self.coarsening_absolute_tolerance = 1.e-3
+        
+        self.coarsening_maximum_refinement_cycles = 6
+        
+        self.coarsening_scalar_solution_component_index = 3
+        
         
     def update_derived_attributes(self):
         """ Add attributes which should not be modified directly,
