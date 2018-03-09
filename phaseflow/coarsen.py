@@ -9,6 +9,7 @@ import numpy
 
 def adapt_solution_to_solution_on_other_mesh(coarse_solution, 
         fine_solution,
+        element,
         absolute_tolerance = 1.e-2,
         maximum_refinement_cycles = 6,
         scalar_solution_component_index = 3):
@@ -21,7 +22,7 @@ def adapt_solution_to_solution_on_other_mesh(coarse_solution,
 
         exceeds_tolerance.set_all(False)
     
-        for coarse_cell in fenics.cells(coarse_mesh):
+        for coarse_cell in fenics.cells(coarse_mesh.leaf_node()):
             
             coarse_value = coarse_solution.leaf_node()(coarse_cell.midpoint())\
                 [scalar_solution_component_index]
@@ -37,7 +38,14 @@ def adapt_solution_to_solution_on_other_mesh(coarse_solution,
                 
             coarse_mesh = fenics.refine(coarse_mesh, exceeds_tolerance)
             
-            coarse_solution = fenics.project(fine_solution, coarse_solution.leaf_node().function_space())
+            """
+            fenics.adapt(coarse_mesh, exceeds_tolerance)
+            
+            coarse_mesh = coarse_mesh.child() 
+            """
+            function_space = fenics.FunctionSpace(coarse_mesh, element)
+            
+            coarse_solution = fenics.project(fine_solution.leaf_node(), function_space)
             
         else:
         

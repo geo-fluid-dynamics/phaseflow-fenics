@@ -20,8 +20,10 @@ def test_coarsen_1d__ci__():
     
     newsim.update_states()
     
-    phaseflow.coarsen.adapt_solution_to_solution_on_other_mesh(newsim.state.solution, 
-        sim.state.solution,
+    phaseflow.coarsen.adapt_solution_to_solution_on_other_mesh(
+        coarse_solution = newsim.state.solution, 
+        fine_solution = sim.state.solution,
+        element = sim.element,
         absolute_tolerance = sim.absolute_tolerance,
         maximum_refinement_cycles = sim.initial_hot_boundary_refinement_cycles,
         scalar_solution_component_index = 2)
@@ -46,8 +48,9 @@ def test_coarsen_2d():
     newsim.update_states()
     
     newsim.state.solution = phaseflow.coarsen.adapt_solution_to_solution_on_other_mesh(
-        newsim.state.solution, 
-        sim.state.solution,
+        coarse_solution = newsim.state.solution, 
+        fine_solution = sim.state.solution,
+        element = sim.element,
         absolute_tolerance = 1.e-2,
         maximum_refinement_cycles = 5,
         scalar_solution_component_index = 3)
