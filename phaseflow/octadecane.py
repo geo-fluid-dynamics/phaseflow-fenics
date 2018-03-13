@@ -23,8 +23,6 @@ class Simulation(phaseflow.simulation.Simulation):
         
         self.solid_viscosity = 1.e8
         
-        self.penalty_parameter = 1.e-7
-        
         self.regularization_central_temperature = 0.
         
         self.regularization_smoothing_parameter = 0.01
@@ -68,8 +66,6 @@ class Simulation(phaseflow.simulation.Simulation):
         
         mu_S = fenics.Constant(self.solid_viscosity)
         
-        gamma = fenics.Constant(self.penalty_parameter)
-        
         def f_B(T):
             """ Idealized linear Boussinesq Buoyancy with $Re = 1$ """
             return T*Ra*g/Pr
@@ -94,8 +90,7 @@ class Simulation(phaseflow.simulation.Simulation):
         inner, dot, grad, div, sym = fenics.inner, fenics.dot, fenics.grad, fenics.div, fenics.sym
         
         self.governing_form = (
-            -div(u)*psi_p 
-            - psi_p*gamma*p
+            - psi_p*div(u)
             + dot(psi_u, 1./Delta_t*(u - u_n) + f_B(T))
             + dot(dot(grad(u), u), psi_u) 
             - div(psi_u)*p 
