@@ -9,7 +9,8 @@ Phaseflow simulates the convection-coupled melting and solidification of phase-c
 Features include:
 - An extensible Python class for time-dependent simulations
 - Checkpointing/restarting using HDF5
-- Adaptive mesh refinement, with mesh coarsening via re-meshing and projection
+- Goal-oriented adaptive mesh refinement (AMR)
+- Coarsening of time-dependent meshes via re-meshing and projection
 
 
 The model system is composed of
