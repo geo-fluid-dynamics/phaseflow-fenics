@@ -511,7 +511,7 @@ class StefanProblemBenchmarkPhaseChangeSimulation(BenchmarkPhaseChangeSimulation
         """
         p, u, T = fenics.split(self.state.solution)
         
-        phi = self.semi_phasefield_mapping
+        phi = self.make_semi_phasefield_function()
         
         self.adaptive_goal_form = phi(T)*self.integration_metric
         

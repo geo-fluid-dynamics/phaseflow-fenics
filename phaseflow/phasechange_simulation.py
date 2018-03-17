@@ -41,6 +41,14 @@ class PhaseChangeSimulation(phaseflow.simulation.Simulation):
         
         self.temperature_element_degree = 1
         
+    
+    def update_derived_attributes(self):
+    
+        phaseflow.simulation.Simulation.update_derived_attributes(self)
+        
+        """ We have to handle the time step size carefully for adaptive time stepping. """
+        self.fenics_timestep_size = fenics.Constant(self.timestep_size)
+        
         
     def update_element(self):
         """ Implement the mixed element per @cite{danaila2014newton}. """
@@ -56,48 +64,83 @@ class PhaseChangeSimulation(phaseflow.simulation.Simulation):
         self.element = fenics.MixedElement([pressure_element, velocity_element, temperature_element])
         
         
-    def update_governing_form(self):
-        """ Implement the variational form per @cite{zimmerman2018monolithic}. """
-        Delta_t = fenics.Constant(self.timestep_size)
-        
+    def make_buoyancy_function(self):
+
         Pr = fenics.Constant(self.prandtl_number)
         
         Ra = fenics.Constant(self.rayleigh_number)
         
-        Ste = fenics.Constant(self.stefan_number)
-        
         g = fenics.Constant(self.gravity)
-        
-        T_r = fenics.Constant(self.regularization_central_temperature)
-        
-        r = fenics.Constant(self.regularization_smoothing_parameter)
-        
-        mu_L = fenics.Constant(self.liquid_viscosity)
-        
-        mu_S = fenics.Constant(self.solid_viscosity)
-        
-        gamma = fenics.Constant(self.penalty_parameter)
         
         def f_B(T):
             """ Idealized linear Boussinesq Buoyancy with $Re = 1$ """
             return T*Ra*g/Pr
+            
+        return f_B
         
+    
+    def make_semi_phasefield_function(self):
+        """ Semi-phase-field mapping from temperature """
+        T_r = fenics.Constant(self.regularization_central_temperature)
+        
+        r = fenics.Constant(self.regularization_smoothing_parameter)
         
         def phi(T):
-            """ Semi-phase-field mapping from temperature """
-            return 0.5*(1. + fenics.tanh((T_r - T)/r))
-            
-            
-        def mu(phi_of_T):
-            """ Phase dependent viscosity """
-            return mu_L + (mu_S - mu_L)*phi_of_T
         
+            return 0.5*(1. + fenics.tanh((T_r - T)/r))
+    
+        return phi
+        
+        
+    def make_phase_dependent_material_property_function(self, P_L, P_S):
+        """ Phase dependent material property.
+
+        Parameters
+        ----------
+        P_L : float
+            The value in liquid state.
+            
+        P_S : float
+            The value in solid state.
+        """
+        def P(phi):
+            """ 
+            
+            Parameters
+            ----------
+            phi : float
+                0. <= phi <= 1.
+            """
+            return P_L + (P_S - P_L)*phi
+            
+        return P
+        
+    
+    def update_governing_form(self):
+        """ Implement the variational form per @cite{zimmerman2018monolithic}. """
+        Pr = fenics.Constant(self.prandtl_number)
+        
+        Ste = fenics.Constant(self.stefan_number)
+        
+        f_B = self.make_buoyancy_function()
+        
+        phi = self.make_semi_phasefield_function()
+        
+        mu = self.make_phase_dependent_material_property_function(
+            P_L = fenics.Constant(self.liquid_viscosity),
+            P_S = fenics.Constant(self.solid_viscosity))
+        
+        gamma = fenics.Constant(self.penalty_parameter)
+        
+        Delta_t = self.fenics_timestep_size
         
         p, u, T = fenics.split(self.state.solution)
          
         p_n, u_n, T_n = fenics.split(self.old_state.solution)
         
         psi_p, psi_u, psi_T = fenics.TestFunctions(self.state.solution.function_space())
+        
+        dx = self.integration_metric
         
         inner, dot, grad, div, sym = fenics.inner, fenics.dot, fenics.grad, fenics.div, fenics.sym
         
@@ -110,10 +153,5 @@ class PhaseChangeSimulation(phaseflow.simulation.Simulation):
             + 2.*mu(phi(T))*inner(sym(grad(u)), sym(grad(psi_u)))
             + 1./Delta_t*psi_T*(T - T_n - 1./Ste*(phi(T) - phi(T_n)))
             + dot(grad(psi_T), 1./Pr*grad(T) - T*u)
-            )*self.integration_metric
-            
-        self.semi_phasefield_mapping = phi  # This must be shared for adaptive mesh refinement.
-        
-        self.fenics_timestep_size = Delta_t  # This must be shared for adaptive time stepping.
-
+            )*dx
         
