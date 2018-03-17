@@ -1,12 +1,12 @@
-""" **octadecane.py** implements the convection-coupled melting of octadecane phase-change materials. """
+""" **phasechange_simulation.py** implements the convection-coupled melting of phase-change materials. """
 import fenics
 import phaseflow
 
     
-class Simulation(phaseflow.simulation.Simulation):
+class PhaseChangeSimulation(phaseflow.simulation.Simulation):
 
     def __init__(self):
-        """ This extends the `__init__` method with attributes for the octadecane model. """
+        """ This extends the `__init__` method with attributes for the convection-coupled phase-change model. """
         phaseflow.simulation.Simulation.__init__(self)
         
         self.timestep_size = 1.
@@ -21,7 +21,15 @@ class Simulation(phaseflow.simulation.Simulation):
         
         self.liquid_viscosity = 1.
         
+        self.liquid_thermal_conductivity = 1.
+        
+        self.liquid_heat_capacity = 1.
+        
         self.solid_viscosity = 1.e8
+        
+        self.solid_thermal_conductivity = 1.
+        
+        self.solid_heat_capacity = 1.
         
         self.penalty_parameter = 1.e-7
         
