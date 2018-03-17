@@ -6,7 +6,7 @@ import tempfile
 
 def test_1d_output_unit__ci__():
 
-    sim = phaseflow.octadecane.Simulation()
+    sim = phaseflow.phasechange_simulation.PhaseChangeSimulation()
     
     sim.mesh = fenics.UnitIntervalMesh(5)
     

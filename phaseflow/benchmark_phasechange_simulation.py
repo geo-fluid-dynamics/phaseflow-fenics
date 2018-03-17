@@ -1,13 +1,13 @@
-"""**octadecane_benchmarks.py** applies the octadecane model to a variety of benchmark problems."""
+""" **benchmark_phasechange_simulation.py** applies the phase-change model to a variety of benchmark problems. """
 import phaseflow
 import fenics
 
  
-class BenchmarkSimulation(phaseflow.octadecane.Simulation):
+class BenchmarkPhaseChangeSimulation(phaseflow.phasechange_simulation.PhaseChangeSimulation):
     """ This extends `phaseflow.octadecane.Simulation` with verification methods. """
     def __init__(self):
         """ This extends the `__init__` method to append the output directory. """
-        phaseflow.octadecane.Simulation.__init__(self)
+        phaseflow.phasechange_simulation.PhaseChangeSimulation.__init__(self)
         
         self.output_dir += "benchmark/"
 
@@ -21,7 +21,7 @@ class BenchmarkSimulation(phaseflow.octadecane.Simulation):
         
             This will only call the `self.verify` method if True.
         """
-        phaseflow.octadecane.Simulation.run(self)
+        phaseflow.phasechange_simulation.PhaseChangeSimulation.run(self)
         
         if verify:
         
@@ -94,7 +94,7 @@ class BenchmarkSimulation(phaseflow.octadecane.Simulation):
                     assert(absolute_error < absolute_tolerance)
         
     
-class CavityBenchmarkSimulation(BenchmarkSimulation):
+class CavityBenchmarkPhaseChangeSimulation(BenchmarkPhaseChangeSimulation):
     """ This extends the BenchmarkSimulation class with attributes and methods specific to 
         rectangular cavity benchmarks.
     
@@ -102,7 +102,7 @@ class CavityBenchmarkSimulation(BenchmarkSimulation):
     """
     def __init__(self):
         """ Extend the `init` method with attributes needed for sizing the cavity. """
-        BenchmarkSimulation.__init__(self)
+        BenchmarkPhaseChangeSimulation.__init__(self)
         
         self.mesh_size = (2, 2)
 
@@ -136,7 +136,7 @@ class CavityBenchmarkSimulation(BenchmarkSimulation):
         These are mostly strings which are used as arguments to `fenics.DirichletBC`
         for specifying where the boundary conditions should be applied.
         """
-        BenchmarkSimulation.update_derived_attributes(self)
+        BenchmarkPhaseChangeSimulation.update_derived_attributes(self)
         
         self.left_wall = "near(x[0],  xmin)".replace("xmin", str(self.xmin))
         
@@ -174,14 +174,14 @@ class CavityBenchmarkSimulation(BenchmarkSimulation):
                 self.mesh_size[0], self.mesh_size[1], self.mesh_size[2])
   
   
-class LidDrivenCavityBenchmarkSimulation(CavityBenchmarkSimulation):
+class LidDrivenCavityBenchmarkPhaseChangeSimulation(CavityBenchmarkPhaseChangeSimulation):
     """ This class implements the lid-driven cavity benchmark. """
     def __init__(self):
         """ Extend the `init` method with attributes for the lid-driven cavity benchmark.
 
         The tolerances set here are used for verification testing.
         """
-        CavityBenchmarkSimulation.__init__(self)
+        CavityBenchmarkPhaseChangeSimulation.__init__(self)
         
         self.relative_tolerance = 3.e-2
         
@@ -200,7 +200,7 @@ class LidDrivenCavityBenchmarkSimulation(CavityBenchmarkSimulation):
     
     def update_derived_attributes(self):
         """ Add attributes for the boundary conditions which should not be modified directly. """
-        CavityBenchmarkSimulation.update_derived_attributes(self)
+        CavityBenchmarkPhaseChangeSimulation.update_derived_attributes(self)
         
         self.fixed_walls = self.bottom_wall + " | " + self.left_wall + " | " + self.right_wall
         
@@ -234,7 +234,7 @@ class LidDrivenCavityBenchmarkSimulation(CavityBenchmarkSimulation):
             absolute_tolerance = self.absolute_tolerance)
  
         
-class LDCBenchmarkSimulationWithSolidSubdomain(LidDrivenCavityBenchmarkSimulation):
+class LDCBenchmarkPhaseChangeSimulationWithSolidSubdomain(LidDrivenCavityBenchmarkPhaseChangeSimulation):
     """ This class extends the lid-driven cavity with a solid subdomain to test variable viscosity.
     
     The unit square from the original benchmark is prescribed a temperature which makes it fluid,
@@ -242,7 +242,7 @@ class LDCBenchmarkSimulationWithSolidSubdomain(LidDrivenCavityBenchmarkSimulatio
     """
     def __init__(self):
     
-        LidDrivenCavityBenchmarkSimulation.__init__(self)
+        LidDrivenCavityBenchmarkPhaseChangeSimulation.__init__(self)
         
         self.ymin = -0.25
         
@@ -281,7 +281,7 @@ class LDCBenchmarkSimulationWithSolidSubdomain(LidDrivenCavityBenchmarkSimulatio
     
     def update_derived_attributes(self):
         """ Add attributes for the boundary conditions which should not be modified directly. """
-        LidDrivenCavityBenchmarkSimulation.update_derived_attributes(self)
+        LidDrivenCavityBenchmarkPhaseChangeSimulation.update_derived_attributes(self)
     
         self.boundary_conditions = [
                 {"subspace": 1, "location": self.top_wall, "value": (1., 0.)},
@@ -290,7 +290,7 @@ class LDCBenchmarkSimulationWithSolidSubdomain(LidDrivenCavityBenchmarkSimulatio
     
     def update_coarse_mesh(self):
         """ Use the coarse mesh from the lid-driven cavity benchmark. """
-        LidDrivenCavityBenchmarkSimulation.update_coarse_mesh(self)
+        LidDrivenCavityBenchmarkPhaseChangeSimulation.update_coarse_mesh(self)
 
         
     def refine_initial_mesh(self):
@@ -326,14 +326,14 @@ class LDCBenchmarkSimulationWithSolidSubdomain(LidDrivenCavityBenchmarkSimulatio
         self.old_state.interpolate(("0.",  self.top_wall, "0.", temperature_string))
 
 
-class HeatDrivenCavityBenchmarkSimulation(CavityBenchmarkSimulation):
+class HeatDrivenCavityBenchmarkPhaseChangeSimulation(CavityBenchmarkPhaseChangeSimulation):
     """ This class implements the heat-driven cavity benchmark. """
     def __init__(self):
         """ Extend the `__init__` method for the heat-driven cavity benchmark. 
         
         The tolerances set here are used during verification testing.
         """
-        CavityBenchmarkSimulation.__init__(self)
+        CavityBenchmarkPhaseChangeSimulation.__init__(self)
         
         self.T_hot = 0.5
     
@@ -364,7 +364,7 @@ class HeatDrivenCavityBenchmarkSimulation(CavityBenchmarkSimulation):
         """ Add attributes which should not be modified directly,
             related to the boundary conditions and initial values.
         """
-        CavityBenchmarkSimulation.update_derived_attributes(self)
+        CavityBenchmarkPhaseChangeSimulation.update_derived_attributes(self)
         
         self.boundary_conditions = [
             {"subspace": 1, "location": self.walls, "value": (0., 0.)},
@@ -385,7 +385,7 @@ class HeatDrivenCavityBenchmarkSimulation(CavityBenchmarkSimulation):
         
     def update_adaptive_goal_form(self):
         """ Set the same goal as for the lid-driven cavity benchmark. """
-        LidDrivenCavityBenchmarkSimulation.update_adaptive_goal_form(self)
+        LidDrivenCavityBenchmarkPhaseChangeSimulation.update_adaptive_goal_form(self)
         
         
     def verify(self):
@@ -399,14 +399,14 @@ class HeatDrivenCavityBenchmarkSimulation(CavityBenchmarkSimulation):
             absolute_tolerance = 1.e-2*0.0649*self.rayleigh_number**0.5/self.prandtl_number)
     
     
-class StefanProblemBenchmarkSimulation(BenchmarkSimulation):
+class StefanProblemBenchmarkPhaseChangeSimulation(BenchmarkPhaseChangeSimulation):
     """ This class implements the 1D Stefan problem benchmark. """
     def __init__(self):
         """ Extend the `__init__` method for the Stefan problem. 
         
         The initial mesh refinement and tolerances set here are used during verification testing.
         """
-        BenchmarkSimulation.__init__(self)
+        BenchmarkPhaseChangeSimulation.__init__(self)
         
         self.initial_uniform_cell_count = 4
         
@@ -441,7 +441,7 @@ class StefanProblemBenchmarkSimulation(BenchmarkSimulation):
         """ Add attributes which should not be modified directly,
             related to the boundary conditions and initial values.
         """
-        BenchmarkSimulation.update_derived_attributes(self)
+        BenchmarkPhaseChangeSimulation.update_derived_attributes(self)
         
         self.boundary_conditions = [
             {"subspace": 2, "location": "near(x[0],  0.)", "value": self.T_hot},
@@ -511,7 +511,7 @@ class StefanProblemBenchmarkSimulation(BenchmarkSimulation):
         """
         p, u, T = fenics.split(self.state.solution)
         
-        phi = self.semi_phasefield_mapping
+        phi = self.make_semi_phasefield_function()
         
         self.adaptive_goal_form = phi(T)*self.integration_metric
         
@@ -537,7 +537,7 @@ class StefanProblemBenchmarkSimulation(BenchmarkSimulation):
         
         
         
-class ConvectionCoupledMeltingOctadecanePCMBenchmarkSimulation(CavityBenchmarkSimulation):
+class ConvectionCoupledMeltingOctadecanePCMBenchmarkPCSimulation(CavityBenchmarkPhaseChangeSimulation):
     """ This class implements the convection-coupled octadecane melting benchmark."""
     def __init__(self):
         """ Extend the `__init__` method for the octadecane melting benchmark. 
@@ -546,7 +546,7 @@ class ConvectionCoupledMeltingOctadecanePCMBenchmarkSimulation(CavityBenchmarkSi
         
         The test suite includes a regression test which will run this for a shorter simulated time.
         """
-        CavityBenchmarkSimulation.__init__(self)
+        CavityBenchmarkPhaseChangeSimulation.__init__(self)
         
         self.T_hot = 1.
         
@@ -597,7 +597,7 @@ class ConvectionCoupledMeltingOctadecanePCMBenchmarkSimulation(CavityBenchmarkSi
         """ Add attributes which should not be modified directly,
             related to the boundary conditions and initial values.
         """
-        CavityBenchmarkSimulation.update_derived_attributes(self)
+        CavityBenchmarkPhaseChangeSimulation.update_derived_attributes(self)
         
         self.boundary_conditions = [
                 {"subspace": 1, "location": self.walls, "value": (0., 0.)},
@@ -626,7 +626,7 @@ class ConvectionCoupledMeltingOctadecanePCMBenchmarkSimulation(CavityBenchmarkSi
     
     def update_coarse_mesh(self):
         """ Set a cavity mesh. """
-        CavityBenchmarkSimulation.update_coarse_mesh(self)
+        CavityBenchmarkPhaseChangeSimulation.update_coarse_mesh(self)
         
     
     def refine_initial_mesh(self):
@@ -658,60 +658,10 @@ class ConvectionCoupledMeltingOctadecanePCMBenchmarkSimulation(CavityBenchmarkSi
         
     def update_adaptive_goal_form(self):
         """ Set the same goal as for the Stefan problem benchmark. """
-        StefanProblemBenchmarkSimulation.update_adaptive_goal_form(self)
-        
-     
-class CCMOctadecanePCMRegressionSimulation(ConvectionCoupledMeltingOctadecanePCMBenchmarkSimulation):
-    """ This modifies the octadecane melting benchmark for quick regression testing. """
-    def __init__(self):
-        
-        ConvectionCoupledMeltingOctadecanePCMBenchmarkSimulation.__init__(self)
-        
-        self.timestep_size = 10.
-        
-        self.end_time = 30.
-        
-        self.quadrature_degree = 8
-        
-        self.mesh_size = (1, 1)
-        
-        self.initial_hot_wall_refinement_cycles = 6
-        
-        self.adaptive_goal_tolerance = 1.e-5
-    
-        self.output_dir += "regression/"
-        
-        
-    def verify(self):
-        """ Test regression based on a previous solution from Phaseflow.
-        
-        In Paraview, the $T = 0.01$ (i.e. the regularization_central_temperature) contour was drawn
-        at time $t = 30.$ (i.e. the end_time).
-        
-        A point from this contour in the upper portion of the domain, 
-        where the PCI has advanced more quickly, was recorded to be (0.278, 0.875).
-        This was checked for commit a8a8a039e5b89d71b6cceaef519dfbf136322639.
-        
-        Here we verify that the temperature is above the melting temperature left of the expected PCI,
-        which is advancing to the right, and is below the melting temperature right of the expected PCI.
-        """
-        pci_y_position_to_check =  0.88
-        
-        reference_pci_x_position = 0.28
-        
-        position_offset = 0.01
-        
-        left_temperature = self.state.solution.leaf_node()(
-            fenics.Point(reference_pci_x_position - position_offset, pci_y_position_to_check))[3]
-        
-        right_temperature = self.state.solution.leaf_node()(
-            fenics.Point(reference_pci_x_position + position_offset, pci_y_position_to_check))[3]
-        
-        assert((left_temperature > self.regularization_central_temperature) 
-            and (self.regularization_central_temperature > right_temperature))
+        StefanProblemBenchmarkPhaseChangeSimulation.update_adaptive_goal_form(self)
      
      
-class CCMOctadecanePCMBenchmarkSimulation3D(ConvectionCoupledMeltingOctadecanePCMBenchmarkSimulation):
+class CCMOctadecanePCMBenchmarkPCSimulation3D(ConvectionCoupledMeltingOctadecanePCMBenchmarkPCSimulation):
     """ This class extends the octadecane melting benchmark to 3D. """
     def __init__(self):
     
@@ -722,6 +672,7 @@ class CCMOctadecanePCMBenchmarkSimulation3D(ConvectionCoupledMeltingOctadecanePC
         self.gravity = (0., -1., 0.)
         
         self.depth_3d = 0.5
+        
         
     def update_derived_attributes(self):
         """ Extend the boundary condition definitions to 3D. """
