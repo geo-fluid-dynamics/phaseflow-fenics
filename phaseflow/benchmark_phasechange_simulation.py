@@ -754,9 +754,11 @@ class WaterHeatDrivenCavityBenchmarkPhaseChangeSimulation(HeatDrivenCavityBenchm
         
         self.adapt_timestep_to_residual = False
         
-        self.steady_relative_tolerance = 0.04
+        self.steady_relative_tolerance = 1.e-2
         
-        self.adaptive_goal_tolerance = 5.e-2
+        self.adaptive_goal_tolerance = 1.
+
+        self.quadrature_degree = 8
         
         
     def update_derived_attributes(self):
