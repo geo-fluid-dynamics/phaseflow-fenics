@@ -750,7 +750,7 @@ class WaterHeatDrivenCavityBenchmarkPhaseChangeSimulation(HeatDrivenCavityBenchm
         
         self.output_dir += "water/"
         
-        self.timestep_size = 1.e-2
+        self.timestep_size = 1.e-3
         
         self.adapt_timestep_to_residual = False
         
@@ -767,16 +767,26 @@ class WaterHeatDrivenCavityBenchmarkPhaseChangeSimulation(HeatDrivenCavityBenchm
         
         T_melt_degC = self.melting_temperature_degC
         
-        def T(T_degC):
+        def normalize_temperature(T_degC):
             """ Normalize the temperature per the scaling of the governing equations. """
             return (T_degC - T_melt_degC)/(T_hot_degC - T_cold_degC)
         
 
-        self.hot_wall_temperature = T(T_degC = self.hot_wall_temperature_degC)
+        self.normalize_temperature = normalize_temperature
+
+        def recover_temperature_in_degrees_celsius(T):
+
+            return T*(T_hot_degC - T_cold_degC) + T_melt_degC
+
+
+        self.recover_temperature_in_degrees_celsius = recover_temperature_in_degrees_celsius
+
+
+        self.hot_wall_temperature = normalize_temperature(self.hot_wall_temperature_degC)
         
-        self.cold_wall_temperature = T(T_degC = self.cold_wall_temperature_degC)
+        self.cold_wall_temperature = normalize_temperature(self.cold_wall_temperature_degC)
             
-        self.melting_temperature = T(T_degC = self.melting_temperature_degC)
+        self.melting_temperature = normalize_temperature(self.melting_temperature_degC)
         
         self.T_melt = fenics.Constant(self.melting_temperature)
         
@@ -797,11 +807,16 @@ class WaterHeatDrivenCavityBenchmarkPhaseChangeSimulation(HeatDrivenCavityBenchm
         
         q = fenics.Constant(1.894816)
         
-        def rho(T):
+        def rho_of_T_degC(T_degC):
             """ Eq. (24) from @cite{danaila2014newton} """
-            return rho_anamoly_SI*(1. - w*abs(T - T_anamoly_degC)**q)
+            return rho_anamoly_SI*(1. - w*abs(T_degC - T_anamoly_degC)**q)
             
-            
+
+        def rho(T):
+            """ The normalized temperature is used by Eq. (25) from @cite{danaila2014newton} """
+            return rho_of_T_degC(self.recover_temperature_in_degrees_celsius(T))
+
+        
         beta = fenics.Constant(6.91e-5) # [K^-1]
         
         T_hot_degC = fenics.Constant(self.hot_wall_temperature_degC)
