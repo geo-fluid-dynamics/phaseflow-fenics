@@ -799,9 +799,9 @@ class WaterHeatDrivenCavityBenchmarkPhaseChangeSimulation(HeatDrivenCavityBenchm
         
     def make_buoyancy_function(self):
 
-        T_anamoly_degC = fenics.Constant(4.0293)  # [deg C]
+        T_anomaly_degC = fenics.Constant(4.0293)  # [deg C]
         
-        rho_anamoly_SI = fenics.Constant(999.972)  # [kg/m^3]
+        rho_anomaly_SI = fenics.Constant(999.972)  # [kg/m^3]
         
         w = fenics.Constant(9.2793e-6)  # [(deg C)^(-q)]
         
@@ -809,7 +809,7 @@ class WaterHeatDrivenCavityBenchmarkPhaseChangeSimulation(HeatDrivenCavityBenchm
         
         def rho_of_T_degC(T_degC):
             """ Eq. (24) from @cite{danaila2014newton} """
-            return rho_anamoly_SI*(1. - w*abs(T_degC - T_anamoly_degC)**q)
+            return rho_anomaly_SI*(1. - w*abs(T_degC - T_anomaly_degC)**q)
             
 
         def rho(T):
