@@ -94,7 +94,8 @@ def test_convection_coupled_melting_phasechange_simulation_pcm_regression__ci__(
     phaseflow.helpers.run_simulation_with_temporary_output(RegressionTestSimulation())
     
    
-def test_water_cavity():
+def test_water_cavity__ci__():
 
-    phaseflow.benchmark_phasechange_simulation.WaterHeatDrivenCavityBenchmarkPhaseChangeSimulation().run()
+    phaseflow.helpers.run_simulation_with_temporary_output(
+        phaseflow.benchmark_phasechange_simulation.WaterHeatDrivenCavityBenchmarkPhaseChangeSimulation())
     
