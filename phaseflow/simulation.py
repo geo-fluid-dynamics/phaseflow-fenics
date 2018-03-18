@@ -42,7 +42,7 @@ class Simulation:
         
         self.steady_relative_tolerance = 1.e-4
         
-        self.adapt_timestep_to_unsteadiness = False
+        self.adapt_timestep_to_residual = False
         
         self.adaptive_time_power = 1.
         
@@ -59,6 +59,14 @@ class Simulation:
         self.coarsening_maximum_refinement_cycles = 6
         
         self.coarsening_scalar_solution_component_index = 3
+
+        self.element = None
+
+        self.boundary_conditions = ({},)
+
+        self.governing_form = None
+
+        self.fenics_timestep_size = None
         
        
     def setup(self):
