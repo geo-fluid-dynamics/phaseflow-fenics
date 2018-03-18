@@ -76,3 +76,10 @@ class State:
         
             file.write(var, self.time)
             
+
+    def set_from_other_state(self, other_state):
+
+        self.solution.leaf_node().vector()[:] = other_state.solution.leaf_node().vector()
+            
+        self.time = 0. + other_state.time
+            
