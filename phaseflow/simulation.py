@@ -278,16 +278,16 @@ class Simulation:
         if new_timestep_size < self.minimum_timestep_size:
         
             new_timestep_size = self.minimum_timestep_size
+
+        self.timestep_size = 0. + new_timestep_size
+
+        self.fenics_timestep_size.assign(new_timestep_size)
             
         if abs(new_timestep_size - self.timestep_size) > self.time_epsilon:
-        
-            self.timestep_size = 0. + new_timestep_size
             
             print("Set the time step size to " + str(self.timestep_size))
     
-            self.fenics_timestep_size.assign(new_timestep_size)
-        
-        
+
     def run(self):
         """ Run the time-dependent simulation. 
         
