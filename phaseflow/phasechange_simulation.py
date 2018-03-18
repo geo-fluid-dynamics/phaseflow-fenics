@@ -37,26 +37,24 @@ class PhaseChangeSimulation(phaseflow.simulation.Simulation):
         
         self.regularization_smoothing_parameter = 0.01
         
-        self.pressure_element_degree = 1
-        
         self.temperature_element_degree = 1
         
     
-    def update_derived_attributes(self):
-    
-        phaseflow.simulation.Simulation.update_derived_attributes(self)
+    def setup_derived_attributes(self):
+        
+        phaseflow.simulation.Simulation.setup_derived_attributes(self)
         
         """ We have to handle the time step size carefully for adaptive time stepping. """
         self.fenics_timestep_size = fenics.Constant(self.timestep_size)
         
         
-    def update_element(self):
+    def setup_element(self):
         """ Implement the mixed element per @cite{danaila2014newton}. """
-        pressure_element = fenics.FiniteElement("P", self.mesh.ufl_cell(), self.pressure_element_degree)
+        pressure_element = fenics.FiniteElement("P", 
+            self.mesh.ufl_cell(), self.temperature_element_degree)
         
-        velocity_element_degree = self.pressure_element_degree + 1
-        
-        velocity_element = fenics.VectorElement("P", self.mesh.ufl_cell(), velocity_element_degree)
+        velocity_element = fenics.VectorElement("P", 
+            self.mesh.ufl_cell(), self.temperature_element_degree + 1)
 
         temperature_element = fenics.FiniteElement(
             "P", self.mesh.ufl_cell(), self.temperature_element_degree)
@@ -116,7 +114,7 @@ class PhaseChangeSimulation(phaseflow.simulation.Simulation):
         return P
         
     
-    def update_governing_form(self):
+    def setup_governing_form(self):
         """ Implement the variational form per @cite{zimmerman2018monolithic}. """
         Pr = fenics.Constant(self.prandtl_number)
         

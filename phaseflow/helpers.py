@@ -57,7 +57,9 @@ class SolutionFile(fenics.XDMFFile):
 
         fenics.XDMFFile.__init__(self, filepath)
         
-        self.parameters["functions_share_mesh"] = True  # Efficiently handles time-dependent solutions
+        self.parameters["functions_share_mesh"] = True  # This refers to the component solution functions.
+
+        self.parameters["flush_output"] = True  # This allows us to view the solution while still running.
         
         self.path = filepath  # Mimic the file path attribute from a `file` returned by `open` 
     

@@ -14,7 +14,7 @@ class Simulation:
     """
     def __init__(self):
         """ Initialize attributes which should be modified by the user before calling `self.run`."""
-        self.end_time = None 
+        self.end_time = 1.
         
         self.quadrature_degree = None  # This by default will use the exact quadrature rule.
         
@@ -42,11 +42,13 @@ class Simulation:
         
         self.steady_relative_tolerance = 1.e-4
         
-        self.adapt_timestep_to_unsteadiness = False
+        self.adapt_timestep_to_residual = False
         
         self.adaptive_time_power = 1.
         
         self.time_epsilon = 1.e-8
+
+        self.timestep = 0
     
         self.max_timesteps = 1000000000000
         
@@ -59,41 +61,49 @@ class Simulation:
         self.coarsening_maximum_refinement_cycles = 6
         
         self.coarsening_scalar_solution_component_index = 3
+
+        self.element = None
+
+        self.boundary_conditions = ({},)
+
+        self.governing_form = None
+
+        self.fenics_timestep_size = None
         
        
     def setup(self):
         """ Set up objects needed before the simulation can run. """
         self.validate_attributes()
         
-        self.update_derived_attributes()
+        self.setup_derived_attributes()
         
         if not self.restarted:
             
-            self.update_coarse_mesh()
+            self.setup_coarse_mesh()
             
-            self.update_element()
+            self.setup_element()
             
             self.refine_initial_mesh()
             
-            self.update_function_space()
+            self.setup_function_space()
             
-            self.update_states()
+            self.setup_states()
             
-            self.update_initial_values()
+            self.setup_initial_values()
         
-        self.update_governing_form()
+        self.setup_governing_form()
         
-        self.update_boundary_conditions()
+        self.setup_boundary_conditions()
         
-        self.update_derivative()
+        self.setup_derivative()
         
-        self.update_problem()
+        self.setup_problem()
         
-        self.update_adaptive_goal_form()
+        self.setup_adaptive_goal_form()
         
-        self.update_solver()
+        self.setup_solver()
         
-        self.update_initial_guess()
+        self.setup_initial_guess()
         
         if self.prefix_output_dir_with_tempdir:
         
@@ -128,7 +138,7 @@ class Simulation:
         pass
 
         
-    def update_derived_attributes(self):
+    def setup_derived_attributes(self):
         """ Set attributes which shouldn't be touched by the user. """
         if self.quadrature_degree is None:
         
@@ -139,12 +149,12 @@ class Simulation:
             self.integration_metric = fenics.dx(metadata={'quadrature_degree': self.quadrature_degree})
     
     
-    def update_coarse_mesh(self):
+    def setup_coarse_mesh(self):
         """ This must be overloaded to instantiate a `fenics.Mesh` at `self.mesh`. """
         assert(False)
     
 
-    def update_element(self):
+    def setup_element(self):
         """ This must be overloaded to instantiate a `fenics.MixedElement` at `self.element`. """
         assert(False)
         
@@ -154,19 +164,19 @@ class Simulation:
         pass
         
         
-    def update_function_space(self):
+    def setup_function_space(self):
         """ Set the function space. """
         self.function_space = fenics.FunctionSpace(self.mesh, self.element)
         
         
-    def update_states(self):    
+    def setup_states(self):    
         """ Set state objects which contain the solutions. """
         self.old_state = phaseflow.state.State(self.function_space, self.element)
         
         self.state = phaseflow.state.State(self.function_space, self.element)
     
     
-    def update_initial_values(self):
+    def setup_initial_values(self):
         """ This must be overloaded to set `self.old_state.solution`. 
         
         Often this might involve calling the `self.old_state.interpolate` method.
@@ -174,7 +184,7 @@ class Simulation:
         assert(False)
         
         
-    def update_governing_form(self):
+    def setup_governing_form(self):
         """ Set the variational form for the governing equations.
         
         This must be overloaded.
@@ -185,7 +195,7 @@ class Simulation:
         assert(False)
         
         
-    def update_boundary_conditions(self):
+    def setup_boundary_conditions(self):
         """ Set the collection of `fenics.DirichetBC` based on the user's provided collection 
             of boundary condition dictionaries.
             
@@ -202,14 +212,14 @@ class Simulation:
                     dict["location"]))
         
         
-    def update_derivative(self):
+    def setup_derivative(self):
         """ Set the derivative of the governing form, needed for the nonlinear solver. """
         self.derivative_of_governing_form = fenics.derivative(self.governing_form, 
             self.state.solution, 
             fenics.TrialFunction(self.function_space))
         
         
-    def update_problem(self):
+    def setup_problem(self):
         """ Set the `fenics.NonlinearVariationalProblem`. """
         self.problem = fenics.NonlinearVariationalProblem( 
             self.governing_form, 
@@ -218,7 +228,7 @@ class Simulation:
             self.derivative_of_governing_form)
         
     
-    def update_adaptive_goal_form(self):
+    def setup_adaptive_goal_form(self):
         """ Set the goal for adaptive mesh refinement.
         
         This should be overloaded for most applications.
@@ -226,7 +236,7 @@ class Simulation:
         self.adaptive_goal_form = self.state.solution[0]*self.integration_metric
         
         
-    def update_solver(self):
+    def setup_solver(self):
         """ Set up the solver, which is a `fenics.AdaptiveNonlinearVariationalSolver`. """
         self.solver = fenics.AdaptiveNonlinearVariationalSolver(
             problem = self.problem,
@@ -245,19 +255,19 @@ class Simulation:
             ["relaxation_parameter"] = self.nonlinear_solver_relaxation
 
     
-    def update_initial_guess(self):
+    def setup_initial_guess(self):
         """ Set the initial guess for the Newton solver.
         
         Using the latest solution as the initial guess should be fine for most applications.
         Otherwise, this must be overloaded.
         """
-        self.state.solution.leaf_node().vector()[:] = self.old_state.solution.leaf_node().vector()
+        self.state.set_from_other_state(self.old_state)
         
         
-    def update_timestep_size(self, new_timestep_size):
+    def set_timestep_size(self, new_timestep_size):
         """ When using adaptive time stepping, this sets the time step size.
         
-        This requires that `self.update_governing_form` sets `self.fenics_timestep_size`,
+        This requires that `self.setup_governing_form` sets `self.fenics_timestep_size`,
         which must be a `fenics.Constant`. Given that, this calls the `fenics.Constant.assign` 
         method so that the change affects `self.governing_form`.
         """
@@ -268,16 +278,16 @@ class Simulation:
         if new_timestep_size < self.minimum_timestep_size:
         
             new_timestep_size = self.minimum_timestep_size
+
+        self.timestep_size = 0. + new_timestep_size
+
+        self.fenics_timestep_size.assign(new_timestep_size)
             
         if abs(new_timestep_size - self.timestep_size) > self.time_epsilon:
-        
-            self.timestep_size = 0. + new_timestep_size
             
             print("Set the time step size to " + str(self.timestep_size))
     
-            self.fenics_timestep_size.assign(new_timestep_size)
-        
-        
+
     def run(self):
         """ Run the time-dependent simulation. 
         
@@ -288,8 +298,12 @@ class Simulation:
         Eventually we may want to consider other time integration options,
         which will require redesigning this function.
         """
-        self.setup()
+        if self.timestep == 0:
+
+            self.setup()
         
+        self.set_timestep_size(self.timestep_size)
+
         solution_filepath = self.output_dir + "/solution.xdmf"
     
         with phaseflow.helpers.SolutionFile(solution_filepath) as self.solution_file:
@@ -316,7 +330,9 @@ class Simulation:
             
             fenics.set_log_level(fenics.PROGRESS)
             
-            for it in range(1, self.max_timesteps):
+            first_timestep = self.timestep + 1
+
+            for self.timestep in range(first_timestep, self.max_timesteps):
                 
                 if self.end_time is not None:
                 
@@ -324,12 +340,9 @@ class Simulation:
                         
                         break
                         
-                if it > 1:  # Set initial values based on previous solution.
+                if self.timestep > 1:  # Set initial values based on previous solution.
 
-                    self.old_state.solution.leaf_node().vector()[:] = \
-                        self.state.solution.leaf_node().vector()
-                    
-                    self.old_state.time = 0. + self.state.time
+                    self.old_state.set_from_other_state(self.state)
                     
                     if self.coarsen_between_timesteps:
                     
@@ -349,7 +362,7 @@ class Simulation:
                 # Check for steady state.
                 if self.stop_when_steady:
                 
-                    self.set_unsteadiness()
+                    self.check_unsteadiness()
                     
                     if (self.unsteadiness < self.steady_relative_tolerance):
                 
@@ -362,7 +375,7 @@ class Simulation:
                         
                     if self.adapt_timestep_to_residual:
                         
-                        self.update_timestep_size(
+                        self.set_timestep_size(
                             self.timestep_size/self.time_norm_relative_residual**self.adaptive_time_power)
                             
                 if self.end_time is not None:
@@ -376,7 +389,7 @@ class Simulation:
                         break
                 
         
-    def set_unsteadiness(self):
+    def check_unsteadiness(self):
         """ Set an 'unsteadiness' metric used for adaptive time stepping. """
         time_residual = fenics.Function(self.state.solution.leaf_node().function_space())
         
@@ -425,11 +438,11 @@ class Simulation:
         
             h5.read(self.mesh, "mesh", True)
         
-        self.update_element()
+        self.setup_element()
             
-        self.update_function_space()
+        self.setup_function_space()
             
-        self.update_states()
+        self.setup_states()
 
         with fenics.HDF5File(self.mesh.mpi_comm(), checkpoint_filepath, "r") as h5:
         
@@ -455,13 +468,13 @@ class Simulation:
         
         fine_solution = self.state.solution.copy(deepcopy = True)
         
-        self.update_coarse_mesh()
+        self.setup_coarse_mesh()
         
         for refinement_cycle in range(self.coarsening_maximum_refinement_cycles):
             
-            self.update_function_space()
+            self.setup_function_space()
             
-            self.update_states()
+            self.setup_states()
             
             self.old_state.time = 0. + time
             
@@ -497,17 +510,17 @@ class Simulation:
                 
                 
         # We broke important references and so have to run the following setup methods again.
-        self.update_governing_form()
+        self.setup_governing_form()
         
-        self.update_boundary_conditions()
+        self.setup_boundary_conditions()
         
-        self.update_derivative()
+        self.setup_derivative()
         
-        self.update_problem()
+        self.setup_problem()
         
-        self.update_adaptive_goal_form()
+        self.setup_adaptive_goal_form()
         
-        self.update_solver()
+        self.setup_solver()
         
-        self.update_initial_guess()
+        self.setup_initial_guess()
         
