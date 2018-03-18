@@ -10,7 +10,7 @@ def test_1d_output_unit__ci__():
     
     sim.mesh = fenics.UnitIntervalMesh(5)
     
-    sim.update_element()
+    sim.setup_element()
     
     function_space = fenics.FunctionSpace(sim.mesh, sim.element)
     
