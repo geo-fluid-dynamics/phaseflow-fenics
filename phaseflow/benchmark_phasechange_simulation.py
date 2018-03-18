@@ -335,9 +335,9 @@ class HeatDrivenCavityBenchmarkPhaseChangeSimulation(CavityBenchmarkPhaseChangeS
         """
         CavityBenchmarkPhaseChangeSimulation.__init__(self)
         
-        self.T_hot = 0.5
+        self.hot_wall_temperature = 0.5
     
-        self.T_cold = -self.T_hot
+        self.cold_wall_temperature = -self.hot_wall_temperature
         
         self.solid_viscosity = 1.
         
@@ -366,16 +366,20 @@ class HeatDrivenCavityBenchmarkPhaseChangeSimulation(CavityBenchmarkPhaseChangeS
         """
         CavityBenchmarkPhaseChangeSimulation.update_derived_attributes(self)
         
+        T_hot = fenics.Constant(self.hot_wall_temperature)
+        
+        T_cold = fenics.Constant(self.cold_wall_temperature)
+        
         self.boundary_conditions = [
             {"subspace": 1, "location": self.walls, "value": (0., 0.)},
-            {"subspace": 2, "location": self.left_wall, "value": self.T_hot},
-            {"subspace": 2, "location": self.right_wall, "value": self.T_cold}]
+            {"subspace": 2, "location": self.left_wall, "value": T_hot},
+            {"subspace": 2, "location": self.right_wall, "value": T_cold}]
             
         self.initial_temperature = "T_hot + x[0]*(T_cold - T_hot)"
         
-        self.initial_temperature = self.initial_temperature.replace("T_hot", str(self.T_hot))
+        self.initial_temperature = self.initial_temperature.replace("T_hot", str(self.hot_wall_temperature))
         
-        self.initial_temperature = self.initial_temperature.replace("T_cold", str(self.T_cold))
+        self.initial_temperature = self.initial_temperature.replace("T_cold", str(self.cold_wall_temperature))
         
         
     def update_initial_values(self):
@@ -414,9 +418,9 @@ class StefanProblemBenchmarkPhaseChangeSimulation(BenchmarkPhaseChangeSimulation
         
         self.initial_pci_position = None  # When None, the position will be set by a rule.
         
-        self.T_hot = 1.
+        self.hot_wall_temperature = 1.
         
-        self.T_cold = -0.01
+        self.cold_wall_temperature = -0.01
         
         self.stefan_number = 0.045
         
@@ -443,9 +447,13 @@ class StefanProblemBenchmarkPhaseChangeSimulation(BenchmarkPhaseChangeSimulation
         """
         BenchmarkPhaseChangeSimulation.update_derived_attributes(self)
         
+        T_hot = fenics.Constant(self.hot_wall_temperature)
+        
+        T_cold = fenics.Constant(self.cold_wall_temperature)
+        
         self.boundary_conditions = [
-            {"subspace": 2, "location": "near(x[0],  0.)", "value": self.T_hot},
-            {"subspace": 2, "location": "near(x[0],  1.)", "value": self.T_cold}]
+            {"subspace": 2, "location": "near(x[0],  0.)", "value": T_hot},
+            {"subspace": 2, "location": "near(x[0],  1.)", "value": T_cold}]
         
         if self.initial_pci_position is None:
             """ Set the initial PCI position such that the melted area is covered by one layer of cells. """
@@ -460,9 +468,9 @@ class StefanProblemBenchmarkPhaseChangeSimulation(BenchmarkPhaseChangeSimulation
         
         initial_temperature = initial_temperature.replace("initial_pci_position", str(initial_pci_position))
         
-        initial_temperature = initial_temperature.replace("T_hot", str(self.T_hot))
+        initial_temperature = initial_temperature.replace("T_hot", str(self.hot_wall_temperature))
         
-        self.initial_temperature = initial_temperature.replace("T_cold", str(self.T_cold))
+        self.initial_temperature = initial_temperature.replace("T_cold", str(self.cold_wall_temperature))
         
     
     def update_coarse_mesh(self):
@@ -548,9 +556,9 @@ class ConvectionCoupledMeltingOctadecanePCMBenchmarkPCSimulation(CavityBenchmark
         """
         CavityBenchmarkPhaseChangeSimulation.__init__(self)
         
-        self.T_hot = 1.
+        self.hot_wall_temperature = 1.
         
-        self.T_cold = -0.01
+        self.cold_wall_temperature = -0.01
         
         self.stefan_number = 0.045      
         
@@ -599,10 +607,14 @@ class ConvectionCoupledMeltingOctadecanePCMBenchmarkPCSimulation(CavityBenchmark
         """
         CavityBenchmarkPhaseChangeSimulation.update_derived_attributes(self)
         
+        T_hot = fenics.Constant(self.hot_wall_temperature)
+        
+        T_cold = fenics.Constant(self.cold_wall_temperature)
+        
         self.boundary_conditions = [
                 {"subspace": 1, "location": self.walls, "value": (0., 0.)},
-                {"subspace": 2, "location": self.left_wall, "value": self.T_hot},
-                {"subspace": 2, "location": self.right_wall, "value": self.T_cold}]
+                {"subspace": 2, "location": self.left_wall, "value": T_hot},
+                {"subspace": 2, "location": self.right_wall, "value": T_cold}]
                 
         if self.initial_pci_position == None:
             """ Set the initial PCI position such that the melted area is covered by one layer of cells. """
@@ -617,9 +629,9 @@ class ConvectionCoupledMeltingOctadecanePCMBenchmarkPCSimulation(CavityBenchmark
         
         initial_temperature = initial_temperature.replace("initial_pci_position", str(initial_pci_position))
         
-        initial_temperature = initial_temperature.replace("T_hot", str(self.T_hot))
+        initial_temperature = initial_temperature.replace("T_hot", str(T_hot))
         
-        initial_temperature = initial_temperature.replace("T_cold", str(self.T_cold))
+        initial_temperature = initial_temperature.replace("T_cold", str(T_cold))
         
         self.initial_temperature = initial_temperature
         
@@ -681,11 +693,15 @@ class CCMOctadecanePCMBenchmarkPCSimulation3D(ConvectionCoupledMeltingOctadecane
         self.zmin = -self.depth_3d/2.
         
         self.zmax = self.depth_3d/2.
+
+        T_hot = fenics.Constant(self.hot_wall_temperature)
+        
+        T_cold = fenics.Constant(self.cold_wall_temperature)
         
         self.boundary_conditions = [
                 {"subspace": 1, "location": self.walls, "value": (0., 0., 0.)},
-                {"subspace": 2, "location": self.left_wall, "value": self.T_hot},
-                {"subspace": 2, "location": self.right_wall, "value": self.T_cold}]
+                {"subspace": 2, "location": self.left_wall, "value": T_hot},
+                {"subspace": 2, "location": self.right_wall, "value": T_cold}]
                 
         
     def refine_initial_mesh(self):
@@ -711,4 +727,110 @@ class CCMOctadecanePCMBenchmarkPCSimulation3D(ConvectionCoupledMeltingOctadecane
                     cell_markers[cell] = True
             
             self.mesh = fenics.refine(self.mesh, cell_markers)
+            
+            
+class WaterHeatDrivenCavityBenchmarkPhaseChangeSimulation(HeatDrivenCavityBenchmarkPhaseChangeSimulation):
+    """ This class implements the heat-driven cavity benchmark. """
+    def __init__(self):
+        """ Extend the `__init__` method for the heat-driven cavity benchmark. 
+        
+        The tolerances set here are used during verification testing.
+        """
+        HeatDrivenCavityBenchmarkPhaseChangeSimulation.__init__(self)
+        
+        self.hot_wall_temperature_degC = 10.  # [deg C]
+    
+        self.cold_wall_temperature_degC = 0.  # [deg C]
+        
+        self.melting_temperature_degC = 0.  # [deg C]
+        
+        self.rayleigh_number = 2.518084e6
+        
+        self.prandtl_number = 6.99
+        
+        self.output_dir += "water/"
+        
+        self.timestep_size = 1.e-2
+        
+        self.adapt_timestep_to_residual = False
+        
+        self.steady_relative_tolerance = 0.04
+        
+        self.adaptive_goal_tolerance = 5.e-2
+        
+        
+    def update_derived_attributes(self):
+    
+        T_hot_degC = self.hot_wall_temperature_degC
+    
+        T_cold_degC = self.cold_wall_temperature_degC
+        
+        T_melt_degC = self.melting_temperature_degC
+        
+        def T(T_degC):
+            """ Normalize the temperature per the scaling of the governing equations. """
+            return (T_degC - T_melt_degC)/(T_hot_degC - T_cold_degC)
+        
+
+        self.hot_wall_temperature = T(T_degC = self.hot_wall_temperature_degC)
+        
+        self.cold_wall_temperature = T(T_degC = self.cold_wall_temperature_degC)
+            
+        self.melting_temperature = T(T_degC = self.melting_temperature_degC)
+        
+        self.T_melt = fenics.Constant(self.melting_temperature)
+        
+        self.T_hot = fenics.Constant(self.hot_wall_temperature)
+        
+        self.T_cold = fenics.Constant(self.cold_wall_temperature)
+        
+        HeatDrivenCavityBenchmarkPhaseChangeSimulation.update_derived_attributes(self)
+        
+        
+    def make_buoyancy_function(self):
+
+        T_anamoly_degC = fenics.Constant(4.0293)  # [deg C]
+        
+        rho_anamoly_SI = fenics.Constant(999.972)  # [kg/m^3]
+        
+        w = fenics.Constant(9.2793e-6)  # [(deg C)^(-q)]
+        
+        q = fenics.Constant(1.894816)
+        
+        def rho(T):
+            """ Eq. (24) from @cite{danaila2014newton} """
+            return rho_anamoly_SI*(1. - w*abs(T - T_anamoly_degC)**q)
+            
+            
+        beta = fenics.Constant(6.91e-5) # [K^-1]
+        
+        T_hot_degC = fenics.Constant(self.hot_wall_temperature_degC)
+    
+        T_cold_degC = fenics.Constant(self.cold_wall_temperature_degC)
+        
+        Pr = fenics.Constant(self.prandtl_number)
+        
+        Ra = fenics.Constant(self.rayleigh_number)
+        
+        g = fenics.Constant(self.gravity)
+        
+        T_melt = self.T_melt
+        
+        def f_B(T):
+            """ Eq. (25) from @cite{danaila2014newton} """
+            return Ra/Pr/(beta*(T_hot_degC - T_cold_degC))*(rho(T_melt) - rho(T))/rho(T_melt)*g
+        
+        
+        return f_B
+        
+        
+    def verify(self):
+        """ Verify against the result published in @cite{michalek2003simulations}. """
+        self.verify_scalar_solution_component(
+            component = 1,
+            coordinates = [(x, (self.ymin + self.ymax)/2.) for x in [0.00, 0.05, 0.12, 0.23, 0.40, 0.59, 0.80, 0.88, 1.00]],
+            verified_values = [1.00, 0.66, 0.56, 0.58, 0.59, 0.62, 0.20, 0.22, 0.00],
+            relative_tolerance = 1.e-2,
+            absolute_tolerance = 2.e-2)
+            
             
