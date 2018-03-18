@@ -37,13 +37,15 @@ class PhaseChangeSimulation(phaseflow.simulation.Simulation):
         
         self.regularization_smoothing_parameter = 0.01
         
-        self.pressure_element_degree = 1
-        
         self.temperature_element_degree = 1
         
     
     def update_derived_attributes(self):
-    
+        
+        self.pressure_element_degree = self.temperature_element_degree
+
+        self.velocity_element_degree = self.pressure_element_degree + 1
+
         phaseflow.simulation.Simulation.update_derived_attributes(self)
         
         """ We have to handle the time step size carefully for adaptive time stepping. """
@@ -52,11 +54,11 @@ class PhaseChangeSimulation(phaseflow.simulation.Simulation):
         
     def update_element(self):
         """ Implement the mixed element per @cite{danaila2014newton}. """
-        pressure_element = fenics.FiniteElement("P", self.mesh.ufl_cell(), self.pressure_element_degree)
+        pressure_element = fenics.FiniteElement("P", 
+            self.mesh.ufl_cell(), self.pressure_element_degree)
         
-        velocity_element_degree = self.pressure_element_degree + 1
-        
-        velocity_element = fenics.VectorElement("P", self.mesh.ufl_cell(), velocity_element_degree)
+        velocity_element = fenics.VectorElement("P", 
+            self.mesh.ufl_cell(), self.velocity_element_degree)
 
         temperature_element = fenics.FiniteElement(
             "P", self.mesh.ufl_cell(), self.temperature_element_degree)
