@@ -130,13 +130,13 @@ class CavityBenchmarkPhaseChangeSimulation(BenchmarkPhaseChangeSimulation):
             self.mesh_size = (self.mesh_size, self.mesh_size)
         
         
-    def update_derived_attributes(self):
+    def setup_derived_attributes(self):
         """ Set attributes which should not be touched by the user. 
         
         These are mostly strings which are used as arguments to `fenics.DirichletBC`
         for specifying where the boundary conditions should be applied.
         """
-        BenchmarkPhaseChangeSimulation.update_derived_attributes(self)
+        BenchmarkPhaseChangeSimulation.setup_derived_attributes(self)
         
         self.left_wall = "near(x[0],  xmin)".replace("xmin", str(self.xmin))
         
@@ -158,7 +158,7 @@ class CavityBenchmarkPhaseChangeSimulation(BenchmarkPhaseChangeSimulation):
             self.walls += " | " + self.back_wall + " | " + self.front_wall
         
         
-    def update_coarse_mesh(self):
+    def setup_coarse_mesh(self):
         """ This creates the rectangular mesh, or rectangular prism in 3D. """
         if len(self.mesh_size) == 2:
         
@@ -198,9 +198,9 @@ class LidDrivenCavityBenchmarkPhaseChangeSimulation(CavityBenchmarkPhaseChangeSi
         self.adaptive_goal_tolerance = 1.e-4
   
     
-    def update_derived_attributes(self):
+    def setup_derived_attributes(self):
         """ Add attributes for the boundary conditions which should not be modified directly. """
-        CavityBenchmarkPhaseChangeSimulation.update_derived_attributes(self)
+        CavityBenchmarkPhaseChangeSimulation.setup_derived_attributes(self)
         
         self.fixed_walls = self.bottom_wall + " | " + self.left_wall + " | " + self.right_wall
         
@@ -211,12 +211,12 @@ class LidDrivenCavityBenchmarkPhaseChangeSimulation(CavityBenchmarkPhaseChangeSi
              "value": (0., 0.)}]
   
   
-    def update_initial_values(self):
+    def setup_initial_values(self):
         """ Set initial values which are consistent with the boundary conditions. """
         self.old_state.interpolate(("0.", self.top_wall, "0.", "1."))
     
     
-    def update_adaptive_goal_form(self):
+    def setup_adaptive_goal_form(self):
         """ Set an adaptive goal based on the horizontal velocity. """
         p, u, T = fenics.split(self.state.solution)
         
@@ -279,18 +279,18 @@ class LDCBenchmarkPhaseChangeSimulationWithSolidSubdomain(LidDrivenCavityBenchma
         self.output_dir += "with_solid_subdomain/"
         
     
-    def update_derived_attributes(self):
+    def setup_derived_attributes(self):
         """ Add attributes for the boundary conditions which should not be modified directly. """
-        LidDrivenCavityBenchmarkPhaseChangeSimulation.update_derived_attributes(self)
+        LidDrivenCavityBenchmarkPhaseChangeSimulation.setup_derived_attributes(self)
     
         self.boundary_conditions = [
                 {"subspace": 1, "location": self.top_wall, "value": (1., 0.)},
                 {"subspace": 1, "location": self.fixed_walls, "value": (0., 0.)}]
     
     
-    def update_coarse_mesh(self):
+    def setup_coarse_mesh(self):
         """ Use the coarse mesh from the lid-driven cavity benchmark. """
-        LidDrivenCavityBenchmarkPhaseChangeSimulation.update_coarse_mesh(self)
+        LidDrivenCavityBenchmarkPhaseChangeSimulation.setup_coarse_mesh(self)
 
         
     def refine_initial_mesh(self):
@@ -317,7 +317,7 @@ class LDCBenchmarkPhaseChangeSimulationWithSolidSubdomain(LidDrivenCavityBenchma
             self.mesh = self.mesh.child()  # Does this break references? Can we do this a different way?
             
     
-    def update_initial_values(self):
+    def setup_initial_values(self):
         """ Set initial values such that the temperature corresponds to 
             liquid or solid phases on either side of the phase-change interface.
         """
@@ -362,11 +362,11 @@ class HeatDrivenCavityBenchmarkPhaseChangeSimulation(CavityBenchmarkPhaseChangeS
         self.adaptive_goal_tolerance = 20.
         
         
-    def update_derived_attributes(self):
+    def setup_derived_attributes(self):
         """ Add attributes which should not be modified directly,
             related to the boundary conditions and initial values.
         """
-        CavityBenchmarkPhaseChangeSimulation.update_derived_attributes(self)
+        CavityBenchmarkPhaseChangeSimulation.setup_derived_attributes(self)
         
         T_hot = fenics.Constant(self.hot_wall_temperature)
         
@@ -384,14 +384,14 @@ class HeatDrivenCavityBenchmarkPhaseChangeSimulation(CavityBenchmarkPhaseChangeS
         self.initial_temperature = self.initial_temperature.replace("T_cold", str(self.cold_wall_temperature))
         
         
-    def update_initial_values(self):
+    def setup_initial_values(self):
         """ Set the initial values. """
         self.old_state.interpolate(("0.", "0.", "0.", self.initial_temperature))
         
         
-    def update_adaptive_goal_form(self):
+    def setup_adaptive_goal_form(self):
         """ Set the same goal as for the lid-driven cavity benchmark. """
-        LidDrivenCavityBenchmarkPhaseChangeSimulation.update_adaptive_goal_form(self)
+        LidDrivenCavityBenchmarkPhaseChangeSimulation.setup_adaptive_goal_form(self)
         
         
     def verify(self):
@@ -443,11 +443,11 @@ class StefanProblemBenchmarkPhaseChangeSimulation(BenchmarkPhaseChangeSimulation
         self.absolute_tolerance = 1.e-2
         
         
-    def update_derived_attributes(self):
+    def setup_derived_attributes(self):
         """ Add attributes which should not be modified directly,
             related to the boundary conditions and initial values.
         """
-        BenchmarkPhaseChangeSimulation.update_derived_attributes(self)
+        BenchmarkPhaseChangeSimulation.setup_derived_attributes(self)
         
         T_hot = fenics.Constant(self.hot_wall_temperature)
         
@@ -475,7 +475,7 @@ class StefanProblemBenchmarkPhaseChangeSimulation(BenchmarkPhaseChangeSimulation
         self.initial_temperature = initial_temperature.replace("T_cold", str(self.cold_wall_temperature))
         
     
-    def update_coarse_mesh(self):
+    def setup_coarse_mesh(self):
         """ Set the 1D mesh """
         self.mesh = fenics.UnitIntervalMesh(self.initial_uniform_cell_count)
         
@@ -509,12 +509,12 @@ class StefanProblemBenchmarkPhaseChangeSimulation(BenchmarkPhaseChangeSimulation
             self.mesh = fenics.refine(self.mesh, cell_markers)  # Does this break references?
     
     
-    def update_initial_values(self):
+    def setup_initial_values(self):
         """ Set the initial values. """
         self.old_state.interpolate(("0.", "0.", self.initial_temperature))
         
         
-    def update_adaptive_goal_form(self):
+    def setup_adaptive_goal_form(self):
         """ Set the adaptive goal based on the semi-phase-field. 
         
         Here the integrated goal is equivalent to the remaining solid area.
@@ -526,7 +526,7 @@ class StefanProblemBenchmarkPhaseChangeSimulation(BenchmarkPhaseChangeSimulation
         self.adaptive_goal_form = phi(T)*self.integration_metric
         
         
-    def update_initial_guess(self):
+    def setup_initial_guess(self):
         """ Set a zero initial guess for the Newton method.
         
         By default Phaseflow usually uses the latest solution (or the initial values) as the initial guess.
@@ -603,11 +603,11 @@ class ConvectionCoupledMeltingOctadecanePCMBenchmarkPCSimulation(CavityBenchmark
         self.coarsening_scalar_solution_component_index = 3
         
         
-    def update_derived_attributes(self):
+    def setup_derived_attributes(self):
         """ Add attributes which should not be modified directly,
             related to the boundary conditions and initial values.
         """
-        CavityBenchmarkPhaseChangeSimulation.update_derived_attributes(self)
+        CavityBenchmarkPhaseChangeSimulation.setup_derived_attributes(self)
         
         T_hot = fenics.Constant(self.hot_wall_temperature)
         
@@ -631,16 +631,16 @@ class ConvectionCoupledMeltingOctadecanePCMBenchmarkPCSimulation(CavityBenchmark
         
         initial_temperature = initial_temperature.replace("initial_pci_position", str(initial_pci_position))
         
-        initial_temperature = initial_temperature.replace("T_hot", str(T_hot))
+        initial_temperature = initial_temperature.replace("T_hot", str(self.hot_wall_temperature))
         
-        initial_temperature = initial_temperature.replace("T_cold", str(T_cold))
+        initial_temperature = initial_temperature.replace("T_cold", str(self.cold_wall_temperature))
         
         self.initial_temperature = initial_temperature
         
     
-    def update_coarse_mesh(self):
+    def setup_coarse_mesh(self):
         """ Set a cavity mesh. """
-        CavityBenchmarkPhaseChangeSimulation.update_coarse_mesh(self)
+        CavityBenchmarkPhaseChangeSimulation.setup_coarse_mesh(self)
         
     
     def refine_initial_mesh(self):
@@ -665,14 +665,14 @@ class ConvectionCoupledMeltingOctadecanePCMBenchmarkPCSimulation(CavityBenchmark
             self.mesh = self.mesh.child()
         
     
-    def update_initial_values(self):
+    def setup_initial_values(self):
         """ Set the initial values. """
         self.old_state.interpolate(("0.", "0.", "0.", self.initial_temperature))
         
         
-    def update_adaptive_goal_form(self):
+    def setup_adaptive_goal_form(self):
         """ Set the same goal as for the Stefan problem benchmark. """
-        StefanProblemBenchmarkPhaseChangeSimulation.update_adaptive_goal_form(self)
+        StefanProblemBenchmarkPhaseChangeSimulation.setup_adaptive_goal_form(self)
      
      
 class CCMOctadecanePCMBenchmarkPCSimulation3D(ConvectionCoupledMeltingOctadecanePCMBenchmarkPCSimulation):
@@ -688,9 +688,9 @@ class CCMOctadecanePCMBenchmarkPCSimulation3D(ConvectionCoupledMeltingOctadecane
         self.depth_3d = 0.5
         
         
-    def update_derived_attributes(self):
+    def setup_derived_attributes(self):
         """ Extend the boundary condition definitions to 3D. """
-        ConvectionCoupledMeltingOctadecanePCMBenchmarkSimulation.update_derived_attributes(self)
+        ConvectionCoupledMeltingOctadecanePCMBenchmarkSimulation.setup_derived_attributes(self)
         
         self.zmin = -self.depth_3d/2.
         
@@ -755,11 +755,11 @@ class WaterHeatDrivenCavityBenchmarkPhaseChangeSimulation(HeatDrivenCavityBenchm
         self.adapt_timestep_to_residual = False
         
         self.quadrature_degree = 8
-        
+
         self.temperature_element_degree = 2
         
         
-    def update_derived_attributes(self):
+    def setup_derived_attributes(self):
     
         T_hot_degC = self.hot_wall_temperature_degC
     
@@ -794,7 +794,7 @@ class WaterHeatDrivenCavityBenchmarkPhaseChangeSimulation(HeatDrivenCavityBenchm
         
         self.T_cold = fenics.Constant(self.cold_wall_temperature)
         
-        HeatDrivenCavityBenchmarkPhaseChangeSimulation.update_derived_attributes(self)
+        HeatDrivenCavityBenchmarkPhaseChangeSimulation.setup_derived_attributes(self)
         
         
     def make_buoyancy_function(self):
@@ -849,7 +849,7 @@ class WaterHeatDrivenCavityBenchmarkPhaseChangeSimulation(HeatDrivenCavityBenchm
             absolute_tolerance = 2.e-2)
 
 
-    def update_adaptive_goal_form(self):
+    def setup_adaptive_goal_form(self):
         """ Set an adaptive goal based on the temperature. """
         p, u, T = fenics.split(self.state.solution)
         
