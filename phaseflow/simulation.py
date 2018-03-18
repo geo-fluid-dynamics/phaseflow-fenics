@@ -14,7 +14,7 @@ class Simulation:
     """
     def __init__(self):
         """ Initialize attributes which should be modified by the user before calling `self.run`."""
-        self.end_time = None 
+        self.end_time = 1.
         
         self.quadrature_degree = None  # This by default will use the exact quadrature rule.
         
@@ -47,6 +47,8 @@ class Simulation:
         self.adaptive_time_power = 1.
         
         self.time_epsilon = 1.e-8
+
+        self.timestep = 0
     
         self.max_timesteps = 1000000000000
         
@@ -296,8 +298,12 @@ class Simulation:
         Eventually we may want to consider other time integration options,
         which will require redesigning this function.
         """
-        self.setup()
+        if self.timestep == 0:
+
+            self.setup()
         
+        self.update_timestep_size(self.timestep_size)
+
         solution_filepath = self.output_dir + "/solution.xdmf"
     
         with phaseflow.helpers.SolutionFile(solution_filepath) as self.solution_file:
@@ -324,7 +330,9 @@ class Simulation:
             
             fenics.set_log_level(fenics.PROGRESS)
             
-            for it in range(1, self.max_timesteps):
+            first_timestep = self.timestep + 1
+
+            for self.timestep in range(first_timestep, self.max_timesteps):
                 
                 if self.end_time is not None:
                 
@@ -332,7 +340,7 @@ class Simulation:
                         
                         break
                         
-                if it > 1:  # Set initial values based on previous solution.
+                if self.timestep > 1:  # Set initial values based on previous solution.
 
                     self.old_state.solution.leaf_node().vector()[:] = \
                         self.state.solution.leaf_node().vector()
