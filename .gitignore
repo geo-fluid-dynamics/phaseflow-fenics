@@ -12,4 +12,4 @@ log.txt
 .coverage
 notebooks/.ipynb_checkpoints/
 .pytest_cache/
-
+.vscode
