@@ -143,12 +143,10 @@ class PhaseChangeSimulation(phaseflow.simulation.Simulation):
         inner, dot, grad, div, sym = fenics.inner, fenics.dot, fenics.grad, fenics.div, fenics.sym
         
         self.governing_form = (
-            -div(u)*psi_p 
-            - psi_p*gamma*p
-            + dot(psi_u, 1./Delta_t*(u - u_n) + f_B(T))
-            + dot(dot(grad(u), u), psi_u) 
+            -psi_p*(div(u) + gamma*p)
+            + dot(psi_u, 1./Delta_t*(u - u_n) + f_B(T) + dot(grad(u), u))
             - div(psi_u)*p 
-            + 2.*mu(phi(T))*inner(sym(grad(u)), sym(grad(psi_u)))
+            + 2.*mu(phi(T))*inner(sym(grad(psi_u)), sym(grad(u)))
             + 1./Delta_t*psi_T*(T - T_n - 1./Ste*(phi(T) - phi(T_n)))
             + dot(grad(psi_T), 1./Pr*grad(T) - T*u)
             )*dx
