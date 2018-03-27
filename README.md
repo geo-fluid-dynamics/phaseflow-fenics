@@ -47,46 +47,63 @@ Author: Alexander G. Zimmerman <alexander.zimmerman@aices.rwth-aachen.de>
 The FEniCS project provides a [Docker image](https://hub.docker.com/r/fenicsproject/stable/) with FEniCS and its dependencies already installed. See their ["FEniCS in Docker" manual](https://fenics.readthedocs.io/projects/containers/en/latest/).
 
 Get the [free community edition of Docker](https://www.docker.com/community-edition).
-    
-## Run Phaseflow in Docker
-Pull the Docker image and run the container, sharing a folder between the host and container
 
-    docker run -ti -v $(pwd):/home/fenics/shared --name fenics quay.io/fenicsproject/stable:latest
 
-Install missing dependencies
+## Run Phaseflow on Ubuntu 16.04 LTS    
+Install FEniCS.
 
-    pip3 install --user h5py
-    
-Clone Phaseflow's git repository
+    sudo apt-get install software-properties-common
+    sudo add-apt-repository ppa:fenics-packages/fenics
+    sudo apt-get update
+    sudo apt-get install --no-install-recommends fenics
+
+Clone Phaseflow's git repository.
 
     git clone https://github.com/geo-fluid-dynamics/phaseflow-fenics.git
     
-Run some of the tests
+Run some of the tests.
 
     python3 -m pytest -v -s -k "lid_driven_cavity" phaseflow-fenics
 
-Exit the container
+## Run Phaseflow in Docker (on any operating system)
+Pull the Docker image and run the container, sharing a folder between the host and container.
+
+    docker run -ti -v $(pwd):/home/fenics/shared --name fenics quay.io/fenicsproject/stable:latest
+
+Install missing dependencies.
+
+    pip3 install --user h5py
+    
+Clone Phaseflow's git repository.
+
+    git clone https://github.com/geo-fluid-dynamics/phaseflow-fenics.git
+    
+Run some of the tests.
+
+    python3 -m pytest -v -s -k "lid_driven_cavity" phaseflow-fenics
+
+Exit the container.
 
     exit
 
 ## Handling the persistent Docker container
-Stop the container
+Stop the container.
 
     docker stop fenics
     
-Start the container, but do not enter it 
+Start the container, but do not enter it.
 
     docker start fenics
     
-Show running containers
+Show running containers.
 
     docker ps
     
-Show all containers, running or not
+Show all containers, running or not.
 
     docker ps -a
     
-Enter the running container with an interactive terminal (Note: "-u fenics" specifies to enter as the fenics user)
+Enter the running container with an interactive terminal (Note: "-u fenics" specifies to enter as the fenics user).
 
     docker exec -ti -u fenics fenics /bin/bash -l
     
