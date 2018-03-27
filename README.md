@@ -4,22 +4,19 @@
 
 <img src="./docs/images/OrthogonalMelting.gif" width="320">
 
-Phaseflow simulates the convection-coupled melting and solidification of phase-change materials (PCM's). We adopt an enthalpy-based, single-domain semi-phase-field, finite element method, with monolithic system coupling and global Newton linearization.
+Phaseflow simulates the convection-coupled melting and solidification of phase-change materials (PCM's). We adopt an enthalpy-based, single-domain semi-phase-field, finite element method, with monolithic system coupling and global Newton linearization. The governing equations are composed of
+- Incompressible flow driven by buoyancy: unsteady Navier-Stokes mass and momentum with Boussinesq approximation
+- Convection-diffusion of the enthalpy field, with an enthalpy source term accounting for the latent heat of the phase-change material
 
-Features include:
+Features include
 - An extensible Python class for time-dependent simulations
 - Checkpointing/restarting using HDF5
 - Goal-oriented adaptive mesh refinement (AMR)
 - Coarsening of time-dependent meshes via re-meshing and projection
 
-
-The model system is composed of
-- Incompressible flow driven by buoyancy: unsteady Navier-Stokes mass and momentum with Boussinesq approximation
-- Convection-diffusion of the enthalpy field, with an enthalpy source term accounting for the latent heat of the phase-change material
-
 Phaseflow spatially discretizes the PDE's with the finite element method, and to this end uses the Python/C++ finite element library [FEniCS](https://fenicsproject.org/). Many other features are provided by FEniCS, including the nonlinear (Newton) solver, goal-oriented adaptive mesh refinement, and solution output to HDF5, among others.
 
-We present the mathematical model, the numerical methods, the Phaseflow implementation and its verification in an accepted proceedings paper, [*Monolithic simulation of convection-coupled phase-change - verification and reproducibility*](https://arxiv.org/abs/1801.03429).
+We present the mathematical model, the numerical methods, the Phaseflow implementation and its verification in an accepted proceedings paper, [*Monolithic simulation of convection-coupled phase-change - verification and reproducibility*](https://arxiv.org/abs/1801.03429). Per the MIT license, you are free to use this code as you wish; but please do cite our paper if this is reasonable.
 
 Author: Alexander G. Zimmerman <alexander.zimmerman@aices.rwth-aachen.de>
 
