@@ -111,3 +111,6 @@ While FEniCS has some nice standard visualization options inline using Python, P
 # For developers:
 ## Project structure
 This project mostly follows the structure suggested by [The Hitchhiker's Guide to Python](http://docs.python-guide.org/en/latest/)
+
+## Guidelines
+Mostly we try to follow PEP proposed guidelines, e.g. [The Zen of Python (PEP 20)](https://www.python.org/dev/peps/pep-0020/), and do not ever `from fenics import *` ([PEP 8](https://www.python.org/dev/peps/pep-0008/)).
