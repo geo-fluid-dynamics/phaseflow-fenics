@@ -39,12 +39,6 @@ Author: Alexander G. Zimmerman <alexander.zimmerman@aices.rwth-aachen.de>
 
     
 # For users:
-## [Docker](https://www.docker.com)
-
-The FEniCS project provides a [Docker image](https://hub.docker.com/r/fenicsproject/stable/) with FEniCS and its dependencies already installed. See their ["FEniCS in Docker" manual](https://fenics.readthedocs.io/projects/containers/en/latest/).
-
-Get the [free community edition of Docker](https://www.docker.com/community-edition).
-
 
 ## Run Phaseflow on Ubuntu 16.04 LTS    
 Install FEniCS.
@@ -63,6 +57,10 @@ Run some of the tests.
     python3 -m pytest -v -s -k "lid_driven_cavity" phaseflow-fenics
 
 ## Run Phaseflow in Docker (on any operating system)
+The FEniCS project provides a [Docker image](https://hub.docker.com/r/fenicsproject/stable/) with FEniCS and its dependencies already installed. See their ["FEniCS in Docker" manual](https://fenics.readthedocs.io/projects/containers/en/latest/).
+
+Get the [free community edition of Docker](https://www.docker.com/community-edition).
+
 Pull the Docker image and run the container, sharing a folder between the host and container.
 
     docker run -ti -v $(pwd):/home/fenics/shared --name fenics quay.io/fenicsproject/stable:latest
