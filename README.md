@@ -58,7 +58,7 @@ Run some of the tests.
 
 Pro tip: Windows 10 now has the Windows Subsystem for Linux. Go to the Microsoft Store and Search "Ubuntu". As of this writing, this gives you a native installation of Ubuntu 16.04 LTS, and this works wonderfully well with FEniCS and Phaseflow.
 
-## Run Phaseflow in Docker (on any operating system)
+## Run Phaseflow in Docker (e.g. on Windows, Mac, many Linux distributions)
 The FEniCS project provides a [Docker image](https://hub.docker.com/r/fenicsproject/stable/) with FEniCS and its dependencies already installed. See their ["FEniCS in Docker" manual](https://fenics.readthedocs.io/projects/containers/en/latest/).
 
 Get the [free community edition of Docker](https://www.docker.com/community-edition).
