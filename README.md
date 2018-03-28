@@ -56,6 +56,8 @@ Run some of the tests.
 
     python3 -m pytest -v -s -k "lid_driven_cavity" phaseflow-fenics
 
+Pro tip: Windows 10 now has the Windows Subsystem for Linux. Go to the Microsoft Store and Search "Ubuntu". As of this writing, this gives you a native installation of Ubuntu 16.04 LTS, and this works wonderfully well with FEniCS and Phaseflow.
+
 ## Run Phaseflow in Docker (on any operating system)
 The FEniCS project provides a [Docker image](https://hub.docker.com/r/fenicsproject/stable/) with FEniCS and its dependencies already installed. See their ["FEniCS in Docker" manual](https://fenics.readthedocs.io/projects/containers/en/latest/).
 
