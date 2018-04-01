@@ -1,7 +1,7 @@
 """ **phasechange_simulation.py** implements the convection-coupled melting of phase-change materials. """
 import fenics
 import phaseflow
-
+import pdb
     
 class PhaseChangeSimulation(phaseflow.simulation.Simulation):
 
@@ -123,19 +123,37 @@ class PhaseChangeSimulation(phaseflow.simulation.Simulation):
     
     def make_time_discrete_terms(self):
     
-        p, u, T = fenics.split(self.state.solution)
+        p_np1, u_np1, T_np1 = fenics.split(self.state.solution)
         
         p_n, u_n, T_n = fenics.split(self.old_state.solution)
         
-        Delta_t = self.fenics_timestep_size
+        t = [self.timestep_size, 0.]
         
-        u_t = self.apply_time_discretization([Delta_t, 0.], [u, u_n])
+        u = [u_np1, u_n]
         
-        T_t = self.apply_time_discretization([Delta_t, 0.], [T, T_n])
+        T = [T_np1, T_n]
         
-        phi = self.make_semi_phasefield_function()
+        _phi = self.make_semi_phasefield_function()
         
-        phi_t = self.apply_time_discretization([Delta_t, 0.], [phi(T), phi(T_n)])  # @todo This is wrong.
+        phi = [_phi(T_np1), _phi(T_n)]
+        
+        if self.time_second_order:
+        
+            t.append(-self.timestep_size)
+        
+            p_nm1, u_nm1, T_nm1 = fenics.split(self.old_old_state.solution)
+            
+            u.append(u_nm1)
+            
+            T.append(T_nm1)
+            
+            phi.append(_phi(T_nm1))
+        
+        u_t = self.apply_time_discretization(t, u)
+        
+        T_t = self.apply_time_discretization(t, T)
+        
+        phi_t = self.apply_time_discretization(t, phi)  # @todo This is wrong.
         
         return u_t, T_t, phi_t
     

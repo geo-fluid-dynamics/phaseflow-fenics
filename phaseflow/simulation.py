@@ -18,21 +18,7 @@ def apply_backward_euler(t, u):
 def apply_bdf2(t, u):
     """ Apply the Gear/BDF2 (fully implicit, second order) backward difference formula for time discretization. 
     
-    Here we use the variable time step size formula given by equation (12) from
-    
-        @article{eckert2004bdf2,
-          title={A BDF2 integration method with step size control for elasto-plasticity},
-          author={Eckert, S and Baaser, H and Gross, D and Scherf, O},
-          journal={Computational Mechanics},
-          volume={34},
-          number={5},
-          pages={377--386},
-          year={2004},
-          publisher={Springer}
-        }
-        
-    which we interpreted in the context of finite difference time discretizations in a PDE,
-    rather than as an ODE solver, by comparing to the constant time step size BDF2 formula in
+    Use the constant time step size scheme from
     
         @article{belhamadia2012enhanced,
           title={An enhanced mathematical model for phase change problems with natural convection},
@@ -43,14 +29,12 @@ def apply_bdf2(t, u):
           pages={192--206},
           year={2012}
         }    
-        
-    Perhaps we could find a reference which derives variable time step size BDF2 
-    in the context of finite difference time discretization,
-    rather than in the context of ODE solvers.
     """
-    tau = fenics.Constant((t[0] - t[1])/(t[1] - t[2]))
+    assert((t[0] - t[1]) == (t[1] - t[2]))
     
-    u_t = (1. + 2.*tau)/(1. + tau)*u[0] - (1. + tau)*u[1] + tau*tau/(1. + tau)*u[2]
+    Delta_t = fenics.Constant(t[0] - t[1])
+    
+    u_t = (3.*u[0] - 4.*u[1] + u[2])/(2.*Delta_t)
     
     return u_t
     
@@ -68,6 +52,8 @@ class Simulation:
         self.quadrature_degree = None  # This by default will use the exact quadrature rule.
         
         self.timestep_size = 1.
+        
+        self.time_second_order = False
         
         self.minimum_timestep_size = 1.e-4
         
@@ -139,6 +125,12 @@ class Simulation:
             self.setup_states()
             
             self.setup_initial_values()
+            
+            if self.time_second_order:
+            
+                self.old_old_state.set_from_other_state(self.old_state)
+            
+                self.old_old_state.time -= self.timestep_size
         
         self.setup_governing_form()
         
@@ -220,9 +212,11 @@ class Simulation:
         
     def setup_states(self):    
         """ Set state objects which contain the solutions. """
+        self.state = phaseflow.state.State(self.function_space, self.element)
+        
         self.old_state = phaseflow.state.State(self.function_space, self.element)
         
-        self.state = phaseflow.state.State(self.function_space, self.element)
+        self.old_old_state = phaseflow.state.State(self.function_space, self.element)
     
     
     def setup_initial_values(self):
@@ -360,6 +354,10 @@ class Simulation:
             
             Without this, exceptions are more likely to corrupt the outputs.
             """
+            if self.time_second_order:
+            
+                self.old_old_state.write_solution(self.solution_file)
+            
             self.old_state.write_solution(self.solution_file)
         
             start_time = 0. + self.old_state.time
@@ -390,7 +388,11 @@ class Simulation:
                         break
                         
                 if self.timestep > 1:  # Set initial values based on previous solution.
-
+                    
+                    if self.time_second_order:
+                    
+                        self.old_old_state.set_from_other_state(self.old_state)
+                    
                     self.old_state.set_from_other_state(self.state)
                     
                     if self.coarsen_between_timesteps:

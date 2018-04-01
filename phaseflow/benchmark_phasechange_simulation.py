@@ -544,6 +544,31 @@ class StefanProblemBenchmarkPhaseChangeSimulation(BenchmarkPhaseChangeSimulation
             verified_values = [1.0, 0.73, 0.47, 0.20, 0.00, -0.01, -0.01],
             relative_tolerance = self.relative_tolerance,
             absolute_tolerance = self.absolute_tolerance)
+
+            
+class StefanProblemBenchmarkPhaseChangeSimulation_BDF2(StefanProblemBenchmarkPhaseChangeSimulation):
+
+    def __init__(self):
+    
+        StefanProblemBenchmarkPhaseChangeSimulation.__init__(self)
+        
+        self.time_second_order = True
+        
+        self.timestep_size = 1.e-3
+        
+        self.adaptive_goal_tolerance = 1.e-7
+        
+        
+    def apply_time_discretization(self, t, u):
+    
+        u_t = phaseflow.simulation.apply_bdf2(t, u)
+        
+        return u_t
+        
+        
+    def setup_initial_guess(self):
+        
+        self.state.set_from_other_state(self.old_state)
         
         
 class ConvectionCoupledMeltingOctadecanePCMBenchmarkPCSimulation(CavityBenchmarkPhaseChangeSimulation):

@@ -38,6 +38,11 @@ def test_stefan_problem_benchmark_with_restart__ci__():
     sim2.run(verify = True)
     
     
+def test_stefan_problem_benchmark_bdf2():
+
+    phaseflow.benchmark_phasechange_simulation.StefanProblemBenchmarkPhaseChangeSimulation_BDF2().run()
+    
+    
 class RegressionTestSimulation( \
         phaseflow.benchmark_phasechange_simulation.ConvectionCoupledMeltingOctadecanePCMBenchmarkPCSimulation):
     """ This modifies the phasechange_simulation melting benchmark for quick regression testing. """
