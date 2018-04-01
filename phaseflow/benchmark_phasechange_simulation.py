@@ -546,7 +546,6 @@ class StefanProblemBenchmarkPhaseChangeSimulation(BenchmarkPhaseChangeSimulation
             absolute_tolerance = self.absolute_tolerance)
         
         
-        
 class ConvectionCoupledMeltingOctadecanePCMBenchmarkPCSimulation(CavityBenchmarkPhaseChangeSimulation):
     """ This class implements the convection-coupled octadecane melting benchmark."""
     def __init__(self):

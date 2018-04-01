@@ -114,6 +114,32 @@ class PhaseChangeSimulation(phaseflow.simulation.Simulation):
         return P
         
     
+    def apply_time_discretization(self, t, u):
+    
+        u_t = phaseflow.simulation.apply_backward_euler(t, u)
+        
+        return u_t
+    
+    
+    def make_time_discrete_terms(self):
+    
+        p, u, T = fenics.split(self.state.solution)
+        
+        p_n, u_n, T_n = fenics.split(self.old_state.solution)
+        
+        Delta_t = self.fenics_timestep_size
+        
+        u_t = self.apply_time_discretization([Delta_t, 0.], [u, u_n])
+        
+        T_t = self.apply_time_discretization([Delta_t, 0.], [T, T_n])
+        
+        phi = self.make_semi_phasefield_function()
+        
+        phi_t = self.apply_time_discretization([Delta_t, 0.], [phi(T), phi(T_n)])  # @todo This is wrong.
+        
+        return u_t, T_t, phi_t
+    
+    
     def setup_governing_form(self):
         """ Implement the variational form per @cite{zimmerman2018monolithic}. """
         Pr = fenics.Constant(self.prandtl_number)
@@ -130,13 +156,11 @@ class PhaseChangeSimulation(phaseflow.simulation.Simulation):
         
         gamma = fenics.Constant(self.penalty_parameter)
         
-        Delta_t = self.fenics_timestep_size
-        
         p, u, T = fenics.split(self.state.solution)
-         
-        p_n, u_n, T_n = fenics.split(self.old_state.solution)
         
-        psi_p, psi_u, psi_T = fenics.TestFunctions(self.state.solution.function_space())
+        u_t, T_t, phi_t = self.make_time_discrete_terms()
+        
+        psi_p, psi_u, psi_T = fenics.TestFunctions(self.function_space)
         
         dx = self.integration_metric
         
@@ -144,10 +168,10 @@ class PhaseChangeSimulation(phaseflow.simulation.Simulation):
         
         self.governing_form = (
             -psi_p*(div(u) + gamma*p)
-            + dot(psi_u, 1./Delta_t*(u - u_n) + f_B(T) + dot(grad(u), u))
+            + dot(psi_u, u_t + f_B(T) + dot(grad(u), u))
             - div(psi_u)*p 
             + 2.*mu(phi(T))*inner(sym(grad(psi_u)), sym(grad(u)))
-            + 1./Delta_t*psi_T*(T - T_n - 1./Ste*(phi(T) - phi(T_n)))
+            + psi_T*(T_t - 1./Ste*phi_t)
             + dot(grad(psi_T), 1./Pr*grad(T) - T*u)
             )*dx
         
