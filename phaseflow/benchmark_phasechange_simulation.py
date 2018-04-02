@@ -308,7 +308,7 @@ class LDCBenchmarkPhaseChangeSimulationWithSolidSubdomain(LidDrivenCavityBenchma
         
         for i in range(self.pci_refinement_cycles):
             
-            edge_markers = fenics.EdgeFunction("bool", self.mesh)
+            edge_markers = fenics.MeshFunction("bool", self.mesh, 1, False)
             
             phase_interface.mark(edge_markers, True)
 
@@ -489,7 +489,7 @@ class StefanProblemBenchmarkPhaseChangeSimulation(BenchmarkPhaseChangeSimulation
         """ Locally refine near the hot boundary """
         for i in range(self.initial_hot_boundary_refinement_cycles):
             
-            cell_markers = fenics.CellFunction("bool", self.mesh)
+            cell_markers = fenics.MeshFunction("bool", self.mesh, 2, False)
             
             cell_markers.set_all(False)
             
@@ -681,7 +681,7 @@ class ConvectionCoupledMeltingOctadecanePCMBenchmarkPCSimulation(CavityBenchmark
         
         for i in range(self.initial_hot_wall_refinement_cycles):
             
-            edge_markers = fenics.EdgeFunction("bool", self.mesh)
+            edge_markers = fenics.MeshFunction("bool", self.mesh, 1, False)
             
             hot_wall.mark(edge_markers, True)
 
@@ -735,7 +735,7 @@ class CCMOctadecanePCMBenchmarkPCSimulation3D(ConvectionCoupledMeltingOctadecane
         """ Replace 2D refinement method with 3D method. Perhaps one could make an n-dimensional method. """
         for i in range(self.initial_hot_wall_refinement_cycles):
         
-            cell_markers = fenics.CellFunction("bool", self.mesh, False)
+            cell_markers = fenics.MeshFunction("bool", self.mesh, self.mesh.topology().dim(), False)
             
             for cell in fenics.cells(self.mesh):
                 

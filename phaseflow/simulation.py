@@ -532,7 +532,7 @@ class Simulation:
             
                 break
                 
-            exceeds_tolerance = fenics.CellFunction("bool", self.mesh.leaf_node())
+            exceeds_tolerance = fenics.MeshFunction("bool", self.mesh.leaf_node(), self.mesh.topology().dim(), False)
 
             exceeds_tolerance.set_all(False)
         
