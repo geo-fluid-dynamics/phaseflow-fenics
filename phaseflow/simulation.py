@@ -323,7 +323,9 @@ class Simulation:
             
             Without this, exceptions are more likely to corrupt the outputs.
             """
-            self.do_before_timesteps()
+            if self.timestep == 0:
+                
+                self.do_before_timesteps()
             
             progress = fenics.Progress("Time-stepping")
             

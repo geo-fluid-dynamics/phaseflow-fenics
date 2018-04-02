@@ -783,6 +783,17 @@ class WaterHeatDrivenCavityBenchmarkPhaseChangeSimulation(HeatDrivenCavityBenchm
 
         self.temperature_element_degree = 2
         
+        self.adaptive_goal_tolerance = 1.e-5
+
+        self.timestep_size = 1.e-3
+
+        self.steady_relative_tolerance = 0.1
+        
+        
+    def do_between_timesteps(self):
+        """ Keep doubling the time step size to quickly reach steady state. """
+        CavityBenchmarkPhaseChangeSimulation.do_between_timesteps(self)
+        
         
     def setup_derived_attributes(self):
     
@@ -882,31 +893,16 @@ class WaterHeatDrivenCavityBenchmarkPhaseChangeSimulation(HeatDrivenCavityBenchm
 
 
     def run(self, verify = True):
-        """ Extend the `phaseflow.octadecane.Simulation.run` method to add a final verification step. 
+        """ Increment the time step size and steady tolerance to more quickly reach steady state. """
+        for i in range(7):
+            
+            phaseflow.phasechange_simulation.PhaseChangeSimulation.run(self)
+            
+            self.set_timestep_size(2.*self.timestep_size)
         
-        Parameters
-        ----------
-        verify : bool
-        
-            This will only call the `self.verify` method if True.
-        """
-        self.adaptive_goal_tolerance = 1.e-5
-
-        self.timestep_size = 1.e-3
-
-        self.steady_relative_tolerance = 1.
-
-        phaseflow.phasechange_simulation.PhaseChangeSimulation.run(self)
-
-        for i in range(1, 4):
-
-            self.timestep_size *= 10.
-        
-            self.steady_relative_tolerance /= 10.
+            self.steady_relative_tolerance /= 2.
 
             self.output_dir += "continue" + str(i) + "/"
-
-            phaseflow.phasechange_simulation.PhaseChangeSimulation.run(self)
 
 
         if verify:
