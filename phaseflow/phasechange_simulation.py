@@ -127,7 +127,7 @@ class PhaseChangeSimulation(phaseflow.simulation.Simulation):
         
         p_n, u_n, T_n = fenics.split(self.old_state.solution)
         
-        t = [self.timestep_size, 0.]
+        t = [self.fenics_timestep_size, 0.]
         
         u = [u_np1, u_n]
         
@@ -137,9 +137,9 @@ class PhaseChangeSimulation(phaseflow.simulation.Simulation):
         
         phi = [_phi(T_np1), _phi(T_n)]
         
-        if self.time_second_order:
+        if self.second_order_time_discretization:
         
-            t.append(-self.timestep_size)
+            t.append(-self.fenics_timestep_size)
         
             p_nm1, u_nm1, T_nm1 = fenics.split(self.old_old_state.solution)
             

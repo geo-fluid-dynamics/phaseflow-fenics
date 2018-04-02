@@ -47,20 +47,13 @@ class Simulation:
     """
     def __init__(self):
         """ Initialize attributes which should be modified by the user before calling `self.run`."""
-        self.end_time = 1.
         
-        self.quadrature_degree = None  # This by default will use the exact quadrature rule.
         
-        self.timestep_size = 1.
-        
-        self.time_second_order = False
-        
-        self.minimum_timestep_size = 1.e-4
-        
-        self.maximum_timestep_size = 1.e12
-        
+        # Adaptive FEM solver
         self.adaptive_goal_tolerance = 1.e12
-
+        
+        
+        # Nonlinear solver
         self.nonlinear_solver_max_iterations = 50
         
         self.nonlinear_solver_absolute_tolerance = 1.e-10
@@ -69,37 +62,101 @@ class Simulation:
         
         self.nonlinear_solver_relaxation = 1.
         
-        self.prefix_output_dir_with_tempdir = False
         
-        self.output_dir = "phaseflow/output/"
+        # Time integration
+        self.end_time = 1.
+        
+        self.timestep_size = 1.
+        
+        self.second_order_time_discretization = False
         
         self.stop_when_steady = False
         
-        self.steady_relative_tolerance = 1.e-4
+        if self.stop_when_steady:
         
-        self.time_epsilon = 1.e-8
-
-        self.timestep = 0
-    
-        self.max_timesteps = 1000000000000
+            self.steady_relative_tolerance = 1.e-4
         
-        self.restarted = False
         
+        # File output
+        self.output_dir = "phaseflow/output/"
+        
+        self.prefix_output_dir_with_tempdir = False
+        
+        
+        # Grid coarsening
         self.coarsen_between_timesteps = False
         
-        self.coarsening_absolute_tolerance = 1.e-3
+        if self.coarsen_between_timesteps:
         
-        self.coarsening_maximum_refinement_cycles = 6
+            self.coarsening_absolute_tolerance = 1.e-3
+            
+            self.coarsening_maximum_refinement_cycles = 6
+            
+            self.coarsening_scalar_solution_component_index = 3
         
-        self.coarsening_scalar_solution_component_index = 3
+        
+        # Quadrature
+        """ The degree of the quadrature rule used for numerical integration. 
+        
+        If `self.quadrature_degree = None`, then the exact quadrature rule will be used.
+        
+        Many of the benchmark tests use the exact quadrature rule.
+        In some cases, setting a lower degree, e.g. `self.quadrature_degree = 8`, leads to great performance benefits.
+        """
+        self.quadrature_degree = None
+        
+        
+        #
+        self.init_hidden_attributes()
+        
+        
+    def setup_coarse_mesh(self):
+        """ This must be overloaded to instantiate a `fenics.Mesh` at `self.mesh`. """
+        raise(NotImplementedError())
+    
 
-        self.element = None
-
-        self.boundary_conditions = ({},)
-
-        self.governing_form = None
-
-        self.fenics_timestep_size = None
+    def setup_element(self):
+        """ This must be overloaded to instantiate a `fenics.MixedElement` at `self.element`. """
+        raise(NotImplementedError())
+    
+    
+    def setup_initial_values(self):
+        """ This must be overloaded to set `self.old_state.solution`. 
+        
+        Often this might involve calling the `self.old_state.interpolate` method.
+        """
+        raise(NotImplementedError())
+        
+        
+    def setup_governing_form(self):
+        """ Set the variational form for the governing equations.
+        
+        This must be overloaded.
+        
+        Optionally, self.derivative_of_governing_form can be set here.
+        Otherwise, the derivative will be computed automatically.
+        """
+        raise(NotImplementedError())
+        
+    
+    def refine_initial_mesh(self):
+        """ Overload this to refine the mesh before adaptive mesh refinement. """
+        pass
+        
+        
+    def init_hidden_attributes(self):
+        """ Initialize attributes which should be hidden from the user. """
+        self.restarted = False
+        
+        self.timestep = 0
+        
+        self.max_timesteps = 1000000000000
+        
+        self.time_epsilon = 1.e-8
+        
+        self.minimum_timestep_size = 1.e-4
+        
+        self.maximum_timestep_size = 1.e12
         
        
     def setup(self):
@@ -122,25 +179,13 @@ class Simulation:
             
             self.setup_initial_values()
             
-            if self.time_second_order:
+            if self.second_order_time_discretization:
             
                 self.old_old_state.set_from_other_state(self.old_state)
             
                 self.old_old_state.time -= self.timestep_size
         
-        self.setup_governing_form()
-        
-        self.setup_boundary_conditions()
-        
-        self.setup_derivative()
-        
-        self.setup_problem()
-        
-        self.setup_adaptive_goal_form()
-        
-        self.setup_solver()
-        
-        self.setup_initial_guess()
+        self.setup_problem_and_solver()
         
         if self.prefix_output_dir_with_tempdir:
         
@@ -154,6 +199,23 @@ class Simulation:
             
                 pprint.pprint(vars(self), simulation_vars_file)
     
+    
+    def setup_problem_and_solver(self):
+    
+        self.setup_governing_form()
+        
+        self.setup_derivative()
+        
+        self.setup_boundary_conditions()
+        
+        self.setup_problem()
+        
+        self.setup_adaptive_goal_form()
+        
+        self.setup_solver()
+        
+        self.setup_initial_guess()
+        
     
     def validate_attributes(self):
         """ Overload this to validate attributes set by the user. 
@@ -177,6 +239,8 @@ class Simulation:
         
     def setup_derived_attributes(self):
         """ Set attributes which shouldn't be touched by the user. """
+        self.fenics_timestep_size = fenics.Constant(self.timestep_size)
+        
         if self.quadrature_degree is None:
         
             self.integration_metric = fenics.dx
@@ -184,23 +248,8 @@ class Simulation:
         else:
         
             self.integration_metric = fenics.dx(metadata={'quadrature_degree': self.quadrature_degree})
+        
     
-    
-    def setup_coarse_mesh(self):
-        """ This must be overloaded to instantiate a `fenics.Mesh` at `self.mesh`. """
-        assert(False)
-    
-
-    def setup_element(self):
-        """ This must be overloaded to instantiate a `fenics.MixedElement` at `self.element`. """
-        assert(False)
-        
-        
-    def refine_initial_mesh(self):
-        """ Overload this to refine the mesh before adaptive mesh refinement. """
-        pass
-        
-        
     def setup_function_space(self):
         """ Set the function space. """
         self.function_space = fenics.FunctionSpace(self.mesh, self.element)
@@ -214,24 +263,12 @@ class Simulation:
         
         self.old_old_state = phaseflow.state.State(self.function_space, self.element)
     
-    
-    def setup_initial_values(self):
-        """ This must be overloaded to set `self.old_state.solution`. 
         
-        Often this might involve calling the `self.old_state.interpolate` method.
-        """
-        assert(False)
-        
-        
-    def setup_governing_form(self):
-        """ Set the variational form for the governing equations.
-        
-        This must be overloaded.
-        
-        Optionally, self.derivative_of_governing_form can be set here.
-        Otherwise, the derivative will be computed automatically.
-        """
-        assert(False)
+    def setup_derivative(self):
+        """ Set the derivative of the governing form, needed for the nonlinear solver. """
+        self.derivative_of_governing_form = fenics.derivative(self.governing_form, 
+            self.state.solution, 
+            fenics.TrialFunction(self.function_space))
         
         
     def setup_boundary_conditions(self):
@@ -249,13 +286,6 @@ class Simulation:
                 fenics.DirichletBC(self.function_space.sub(dict["subspace"]), 
                     dict["value"], 
                     dict["location"]))
-        
-        
-    def setup_derivative(self):
-        """ Set the derivative of the governing form, needed for the nonlinear solver. """
-        self.derivative_of_governing_form = fenics.derivative(self.governing_form, 
-            self.state.solution, 
-            fenics.TrialFunction(self.function_space))
         
         
     def setup_problem(self):
@@ -302,39 +332,6 @@ class Simulation:
         """
         self.state.set_from_other_state(self.old_state)
         
-        
-    def set_timestep_size(self, new_timestep_size):
-        """ When using adaptive time stepping, this sets the time step size.
-        
-        This requires that `self.setup_governing_form` sets `self.fenics_timestep_size`,
-        which must be a `fenics.Constant`. Given that, this calls the `fenics.Constant.assign` 
-        method so that the change affects `self.governing_form`.
-        """
-        if new_timestep_size > self.maximum_timestep_size:
-                        
-            new_timestep_size = self.maximum_timestep_size
-            
-        if new_timestep_size < self.minimum_timestep_size:
-        
-            new_timestep_size = self.minimum_timestep_size
-
-        self.timestep_size = 0. + new_timestep_size
-
-        self.fenics_timestep_size.assign(new_timestep_size)
-            
-        if abs(new_timestep_size - self.timestep_size) > self.time_epsilon:
-            
-            print("Set the time step size to " + str(self.timestep_size))
-    
-
-    def do_between_timesteps(self):
-        """ Overload this with anything you want to be routinely done between time steps.
-        
-        For example: In the heat-driven cavity benchmark, 
-        we keep doubling the time step size to quickly reach steady state.
-        """
-        pass
-    
     
     def run(self):
         """ Run the time-dependent simulation. 
@@ -350,8 +347,6 @@ class Simulation:
 
             self.setup()
         
-        self.set_timestep_size(self.timestep_size)
-
         solution_filepath = self.output_dir + "/solution.xdmf"
     
         with phaseflow.helpers.SolutionFile(solution_filepath) as self.solution_file:
@@ -359,71 +354,35 @@ class Simulation:
             
             Without this, exceptions are more likely to corrupt the outputs.
             """
-            if self.time_second_order:
+            self.do_before_timesteps()
             
-                self.old_old_state.write_solution(self.solution_file)
-            
-            self.old_state.write_solution(self.solution_file)
-        
-            start_time = 0. + self.old_state.time
-
-            if self.end_time is not None:
-            
-                if start_time >= self.end_time - self.time_epsilon:
-            
-                    phaseflow.helpers.print_once(
-                        "Start time is already too close to end time. Only writing initial values.")
-                    
-                    return
-                
-                
-            # Run solver for each time step until reaching end time.
             progress = fenics.Progress("Time-stepping")
-            
-            fenics.set_log_level(fenics.PROGRESS)
             
             first_timestep = self.timestep + 1
 
             for self.timestep in range(first_timestep, self.max_timesteps):
-                
-                if self.end_time is not None:
-                
-                    if(self.state.time > self.end_time - self.time_epsilon):
-                        
-                        break
-                        
-                if self.timestep > 1:  # Set initial values based on previous solution.
+                """ Run solver for each time step until reaching end time or max number of time steps. """
+                if (self.end_time is not None) and (self.state.time > self.end_time - self.time_epsilon):
+                    """ Check if the end time has been reached. """
+                    phaseflow.helpers.print_once("Reached end time, t = " + str(self.end_time))
                     
+                    break
+                        
+                if self.timestep > 1:
+                    """ Handle some operations between time steps. """
                     self.do_between_timesteps()
-                    
-                    if self.time_second_order:
-                    
-                        self.old_old_state.set_from_other_state(self.old_state)
-                    
-                    self.old_state.set_from_other_state(self.state)
-                    
-                    if self.coarsen_between_timesteps:
-                    
-                        self.coarsen()
-                
-                self.state.time = self.old_state.time + self.timestep_size
                 
                 self.solver.solve(self.adaptive_goal_tolerance)
-                
-                phaseflow.helpers.print_once("Reached time t = " + str(self.state.time))
                 
                 self.state.write_solution(self.solution_file)
 
                 self.write_checkpoint()
                 
-                
-                # Check for steady state.
                 if self.stop_when_steady:
-                
+                    """ Check for steady state. """
                     self.compute_unsteadiness()
                     
-                    phaseflow.helpers.print_once(
-                        "Unsteadiness = " + str(self.unsteadiness)
+                    phaseflow.helpers.print_once("Unsteadiness = " + str(self.unsteadiness)
                         + " (Stopping at " + str(self.steady_relative_tolerance) + ")")
                         
                     if (self.unsteadiness < self.steady_relative_tolerance):
@@ -431,17 +390,41 @@ class Simulation:
                         phaseflow.helpers.print_once("Reached steady state at time t = " + str(self.state.time))
                         
                         break
-                    
-                if self.end_time is not None:
                 
-                    progress.update(self.state.time / self.end_time)
-                    
-                    if self.state.time >= (self.end_time - fenics.dolfin.DOLFIN_EPS):
-                    
-                        phaseflow.helpers.print_once("Reached end time, t = " + str(self.end_time))
-                    
-                        break
                 
+    def do_before_timesteps(self):
+    
+        if self.second_order_time_discretization:
+            
+            self.old_old_state.write_solution(self.solution_file)
+        
+        self.old_state.write_solution(self.solution_file)
+        
+        fenics.set_log_level(fenics.PROGRESS)
+            
+
+    def do_between_timesteps(self):
+        """ Handle some operations between time steps, mostly managing solutions at different times.
+        
+        Overload this with anything you want to be routinely done between time steps.
+        
+            For example: In the heat-driven cavity benchmark, 
+            we keep doubling the time step size to quickly reach steady state.
+        """
+        phaseflow.helpers.print_once("Reached time t = " + str(self.state.time))
+        
+        if self.second_order_time_discretization:
+                    
+            self.old_old_state.set_from_other_state(self.old_state)
+        
+        self.old_state.set_from_other_state(self.state)
+        
+        if self.coarsen_between_timesteps:
+        
+            self.coarsen()
+    
+        self.state.time = self.old_state.time + self.timestep_size
+        
         
     def compute_unsteadiness(self):
         """ Set 'unsteadiness' metric to compare to `steady_tolerance` for choosing to stop at steady state. """
@@ -509,6 +492,30 @@ class Simulation:
         self.output_dir += "restarted_t" + str(self.old_state.time) + "/"
         
         
+    def set_timestep_size(self, new_timestep_size):
+        """ When using adaptive time stepping, this sets the time step size.
+        
+        This requires that `self.setup_governing_form` sets `self.fenics_timestep_size`,
+        which must be a `fenics.Constant`. Given that, this calls the `fenics.Constant.assign` 
+        method so that the change affects `self.governing_form`.
+        """
+        if new_timestep_size > self.maximum_timestep_size:
+                        
+            new_timestep_size = self.maximum_timestep_size
+            
+        if new_timestep_size < self.minimum_timestep_size:
+        
+            new_timestep_size = self.minimum_timestep_size
+
+        self.timestep_size = 0. + new_timestep_size
+
+        self.fenics_timestep_size.assign(new_timestep_size)
+            
+        if abs(new_timestep_size - self.timestep_size) > self.time_epsilon:
+            
+            print("Set the time step size to " + str(self.timestep_size))
+            
+        
     def coarsen(self):
         """ Remesh and refine the new mesh until the interpolation error tolerance is met. 
     
@@ -558,19 +565,5 @@ class Simulation:
             
                 break
                 
-                
-        # We broke important references and so have to run the following setup methods again.
-        self.setup_governing_form()
-        
-        self.setup_boundary_conditions()
-        
-        self.setup_derivative()
-        
-        self.setup_problem()
-        
-        self.setup_adaptive_goal_form()
-        
-        self.setup_solver()
-        
-        self.setup_initial_guess()
+        self.setup_problem_and_solver()  # We broke important references 
         

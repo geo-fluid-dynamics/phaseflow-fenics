@@ -357,12 +357,14 @@ class HeatDrivenCavityBenchmarkPhaseChangeSimulation(CavityBenchmarkPhaseChangeS
         
         self.output_dir += "heat_driven_cavity/"
         
-        self.adaptive_goal_tolerance = 10.
+        self.adaptive_goal_tolerance = 20.
         
         
     def do_between_timesteps(self):
         """ Keep doubling the time step size to quickly reach steady state. """
         self.set_timestep_size(2.*self.timestep_size)
+        
+        CavityBenchmarkPhaseChangeSimulation.do_between_timesteps(self)
         
         
     def setup_derived_attributes(self):
@@ -555,7 +557,7 @@ class StefanProblemBenchmarkPhaseChangeSimulation_BDF2(StefanProblemBenchmarkPha
     
         StefanProblemBenchmarkPhaseChangeSimulation.__init__(self)
         
-        self.time_second_order = True
+        self.second_order_time_discretization = True
         
         self.timestep_size = 4.e-3
         
