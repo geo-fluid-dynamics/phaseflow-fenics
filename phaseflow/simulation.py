@@ -141,6 +141,8 @@ class Simulation:
         
         self.maximum_timestep_size = 1.e12
         
+        self.fenics_timestep_size = fenics.Constant(self.timestep_size)
+        
        
     def setup(self):
         """ Set up objects needed before the simulation can run. """
@@ -425,6 +427,10 @@ class Simulation:
         
             h5.write(self.state.solution.leaf_node(), "solution")
             
+            if self.second_order_time_discretization:
+            
+                h5.write(self.old_state.solution.leaf_node(), "old_solution")
+            
         if fenics.MPI.rank(fenics.mpi_comm_world()) is 0:
         
             with h5py.File(checkpoint_filepath, "r+") as h5:
@@ -432,6 +438,10 @@ class Simulation:
                 h5.create_dataset("time", data = self.state.time)
                 
                 h5.create_dataset("timestep_size", data = self.timestep_size)
+                
+                if self.second_order_time_discretization:
+                
+                    h5.create_dataset("old_time", data = self.old_state.time)
         
         
     def read_checkpoint(self, checkpoint_filepath):
@@ -454,11 +464,19 @@ class Simulation:
         
             h5.read(self.old_state.solution, "solution")
             
+            if self.second_order_time_discretization:
+            
+                h5.read(self.old_old_state.solution, "old_solution")
+            
         with h5py.File(checkpoint_filepath, "r") as h5:
                 
             self.old_state.time = h5["time"].value
             
-            self.timestep_size = h5["timestep_size"].value
+            self.set_timestep_size(h5["timestep_size"].value)
+            
+            if self.second_order_time_discretization:
+            
+                self.old_old_state.time = h5["old_time"].value
         
         self.restarted = True
         
