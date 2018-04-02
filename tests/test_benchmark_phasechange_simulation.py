@@ -38,9 +38,10 @@ def test_stefan_problem_benchmark_with_restart__ci__():
     sim2.run(verify = True)
     
     
-def test_stefan_problem_benchmark_bdf2():
+def test_stefan_problem_benchmark_bdf2__ci__():
 
-    phaseflow.benchmark_phasechange_simulation.StefanProblemBenchmarkPhaseChangeSimulation_BDF2().run()
+    phaseflow.helpers.run_simulation_with_temporary_output(
+        phaseflow.benchmark_phasechange_simulation.StefanProblemBenchmarkPhaseChangeSimulation_BDF2().run())
     
     
 class RegressionTestSimulation( \
