@@ -75,11 +75,16 @@ class State:
         for var in [pressure, velocity, temperature]:
         
             file.write(var, self.time)
-            
+    
+
+    def set_solution_from_other_solution(self, other_solution):
+
+        self.solution.leaf_node().vector()[:] = other_solution.leaf_node().vector()
+        
 
     def set_from_other_state(self, other_state):
 
-        self.solution.leaf_node().vector()[:] = other_state.solution.leaf_node().vector()
+        self.set_solution_from_other_solution(other_state.solution)
             
         self.time = 0. + other_state.time
-            
+        

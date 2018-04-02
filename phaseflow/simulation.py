@@ -6,39 +6,6 @@ import pprint
 import h5py
 
 
-def apply_backward_euler(t, u):
-        """ Apply the backward Euler (fully implicit, first order) time discretization method. """
-        Delta_t = fenics.Constant(t[0] - t[1])
-        
-        u_t = (u[0] - u[1])/Delta_t
-        
-        return u_t
-        
-    
-def apply_bdf2(t, u):
-    """ Apply the Gear/BDF2 (fully implicit, second order) backward difference formula for time discretization. 
-    
-    Use the constant time step size scheme from
-    
-        @article{belhamadia2012enhanced,
-          title={An enhanced mathematical model for phase change problems with natural convection},
-          author={Belhamadia, YOUSSEF and Kane, ABDOULAYE S and Fortin, ANDR{\'E}},
-          journal={Int. J. Numer. Anal. Model},
-          volume={3},
-          number={2},
-          pages={192--206},
-          year={2012}
-        }    
-    """
-    assert((t[0] - t[1]) == (t[1] - t[2]))
-    
-    Delta_t = fenics.Constant(t[0] - t[1])
-    
-    u_t = (3.*u[0] - 4.*u[1] + u[2])/(2.*Delta_t)
-    
-    return u_t
-    
-
 class Simulation:
     """ This is a 'god class' which acts as an API for writing Phaseflow models and applications. 
     
@@ -81,18 +48,6 @@ class Simulation:
         self.output_dir = "phaseflow/output/"
         
         self.prefix_output_dir_with_tempdir = False
-        
-        
-        # Grid coarsening
-        self.coarsen_between_timesteps = False
-        
-        if self.coarsen_between_timesteps:
-        
-            self.coarsening_absolute_tolerance = 1.e-3
-            
-            self.coarsening_maximum_refinement_cycles = 6
-            
-            self.coarsening_scalar_solution_component_index = 3
         
         
         # Quadrature
@@ -144,6 +99,26 @@ class Simulation:
         pass
         
         
+    def validate_attributes(self):
+        """ Overload this to validate attributes set by the user. 
+        
+        The goal should be to improve user friendliness, or otherwise reduce lines of user code.
+        
+        For example, phaseflow.octadecane_benchmarks.CavityBenchmarkSimulation overloads
+        .. code-block::python
+        
+            def validate_attributes(self):
+    
+                if type(self.mesh_size) is type(20):
+                
+                    self.mesh_size = (self.mesh_size, self.mesh_size)
+        
+        
+        since the domain is often a unit square discretized uniformly in both directions.
+        """
+        pass
+        
+        
     def init_hidden_attributes(self):
         """ Initialize attributes which should be hidden from the user. """
         self.restarted = False
@@ -185,23 +160,6 @@ class Simulation:
             
                 self.old_old_state.time -= self.timestep_size
         
-        self.setup_problem_and_solver()
-        
-        if self.prefix_output_dir_with_tempdir:
-        
-            self.output_dir = tempfile.mkdtemp() + "/" + self.output_dir
-            
-        phaseflow.helpers.mkdir_p(self.output_dir)
-            
-        if fenics.MPI.rank(fenics.mpi_comm_world()) is 0:
-        
-            with open(self.output_dir + '/simulation_vars.txt', 'w') as simulation_vars_file:
-            
-                pprint.pprint(vars(self), simulation_vars_file)
-    
-    
-    def setup_problem_and_solver(self):
-    
         self.setup_governing_form()
         
         self.setup_derivative()
@@ -216,27 +174,19 @@ class Simulation:
         
         self.setup_initial_guess()
         
+        if self.prefix_output_dir_with_tempdir:
+        
+            self.output_dir = tempfile.mkdtemp() + "/" + self.output_dir
+            
+        phaseflow.helpers.mkdir_p(self.output_dir)
+            
+        if fenics.MPI.rank(fenics.mpi_comm_world()) is 0:
+        
+            with open(self.output_dir + '/simulation_vars.txt', 'w') as simulation_vars_file:
+            
+                pprint.pprint(vars(self), simulation_vars_file)
     
-    def validate_attributes(self):
-        """ Overload this to validate attributes set by the user. 
-        
-        The goal should be to improve user friendliness, or otherwise reduce lines of user code.
-        
-        For example, phaseflow.octadecane_benchmarks.CavityBenchmarkSimulation overloads
-        .. code-block::python
-        
-            def validate_attributes(self):
     
-                if type(self.mesh_size) is type(20):
-                
-                    self.mesh_size = (self.mesh_size, self.mesh_size)
-        
-        
-        since the domain is often a unit square discretized uniformly in both directions.
-        """
-        pass
-
-        
     def setup_derived_attributes(self):
         """ Set attributes which shouldn't be touched by the user. """
         self.fenics_timestep_size = fenics.Constant(self.timestep_size)
@@ -261,7 +211,9 @@ class Simulation:
         
         self.old_state = phaseflow.state.State(self.function_space, self.element)
         
-        self.old_old_state = phaseflow.state.State(self.function_space, self.element)
+        if self.second_order_time_discretization:
+        
+            self.old_old_state = phaseflow.state.State(self.function_space, self.element)
     
         
     def setup_derivative(self):
@@ -330,7 +282,7 @@ class Simulation:
         Using the latest solution as the initial guess should be fine for most applications.
         Otherwise, this must be overloaded.
         """
-        self.state.set_from_other_state(self.old_state)
+        self.state.set_solution_from_other_solution(self.old_state.solution)
         
     
     def run(self):
@@ -371,11 +323,13 @@ class Simulation:
                 if self.timestep > 1:
                     """ Handle some operations between time steps. """
                     self.do_between_timesteps()
+                    
+                self.state.time = self.old_state.time + self.timestep_size
                 
                 self.solver.solve(self.adaptive_goal_tolerance)
                 
                 self.state.write_solution(self.solution_file)
-
+                
                 self.write_checkpoint()
                 
                 if self.stop_when_steady:
@@ -418,12 +372,6 @@ class Simulation:
             self.old_old_state.set_from_other_state(self.old_state)
         
         self.old_state.set_from_other_state(self.state)
-        
-        if self.coarsen_between_timesteps:
-        
-            self.coarsen()
-    
-        self.state.time = self.old_state.time + self.timestep_size
         
         
     def compute_unsteadiness(self):
@@ -514,56 +462,4 @@ class Simulation:
         if abs(new_timestep_size - self.timestep_size) > self.time_epsilon:
             
             print("Set the time step size to " + str(self.timestep_size))
-            
-        
-    def coarsen(self):
-        """ Remesh and refine the new mesh until the interpolation error tolerance is met. 
-    
-        For simplicity, for now we'll consider only one scalar component of the solution.
-        """
-        time = 0. + self.old_state.time
-        
-        fine_solution = self.state.solution.copy(deepcopy = True)
-        
-        self.setup_coarse_mesh()
-        
-        for refinement_cycle in range(self.coarsening_maximum_refinement_cycles):
-            
-            self.setup_function_space()
-            
-            self.setup_states()
-            
-            self.old_state.time = 0. + time
-            
-            self.old_state.solution = fenics.project(fine_solution.leaf_node(), self.function_space.leaf_node())
-            
-            if refinement_cycle == self.coarsening_maximum_refinement_cycles:
-            
-                break
-                
-            exceeds_tolerance = fenics.CellFunction("bool", self.mesh.leaf_node())
-
-            exceeds_tolerance.set_all(False)
-        
-            for cell in fenics.cells(self.mesh.leaf_node()):
-                
-                coarse_value = self.old_state.solution.leaf_node()(cell.midpoint())\
-                    [self.coarsening_scalar_solution_component_index]
-                    
-                fine_value = fine_solution.leaf_node()(cell.midpoint())\
-                    [self.coarsening_scalar_solution_component_index]
-                
-                if (abs(coarse_value - fine_value) > self.coarsening_absolute_tolerance):
-                
-                    exceeds_tolerance[cell] = True
-                
-            if any(exceeds_tolerance):
-                
-                self.mesh = fenics.refine(self.mesh, exceeds_tolerance)
-                
-            else:
-            
-                break
-                
-        self.setup_problem_and_solver()  # We broke important references 
         

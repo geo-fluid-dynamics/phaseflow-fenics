@@ -1,8 +1,8 @@
 """ **benchmark_phasechange_simulation.py** applies the phase-change model to a variety of benchmark problems. """
-import phaseflow
 import fenics
+import phaseflow
 
- 
+
 class BenchmarkPhaseChangeSimulation(phaseflow.phasechange_simulation.PhaseChangeSimulation):
     """ This extends `phaseflow.octadecane.Simulation` with verification methods. """
     def __init__(self):
@@ -563,10 +563,12 @@ class StefanProblemBenchmarkPhaseChangeSimulation_BDF2(StefanProblemBenchmarkPha
         
         self.adaptive_goal_tolerance = 1.e-7
         
+        self.output_dir += "bdf2/"
+        
         
     def apply_time_discretization(self, t, u):
     
-        u_t = phaseflow.simulation.apply_bdf2(t, u)
+        u_t = phaseflow.backward_difference_formulas.apply_bdf2(t, u)
         
         return u_t
         
@@ -621,15 +623,7 @@ class ConvectionCoupledMeltingOctadecanePCMBenchmarkPCSimulation(CavityBenchmark
         
         self.end_time = 80.  # This is close to the time of interest published in @{danaila2014newton}
         
-        self.output_dir += "adaptive_convection_coupled_melting_octadecane_pcm/"
-        
-        self.coarsen_between_timesteps = True
-        
-        self.coarsening_absolute_tolerance = 1.e-3
-        
-        self.coarsening_maximum_refinement_cycles = 6
-        
-        self.coarsening_scalar_solution_component_index = 3
+        self.output_dir += "convection_coupled_melting/"
         
         
     def setup_derived_attributes(self):

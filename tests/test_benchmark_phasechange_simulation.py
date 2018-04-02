@@ -99,7 +99,29 @@ def test_convection_coupled_melting_phasechange_simulation_pcm_regression__ci__(
 
     phaseflow.helpers.run_simulation_with_temporary_output(RegressionTestSimulation())
     
-   
+
+def test_convection_coupled_melting_single_step():
+
+    sim = RegressionTestSimulation()
+    
+    sim.end_time = 0. + sim.timestep_size
+    
+    sim.output_dir += "single_step/"
+    
+    sim.run()
+
+    
+def test_convection_coupled_melting_zero_steps():
+
+    sim = RegressionTestSimulation()
+    
+    sim.end_time = 0.
+    
+    sim.output_dir += "zero_steps/"
+    
+    sim.run()
+    
+    
 def test_water_cavity__ci__():
 
     phaseflow.helpers.run_simulation_with_temporary_output(

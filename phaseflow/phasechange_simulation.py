@@ -1,8 +1,8 @@
 """ **phasechange_simulation.py** implements the convection-coupled melting of phase-change materials. """
 import fenics
 import phaseflow
-import pdb
-    
+
+
 class PhaseChangeSimulation(phaseflow.simulation.Simulation):
 
     def __init__(self):
@@ -38,14 +38,6 @@ class PhaseChangeSimulation(phaseflow.simulation.Simulation):
         self.regularization_smoothing_parameter = 0.01
         
         self.temperature_element_degree = 1
-        
-    
-    def setup_derived_attributes(self):
-        
-        phaseflow.simulation.Simulation.setup_derived_attributes(self)
-        
-        """ We have to handle the time step size carefully for adaptive time stepping. """
-        self.fenics_timestep_size = fenics.Constant(self.timestep_size)
         
         
     def setup_element(self):
@@ -114,9 +106,9 @@ class PhaseChangeSimulation(phaseflow.simulation.Simulation):
         return P
         
     
-    def apply_time_discretization(self, t, u):
+    def apply_time_discretization(self, Delta_t, u):
     
-        u_t = phaseflow.simulation.apply_backward_euler(t, u)
+        u_t = phaseflow.backward_difference_formulas.apply_backward_euler(Delta_t, u)
         
         return u_t
     
@@ -127,8 +119,6 @@ class PhaseChangeSimulation(phaseflow.simulation.Simulation):
         
         p_n, u_n, T_n = fenics.split(self.old_state.solution)
         
-        t = [self.fenics_timestep_size, 0.]
-        
         u = [u_np1, u_n]
         
         T = [T_np1, T_n]
@@ -138,9 +128,7 @@ class PhaseChangeSimulation(phaseflow.simulation.Simulation):
         phi = [_phi(T_np1), _phi(T_n)]
         
         if self.second_order_time_discretization:
-        
-            t.append(-self.fenics_timestep_size)
-        
+            
             p_nm1, u_nm1, T_nm1 = fenics.split(self.old_old_state.solution)
             
             u.append(u_nm1)
@@ -149,11 +137,11 @@ class PhaseChangeSimulation(phaseflow.simulation.Simulation):
             
             phi.append(_phi(T_nm1))
         
-        u_t = self.apply_time_discretization(t, u)
+        u_t = self.apply_time_discretization(self.fenics_timestep_size, u)
         
-        T_t = self.apply_time_discretization(t, T)
+        T_t = self.apply_time_discretization(self.fenics_timestep_size, T)
         
-        phi_t = self.apply_time_discretization(t, phi)  # @todo This is wrong.
+        phi_t = self.apply_time_discretization(self.fenics_timestep_size, phi)  # @todo This is wrong.
         
         return u_t, T_t, phi_t
     
