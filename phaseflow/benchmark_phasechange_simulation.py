@@ -489,7 +489,7 @@ class StefanProblemBenchmarkPhaseChangeSimulation(BenchmarkPhaseChangeSimulation
         """ Locally refine near the hot boundary """
         for i in range(self.initial_hot_boundary_refinement_cycles):
             
-            cell_markers = fenics.MeshFunction("bool", self.mesh, 2, False)
+            cell_markers = fenics.MeshFunction("bool", self.mesh, self.mesh.toplogy().dim(), False)
             
             cell_markers.set_all(False)
             
