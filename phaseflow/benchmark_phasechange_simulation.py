@@ -355,11 +355,14 @@ class HeatDrivenCavityBenchmarkPhaseChangeSimulation(CavityBenchmarkPhaseChangeS
         
         self.steady_relative_tolerance = 1.e-4
         
-        self.adapt_timestep_to_residual = True
-        
         self.output_dir += "heat_driven_cavity/"
         
-        self.adaptive_goal_tolerance = 20.
+        self.adaptive_goal_tolerance = 10.
+        
+        
+    def do_between_timesteps(self):
+        """ Keep doubling the time step size to quickly reach steady state. """
+        self.set_timestep_size(2.*self.timestep_size)
         
         
     def setup_derived_attributes(self):

@@ -77,10 +77,6 @@ class Simulation:
         
         self.steady_relative_tolerance = 1.e-4
         
-        self.adapt_timestep_to_residual = False
-        
-        self.adaptive_time_power = 1.
-        
         self.time_epsilon = 1.e-8
 
         self.timestep = 0
@@ -331,6 +327,15 @@ class Simulation:
             print("Set the time step size to " + str(self.timestep_size))
     
 
+    def do_between_timesteps(self):
+        """ Overload this with anything you want to be routinely done between time steps.
+        
+        For example: In the heat-driven cavity benchmark, 
+        we keep doubling the time step size to quickly reach steady state.
+        """
+        pass
+    
+    
     def run(self):
         """ Run the time-dependent simulation. 
         
@@ -389,6 +394,8 @@ class Simulation:
                         
                 if self.timestep > 1:  # Set initial values based on previous solution.
                     
+                    self.do_between_timesteps()
+                    
                     if self.time_second_order:
                     
                         self.old_old_state.set_from_other_state(self.old_state)
@@ -413,22 +420,18 @@ class Simulation:
                 # Check for steady state.
                 if self.stop_when_steady:
                 
-                    self.check_unsteadiness()
+                    self.compute_unsteadiness()
                     
-                    if (self.unsteadiness < self.steady_relative_tolerance):
-                
-                        steady = True
+                    phaseflow.helpers.print_once(
+                        "Unsteadiness = " + str(self.unsteadiness)
+                        + " (Stopping at " + str(self.steady_relative_tolerance) + ")")
                         
-                        phaseflow.helpers.print_once("Reached steady state at time t = " 
-                            + str(self.state.time))
+                    if (self.unsteadiness < self.steady_relative_tolerance):
+                        
+                        phaseflow.helpers.print_once("Reached steady state at time t = " + str(self.state.time))
                         
                         break
-                        
-                    if self.adapt_timestep_to_residual:
-                        
-                        self.set_timestep_size(
-                            self.timestep_size/self.time_norm_relative_residual**self.adaptive_time_power)
-                            
+                    
                 if self.end_time is not None:
                 
                     progress.update(self.state.time / self.end_time)
@@ -440,20 +443,16 @@ class Simulation:
                         break
                 
         
-    def check_unsteadiness(self):
-        """ Set an 'unsteadiness' metric used for adaptive time stepping. """
+    def compute_unsteadiness(self):
+        """ Set 'unsteadiness' metric to compare to `steady_tolerance` for choosing to stop at steady state. """
         time_residual = fenics.Function(self.state.solution.leaf_node().function_space())
         
         time_residual.assign(self.state.solution.leaf_node() - self.old_state.solution.leaf_node())
         
-        self.time_norm_relative_residual = fenics.norm(time_residual.leaf_node(), "L2")/ \
+        L2_norm_relative_time_residual = fenics.norm(time_residual.leaf_node(), "L2")/ \
             fenics.norm(self.old_state.solution.leaf_node(), "L2")
         
-        self.unsteadiness = self.time_norm_relative_residual/self.timestep_size
-        
-        phaseflow.helpers.print_once(
-            "Unsteadiness L2_norm(w - w_n) / L2_norm(w_n) / Delta_t = " + str(self.unsteadiness)
-            + " (Stopping at " + str(self.steady_relative_tolerance) + ")")
+        self.unsteadiness = L2_norm_relative_time_residual
                 
                 
     def write_checkpoint(self):
