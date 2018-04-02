@@ -1,8 +1,8 @@
 """ **benchmark_phasechange_simulation.py** applies the phase-change model to a variety of benchmark problems. """
-import phaseflow
 import fenics
+import phaseflow
 
- 
+
 class BenchmarkPhaseChangeSimulation(phaseflow.phasechange_simulation.PhaseChangeSimulation):
     """ This extends `phaseflow.octadecane.Simulation` with verification methods. """
     def __init__(self):
@@ -308,7 +308,7 @@ class LDCBenchmarkPhaseChangeSimulationWithSolidSubdomain(LidDrivenCavityBenchma
         
         for i in range(self.pci_refinement_cycles):
             
-            edge_markers = fenics.EdgeFunction("bool", self.mesh)
+            edge_markers = fenics.MeshFunction("bool", self.mesh, 1, False)
             
             phase_interface.mark(edge_markers, True)
 
@@ -355,11 +355,16 @@ class HeatDrivenCavityBenchmarkPhaseChangeSimulation(CavityBenchmarkPhaseChangeS
         
         self.steady_relative_tolerance = 1.e-4
         
-        self.adapt_timestep_to_residual = True
-        
         self.output_dir += "heat_driven_cavity/"
         
         self.adaptive_goal_tolerance = 20.
+        
+        
+    def do_between_timesteps(self):
+        """ Keep doubling the time step size to quickly reach steady state. """
+        CavityBenchmarkPhaseChangeSimulation.do_between_timesteps(self)
+        
+        self.set_timestep_size(2.*self.timestep_size)
         
         
     def setup_derived_attributes(self):
@@ -403,8 +408,8 @@ class HeatDrivenCavityBenchmarkPhaseChangeSimulation(CavityBenchmarkPhaseChangeS
                 for val in [0.0000, -0.0649, -0.0194, 0.0000, 0.0194, 0.0649, 0.0000]],
             relative_tolerance = 1.e-2,
             absolute_tolerance = 1.e-2*0.0649*self.rayleigh_number**0.5/self.prandtl_number)
-    
-    
+
+   
 class StefanProblemBenchmarkPhaseChangeSimulation(BenchmarkPhaseChangeSimulation):
     """ This class implements the 1D Stefan problem benchmark. """
     def __init__(self):
@@ -484,7 +489,7 @@ class StefanProblemBenchmarkPhaseChangeSimulation(BenchmarkPhaseChangeSimulation
         """ Locally refine near the hot boundary """
         for i in range(self.initial_hot_boundary_refinement_cycles):
             
-            cell_markers = fenics.CellFunction("bool", self.mesh)
+            cell_markers = fenics.MeshFunction("bool", self.mesh, self.mesh.topology().dim(), False)
             
             cell_markers.set_all(False)
             
@@ -544,7 +549,33 @@ class StefanProblemBenchmarkPhaseChangeSimulation(BenchmarkPhaseChangeSimulation
             verified_values = [1.0, 0.73, 0.47, 0.20, 0.00, -0.01, -0.01],
             relative_tolerance = self.relative_tolerance,
             absolute_tolerance = self.absolute_tolerance)
+
+            
+class StefanProblemBenchmarkPhaseChangeSimulation_BDF2(StefanProblemBenchmarkPhaseChangeSimulation):
+
+    def __init__(self):
+    
+        StefanProblemBenchmarkPhaseChangeSimulation.__init__(self)
         
+        self.second_order_time_discretization = True
+        
+        self.timestep_size = 4.e-3
+        
+        self.adaptive_goal_tolerance = 1.e-7
+        
+        self.output_dir += "bdf2/"
+        
+        
+    def apply_time_discretization(self, Delta_t, u):
+    
+        u_t = phaseflow.backward_difference_formulas.apply_bdf2(Delta_t, u)
+        
+        return u_t
+        
+        
+    def setup_initial_guess(self):
+        
+        self.state.set_from_other_state(self.old_state)
         
         
 class ConvectionCoupledMeltingOctadecanePCMBenchmarkPCSimulation(CavityBenchmarkPhaseChangeSimulation):
@@ -592,15 +623,9 @@ class ConvectionCoupledMeltingOctadecanePCMBenchmarkPCSimulation(CavityBenchmark
         
         self.end_time = 80.  # This is close to the time of interest published in @{danaila2014newton}
         
-        self.output_dir += "adaptive_convection_coupled_melting_octadecane_pcm/"
+        self.output_dir += "convection_coupled_melting/"
         
         self.coarsen_between_timesteps = True
-        
-        self.coarsening_absolute_tolerance = 1.e-3
-        
-        self.coarsening_maximum_refinement_cycles = 6
-        
-        self.coarsening_scalar_solution_component_index = 3
         
         
     def setup_derived_attributes(self):
@@ -656,7 +681,7 @@ class ConvectionCoupledMeltingOctadecanePCMBenchmarkPCSimulation(CavityBenchmark
         
         for i in range(self.initial_hot_wall_refinement_cycles):
             
-            edge_markers = fenics.EdgeFunction("bool", self.mesh)
+            edge_markers = fenics.MeshFunction("bool", self.mesh, 1, False)
             
             hot_wall.mark(edge_markers, True)
 
@@ -710,7 +735,7 @@ class CCMOctadecanePCMBenchmarkPCSimulation3D(ConvectionCoupledMeltingOctadecane
         """ Replace 2D refinement method with 3D method. Perhaps one could make an n-dimensional method. """
         for i in range(self.initial_hot_wall_refinement_cycles):
         
-            cell_markers = fenics.CellFunction("bool", self.mesh, False)
+            cell_markers = fenics.MeshFunction("bool", self.mesh, self.mesh.topology().dim(), False)
             
             for cell in fenics.cells(self.mesh):
                 
@@ -757,6 +782,17 @@ class WaterHeatDrivenCavityBenchmarkPhaseChangeSimulation(HeatDrivenCavityBenchm
         self.quadrature_degree = 8
 
         self.temperature_element_degree = 2
+        
+        self.adaptive_goal_tolerance = 1.e-5
+
+        self.timestep_size = 1.e-3
+
+        self.steady_relative_tolerance = 0.1
+        
+        
+    def do_between_timesteps(self):
+        """ Keep doubling the time step size to quickly reach steady state. """
+        CavityBenchmarkPhaseChangeSimulation.do_between_timesteps(self)
         
         
     def setup_derived_attributes(self):
@@ -857,31 +893,16 @@ class WaterHeatDrivenCavityBenchmarkPhaseChangeSimulation(HeatDrivenCavityBenchm
 
 
     def run(self, verify = True):
-        """ Extend the `phaseflow.octadecane.Simulation.run` method to add a final verification step. 
+        """ Increment the time step size and steady tolerance to more quickly reach steady state. """
+        for i in range(7):
+            
+            phaseflow.phasechange_simulation.PhaseChangeSimulation.run(self)
+            
+            self.set_timestep_size(2.*self.timestep_size)
         
-        Parameters
-        ----------
-        verify : bool
-        
-            This will only call the `self.verify` method if True.
-        """
-        self.adaptive_goal_tolerance = 1.e-5
-
-        self.timestep_size = 1.e-3
-
-        self.steady_relative_tolerance = 1.
-
-        phaseflow.phasechange_simulation.PhaseChangeSimulation.run(self)
-
-        for i in range(1, 4):
-
-            self.timestep_size *= 10.
-        
-            self.steady_relative_tolerance /= 10.
+            self.steady_relative_tolerance /= 2.
 
             self.output_dir += "continue" + str(i) + "/"
-
-            phaseflow.phasechange_simulation.PhaseChangeSimulation.run(self)
 
 
         if verify:

@@ -13,7 +13,7 @@ def test_heat_driven_cavity_benchmark__ci__():
     
     phaseflow.helpers.run_simulation_with_temporary_output(
         phaseflow.benchmark_phasechange_simulation.HeatDrivenCavityBenchmarkPhaseChangeSimulation())
-        
+
     
 def test_stefan_problem_benchmark_with_restart__ci__():
     """ This tests that restarting does not affect time accuracy. """
@@ -36,6 +36,12 @@ def test_stefan_problem_benchmark_with_restart__ci__():
     sim2.prefix_output_dir_with_tempdir = True
     
     sim2.run(verify = True)
+    
+    
+def test_stefan_problem_benchmark_bdf2__ci__():
+
+    phaseflow.helpers.run_simulation_with_temporary_output(
+        phaseflow.benchmark_phasechange_simulation.StefanProblemBenchmarkPhaseChangeSimulation_BDF2())
     
     
 class RegressionTestSimulation( \
@@ -93,7 +99,29 @@ def test_convection_coupled_melting_phasechange_simulation_pcm_regression__ci__(
 
     phaseflow.helpers.run_simulation_with_temporary_output(RegressionTestSimulation())
     
-   
+
+def test_convection_coupled_melting_single_step():
+
+    sim = RegressionTestSimulation()
+    
+    sim.end_time = 0. + sim.timestep_size
+    
+    sim.output_dir += "single_step/"
+    
+    sim.run()
+
+    
+def test_convection_coupled_melting_zero_steps():
+
+    sim = RegressionTestSimulation()
+    
+    sim.end_time = 0.
+    
+    sim.output_dir += "zero_steps/"
+    
+    sim.run()
+    
+    
 def test_water_cavity__ci__():
 
     phaseflow.helpers.run_simulation_with_temporary_output(
