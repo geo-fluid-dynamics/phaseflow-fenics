@@ -13,7 +13,7 @@ def test_heat_driven_cavity_benchmark__ci__():
     
     phaseflow.helpers.run_simulation_with_temporary_output(
         phaseflow.benchmark_phasechange_simulation.HeatDrivenCavityBenchmarkPhaseChangeSimulation())
-        
+
     
 def test_stefan_problem_benchmark_with_restart__ci__():
     """ This tests that restarting does not affect time accuracy. """

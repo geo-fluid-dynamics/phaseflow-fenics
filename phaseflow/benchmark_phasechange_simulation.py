@@ -362,9 +362,9 @@ class HeatDrivenCavityBenchmarkPhaseChangeSimulation(CavityBenchmarkPhaseChangeS
         
     def do_between_timesteps(self):
         """ Keep doubling the time step size to quickly reach steady state. """
-        self.set_timestep_size(2.*self.timestep_size)
-        
         CavityBenchmarkPhaseChangeSimulation.do_between_timesteps(self)
+        
+        self.set_timestep_size(2.*self.timestep_size)
         
         
     def setup_derived_attributes(self):
@@ -408,8 +408,8 @@ class HeatDrivenCavityBenchmarkPhaseChangeSimulation(CavityBenchmarkPhaseChangeS
                 for val in [0.0000, -0.0649, -0.0194, 0.0000, 0.0194, 0.0649, 0.0000]],
             relative_tolerance = 1.e-2,
             absolute_tolerance = 1.e-2*0.0649*self.rayleigh_number**0.5/self.prandtl_number)
-    
-    
+
+   
 class StefanProblemBenchmarkPhaseChangeSimulation(BenchmarkPhaseChangeSimulation):
     """ This class implements the 1D Stefan problem benchmark. """
     def __init__(self):
@@ -566,9 +566,9 @@ class StefanProblemBenchmarkPhaseChangeSimulation_BDF2(StefanProblemBenchmarkPha
         self.output_dir += "bdf2/"
         
         
-    def apply_time_discretization(self, t, u):
+    def apply_time_discretization(self, Delta_t, u):
     
-        u_t = phaseflow.backward_difference_formulas.apply_bdf2(t, u)
+        u_t = phaseflow.backward_difference_formulas.apply_bdf2(Delta_t, u)
         
         return u_t
         

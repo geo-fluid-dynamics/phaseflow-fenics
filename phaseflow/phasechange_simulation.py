@@ -137,11 +137,19 @@ class PhaseChangeSimulation(phaseflow.simulation.Simulation):
             
             phi.append(_phi(T_nm1))
         
-        u_t = self.apply_time_discretization(self.fenics_timestep_size, u)
+        if self.second_order_time_discretization:
         
-        T_t = self.apply_time_discretization(self.fenics_timestep_size, T)
+            Delta_t = [self.fenics_timestep_size, self.old_fenics_timestep_size]
+            
+        else:
         
-        phi_t = self.apply_time_discretization(self.fenics_timestep_size, phi)  # @todo This is wrong.
+            Delta_t = self.fenics_timestep_size
+        
+        u_t = self.apply_time_discretization(Delta_t, u)
+        
+        T_t = self.apply_time_discretization(Delta_t, T)
+        
+        phi_t = self.apply_time_discretization(Delta_t, phi)  # @todo This is wrong.
         
         return u_t, T_t, phi_t
     

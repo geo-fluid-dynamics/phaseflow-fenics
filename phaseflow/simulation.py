@@ -204,6 +204,10 @@ class Simulation:
         """ Set attributes which shouldn't be touched by the user. """
         self.fenics_timestep_size = fenics.Constant(self.timestep_size)
         
+        if self.second_order_time_discretization:
+        
+            self.old_fenics_timestep_size = fenics.Constant(self.timestep_size)
+        
         if self.quadrature_degree is None:
         
             self.integration_metric = fenics.dx
@@ -387,6 +391,8 @@ class Simulation:
         if self.second_order_time_discretization:
                     
             self.old_old_state.set_from_other_state(self.old_state)
+            
+            self.old_fenics_timestep_size.assign(self.timestep_size)
         
         self.old_state.set_from_other_state(self.state)
         
