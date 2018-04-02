@@ -554,7 +554,7 @@ class StefanProblemBenchmarkPhaseChangeSimulation_BDF2(StefanProblemBenchmarkPha
         
         self.time_second_order = True
         
-        self.timestep_size = 1.e-3
+        self.timestep_size = 4.e-3
         
         self.adaptive_goal_tolerance = 1.e-7
         
