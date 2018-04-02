@@ -39,9 +39,7 @@ class Simulation:
         
         self.stop_when_steady = False
         
-        if self.stop_when_steady:
-        
-            self.steady_relative_tolerance = 1.e-4
+        self.steady_relative_tolerance = 1.e-4
         
         
         # File output
@@ -59,6 +57,16 @@ class Simulation:
         In some cases, setting a lower degree, e.g. `self.quadrature_degree = 8`, leads to great performance benefits.
         """
         self.quadrature_degree = None
+        
+        
+        # Grid coarsening
+        self.coarsen_between_timesteps = False
+        
+        self.coarsening_absolute_tolerance = 1.e-3
+        
+        self.coarsening_maximum_refinement_cycles = 6
+        
+        self.coarsening_scalar_solution_component_index = 3
         
         
         #
@@ -160,19 +168,7 @@ class Simulation:
             
                 self.old_old_state.time -= self.timestep_size
         
-        self.setup_governing_form()
-        
-        self.setup_derivative()
-        
-        self.setup_boundary_conditions()
-        
-        self.setup_problem()
-        
-        self.setup_adaptive_goal_form()
-        
-        self.setup_solver()
-        
-        self.setup_initial_guess()
+        self.setup_problem_and_solver()
         
         if self.prefix_output_dir_with_tempdir:
         
@@ -185,6 +181,23 @@ class Simulation:
             with open(self.output_dir + '/simulation_vars.txt', 'w') as simulation_vars_file:
             
                 pprint.pprint(vars(self), simulation_vars_file)
+    
+    
+    def setup_problem_and_solver(self):
+        """ Set up the `fenics.NonlinearVariationalProblem` and `fenics.AdaptiveNonlinearVariationalSolver`. """
+        self.setup_governing_form()
+        
+        self.setup_boundary_conditions()
+        
+        self.setup_derivative()
+        
+        self.setup_problem()
+        
+        self.setup_adaptive_goal_form()
+        
+        self.setup_solver()
+        
+        self.setup_initial_guess()
     
     
     def setup_derived_attributes(self):
@@ -324,6 +337,10 @@ class Simulation:
                     """ Handle some operations between time steps. """
                     self.do_between_timesteps()
                     
+                    if self.coarsen_between_timesteps:
+                    
+                        self.coarsen()
+                    
                 self.state.time = self.old_state.time + self.timestep_size
                 
                 self.solver.solve(self.adaptive_goal_tolerance)
@@ -462,4 +479,56 @@ class Simulation:
         if abs(new_timestep_size - self.timestep_size) > self.time_epsilon:
             
             print("Set the time step size to " + str(self.timestep_size))
+        
+        
+    def coarsen(self):
+        """ Remesh and refine the new mesh until the interpolation error tolerance is met. 
+    
+        For simplicity, for now we'll consider only one scalar component of the solution.
+        """
+        time = 0. + self.old_state.time
+        
+        fine_solution = self.state.solution.copy(deepcopy = True)
+        
+        self.setup_coarse_mesh()
+        
+        for refinement_cycle in range(self.coarsening_maximum_refinement_cycles):
+            
+            self.setup_function_space()
+            
+            self.setup_states()
+            
+            self.old_state.time = 0. + time
+            
+            self.old_state.solution = fenics.project(fine_solution.leaf_node(), self.function_space.leaf_node())
+            
+            if refinement_cycle == self.coarsening_maximum_refinement_cycles:
+            
+                break
+                
+            exceeds_tolerance = fenics.CellFunction("bool", self.mesh.leaf_node())
+
+            exceeds_tolerance.set_all(False)
+        
+            for cell in fenics.cells(self.mesh.leaf_node()):
+                
+                coarse_value = self.old_state.solution.leaf_node()(cell.midpoint())\
+                    [self.coarsening_scalar_solution_component_index]
+                    
+                fine_value = fine_solution.leaf_node()(cell.midpoint())\
+                    [self.coarsening_scalar_solution_component_index]
+                
+                if (abs(coarse_value - fine_value) > self.coarsening_absolute_tolerance):
+                
+                    exceeds_tolerance[cell] = True
+                
+            if any(exceeds_tolerance):
+                
+                self.mesh = fenics.refine(self.mesh, exceeds_tolerance)
+                
+            else:
+            
+                break
+        
+        self.setup_problem_and_solver()  # We broke important references.
         

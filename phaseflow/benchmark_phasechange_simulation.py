@@ -625,6 +625,8 @@ class ConvectionCoupledMeltingOctadecanePCMBenchmarkPCSimulation(CavityBenchmark
         
         self.output_dir += "convection_coupled_melting/"
         
+        self.coarsen_between_timesteps = True
+        
         
     def setup_derived_attributes(self):
         """ Add attributes which should not be modified directly,
