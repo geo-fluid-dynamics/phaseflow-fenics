@@ -79,32 +79,6 @@ Run some of the tests.
 
     python3 -m pytest -v -s -k "lid_driven_cavity" phaseflow-fenics
 
-Exit the container.
-
-    exit
-
-## Handling the persistent Docker container
-Stop the container.
-
-    docker stop fenics
-    
-Start the container, but do not enter it.
-
-    docker start fenics
-    
-Show running containers.
-
-    docker ps
-    
-Show all containers, running or not.
-
-    docker ps -a
-    
-Enter the running container with an interactive terminal (Note: "-u fenics" specifies to enter as the fenics user).
-
-    docker exec -ti -u fenics fenics /bin/bash -l
-    
-    
 ## Visualizing results
 While FEniCS has some nice standard visualization options inline using Python, Phaseflow (using built-in methods in FEniCS) typically writes solutions to the XDMF format, which stores the data using HDF5 and adds an XML interface so that the data can be properly parsed by common open-source visualization tools (e.g. [ParaView](https://www.paraview.org/) or [VisIt](https://wci.llnl.gov/simulation/computer-codes/visit/)).
     
