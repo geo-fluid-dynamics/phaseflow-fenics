@@ -188,4 +188,29 @@ class PhaseChangeSimulation(phaseflow.simulation.Simulation):
             + psi_T*(T_t - 1./Ste*phi_t)
             + dot(grad(psi_T), 1./Pr*grad(T) - T*u)
             )*dx
-        
+       
+
+    def write_solution(self, file, state):
+        """ Write the solution to a file.
+
+        Parameters
+        ----------
+        file : phaseflow.helpers.SolutionFile
+
+            This method should have been called from within the context of the open `file`.
+        """
+        phaseflow.helpers.print_once("Writing solution to " + str(file.path))
+
+        pressure, velocity, temperature = state.solution.leaf_node().split()
+
+        pressure.rename("p", "pressure")
+
+        velocity.rename("u", "velocity")
+
+        temperature.rename("T", "temperature")
+
+        for var in [pressure, velocity, temperature]:
+
+            file.write(var, state.time)
+
+ 
