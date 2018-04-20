@@ -258,6 +258,13 @@ class Simulation:
                     dict["value"], 
                     dict["location"]))
         
+
+    def apply_time_discretization(self, Delta_t, u):
+    
+        u_t = phaseflow.backward_difference_formulas.apply_backward_euler(Delta_t, u)
+        
+        return u_t
+
         
     def setup_problem(self):
         """ Set the `fenics.NonlinearVariationalProblem`. """
@@ -353,7 +360,7 @@ class Simulation:
                 
                 self.solver.solve(self.adaptive_goal_tolerance)
                 
-                self.state.write_solution(self.solution_file)
+                self.write_solution(self.solution_file, self.state)
                 
                 self.write_checkpoint()
                 
@@ -375,9 +382,9 @@ class Simulation:
     
         if self.second_order_time_discretization:
             
-            self.old_old_state.write_solution(self.solution_file)
+            self.write_solution(self.solution_file, self.old_old_state)
         
-        self.old_state.write_solution(self.solution_file)
+        self.write_solution(self.solution_file, self.old_state)
         
         fenics.set_log_level(fenics.PROGRESS)
             
@@ -411,8 +418,24 @@ class Simulation:
             fenics.norm(self.old_state.solution.leaf_node(), "L2")
         
         self.unsteadiness = L2_norm_relative_time_residual
+
                 
-                
+    def write_solution(self, file, state):
+        """ Write the solution to a file.
+
+        Parameters
+        ----------
+        file : phaseflow.helpers.SolutionFile
+
+            This method should have been called from within the context of the open `file`.
+        """
+        phaseflow.helpers.print_once("Writing solution to " + str(file.path))
+
+        for var in state.solution.leaf_node().split():
+
+            file.write(var, state.time)
+
+ 
     def write_checkpoint(self):
         """Write checkpoint file (with solution and time) to disk."""
         checkpoint_filepath = self.output_dir + "checkpoint_t" + str(self.state.time) + ".h5"

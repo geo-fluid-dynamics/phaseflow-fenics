@@ -49,34 +49,6 @@ class State:
         self.solution.leaf_node().vector()[:] = interpolated_solution.leaf_node().vector() 
         
     
-    def write_solution(self, file):
-        """ Write the solution to a file.
-        
-        This assumes that `self.state.solution` has exactly three parts, including, in order, 
-        the pressure, velocity, and temperature. 
-        For other types of solutions, e.g. with more variables, this method must be overloaded.
-        
-        Parameters
-        ----------
-        file : phaseflow.helpers.SolutionFile
-        
-            This method should have been called from within the context of the open `file`.
-        """
-        phaseflow.helpers.print_once("Writing solution to " + str(file.path))
-        
-        pressure, velocity, temperature = self.solution.leaf_node().split()
-    
-        pressure.rename("p", "pressure")
-        
-        velocity.rename("u", "velocity")
-        
-        temperature.rename("T", "temperature")
-        
-        for var in [pressure, velocity, temperature]:
-        
-            file.write(var, self.time)
-    
-
     def set_solution_from_other_solution(self, other_solution):
 
         self.solution.leaf_node().vector()[:] = other_solution.leaf_node().vector()

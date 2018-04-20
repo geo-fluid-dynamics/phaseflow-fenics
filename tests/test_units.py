@@ -19,7 +19,7 @@ def test_1d_output_unit__ci__():
     with phaseflow.helpers.SolutionFile(tempfile.mkdtemp() + "/output/test_1D_output/solution.xdmf") \
             as solution_file:
      
-        state.write_solution(solution_file)
+        sim.write_solution(solution_file, state)
     
         
 def test_1d_velocity_unit__ci__():
