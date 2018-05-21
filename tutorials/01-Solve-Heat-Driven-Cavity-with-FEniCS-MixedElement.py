@@ -7,13 +7,11 @@ N = 4
 mesh = fenics.UnitSquareMesh(N, N)
 
 
-p_ele = fenics.FiniteElement('P', mesh.ufl_cell(), 1)
+P1 = fenics.FiniteElement('P', mesh.ufl_cell(), 1)
 
-u_ele = fenics.VectorElement('P', mesh.ufl_cell(), 2)
+P2 = fenics.VectorElement('P', mesh.ufl_cell(), 2)
 
-T_ele = fenics.FiniteElement('P', mesh.ufl_cell(), 1)
-
-mixed_element = fenics.MixedElement([p_ele, u_ele, T_ele])
+mixed_element = fenics.MixedElement([P1, P2, P1])
 
 W = fenics.FunctionSpace(mesh, mixed_element)
 
@@ -66,6 +64,19 @@ Delta_t = fenics.Constant(timestep_size)
 u_t = (u - u_n)/Delta_t
 
 T_t = (T - T_n)/Delta_t
+
+
+inner, dot, grad, div, sym = \
+    fenics.inner, fenics.dot, fenics.grad, fenics.div, fenics.sym
+    
+mass = -psi_p*div(u)
+
+momentum = dot(psi_u, u_t + dot(grad(u), u) + f_B) - div(psi_u)*p \
+    + 2.*mu*inner(sym(grad(psi_u)), sym(grad(u)))
+
+energy = psi_T*T_t + dot(grad(psi_T), 1./Pr*grad(T) - T*u)
+        
+F = (mass + momentum + energy)*fenics.dx
 
 
 penalty_stabilization_parameter = 1.e-7
