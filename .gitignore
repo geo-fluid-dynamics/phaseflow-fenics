@@ -10,6 +10,6 @@ dist
 phaseflow.egg-info
 log.txt
 .coverage
-notebooks/.ipynb_checkpoints/
+**/.ipynb_checkpoints/
 .pytest_cache/
 .vscode
