@@ -42,6 +42,8 @@ def apply_bdf2(Delta_t, u):
     rather than in the context of ODE solvers.
     """
     tau = Delta_t[0]/Delta_t[1]
+        
+    assert(tau < 1. + fenics.sqrt(2.))  # This is necessary for second order accuracy.
     
     u_t = 1./Delta_t[0]*((1. + 2.*tau)/(1. + tau)*u[0] - (1. + tau)*u[1] + tau*tau/(1. + tau)*u[2])
     
