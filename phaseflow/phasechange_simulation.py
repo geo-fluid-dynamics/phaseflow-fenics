@@ -1,216 +1,314 @@
-""" **phasechange_simulation.py** implements the convection-coupled melting of phase-change materials. """
-import fenics
+""" **phaseflow.py** provides an abstract class for convection-coupled phase-change simulations. 
+
+This also includes a class which implements a convection-coupled melting benchmark simulation.
+"""
 import phaseflow
+import fenics
+import matplotlib
+import math
 
 
-class PhaseChangeSimulation(phaseflow.simulation.Simulation):
-
-    def __init__(self):
-        """ This extends the `__init__` method with attributes for the convection-coupled phase-change model. """
-        phaseflow.simulation.Simulation.__init__(self)
-        
-        self.timestep_size = 1.
-        
-        self.rayleigh_number = 1.
-        
-        self.prandtl_number = 1.
-        
-        self.stefan_number = 1.
-        
-        self.gravity = (0., -1.)
-        
-        self.liquid_viscosity = 1.
-        
-        self.liquid_thermal_conductivity = 1.
-        
-        self.liquid_heat_capacity = 1.
-        
-        self.solid_viscosity = 1.e8
-        
-        self.solid_thermal_conductivity = 1.
-        
-        self.solid_heat_capacity = 1.
-        
-        self.penalty_parameter = 1.e-7
-        
-        self.regularization_central_temperature = 0.
-        
-        self.regularization_smoothing_parameter = 0.01
-        
-        self.temperature_element_degree = 1
-        
-        
-    def setup_element(self):
-        """ Implement the mixed element per @cite{danaila2014newton}. """
-        pressure_element = fenics.FiniteElement("P", 
-            self.mesh.ufl_cell(), self.temperature_element_degree)
-        
-        velocity_element = fenics.VectorElement("P", 
-            self.mesh.ufl_cell(), self.temperature_element_degree + 1)
-
-        temperature_element = fenics.FiniteElement(
-            "P", self.mesh.ufl_cell(), self.temperature_element_degree)
-        
-        self.element = fenics.MixedElement([pressure_element, velocity_element, temperature_element])
-        
-        
-    def make_buoyancy_function(self):
-
-        Pr = fenics.Constant(self.prandtl_number)
-        
-        Ra = fenics.Constant(self.rayleigh_number)
-        
-        g = fenics.Constant(self.gravity)
-        
-        def f_B(T):
-            """ Idealized linear Boussinesq Buoyancy with $Re = 1$ """
-            return T*Ra*g/Pr
-            
-        return f_B
-        
+class AbstractSimulation(phaseflow.simulation.AbstractSimulation):
+    """ Implement the general model for phase-change coupled with natural and compositional convection.
     
-    def make_semi_phasefield_function(self):
-        """ Semi-phase-field mapping from temperature """
-        T_r = fenics.Constant(self.regularization_central_temperature)
+    This class is abstract, because an instantiable simulation still requires 
+    definitions for the mesh, initial values, and boundary conditions. """
+    def __init__(self, time_order = 1, integration_measure = fenics.dx):
         
-        r = fenics.Constant(self.regularization_smoothing_parameter)
+        self.temperature_rayleigh_number = fenics.Constant(1., name = "Ra_T")
         
-        def phi(T):
+        self.concentration_rayleigh_number = fenics.Constant(1., name = "Ra_C")
         
-            return 0.5*(1. + fenics.tanh((T_r - T)/r))
+        self.prandtl_number = fenics.Constant(1., name = "Pr")
+        
+        self.stefan_number = fenics.Constant(1., name = "Ste")
+        
+        self.lewis_number = fenics.Constant(1., name = "Le")
+        
+        self.pure_liquidus_temperature = fenics.Constant(0., name = "T_m")
+        
+        self.liquidus_slope = fenics.Constant(-1., name = "m_L")
+        
+        self.liquid_viscosity = fenics.Constant(1., name = "mu_L")
+        
+        self.solid_viscosity = fenics.Constant(1.e8, name = "mu_S")
+        
+        self.pressure_penalty_factor = fenics.Constant(1.e-7, name = "gamma")
+        
+        self.regularization_central_temperature_offset = fenics.Constant(0., name = "delta_T")
+        
+        self.regularization_smoothing_parameter = fenics.Constant(0.01, name = "r")
     
-        return phi
+        super().__init__(time_order = time_order, integration_measure = integration_measure)
+    
+    def phi(self, T, C, T_m, m_L, delta_T, r):
+    
+        T_L = delta_T + T_m + m_L*C
         
+        tanh = fenics.tanh
         
-    def make_phase_dependent_material_property_function(self, P_L, P_S):
-        """ Phase dependent material property.
-
-        Parameters
-        ----------
-        P_L : float
-            The value in liquid state.
-            
-        P_S : float
-            The value in solid state.
+        return 0.5*(1. + tanh((T_L - T)/r))
+        
+    def semi_phasefield(self, T, C):
+        """ The semi-phasefield $phi$ given in UFL. """
+        T_m = self.pure_liquidus_temperature
+        
+        m_L = self.liquidus_slope
+        
+        delta_T = self.regularization_central_temperature_offset
+        
+        r = self.regularization_smoothing_parameter
+        
+        return self.phi(T = T, C = C, T_m = T_m, m_L = m_L, delta_T = delta_T, r = r)
+        
+    def point_value_from_semi_phasefield(self, T, C):
+        """ The semi-phasefield $phi$ sutiable for evaluation given a single $T$ and $C$. 
+        
+        Maybe there is a way to evaluate the UFL expression rather than having to provide this
+        redundant function.
         """
-        def P(phi):
-            """ 
+        T_m = self.pure_liquidus_temperature.values()[0]
+        
+        m_L = self.liquidus_slope.values()[0]
+        
+        delta_T = self.regularization_central_temperature_offset.values()[0]
+        
+        r = self.regularization_smoothing_parameter.values()[0]
+        
+        return self.phi(T = T, C = C, T_m = T_m, m_L = m_L, delta_T = delta_T, r = r)
+        
+    def time_discrete_terms(self):
+        
+        p_t, u_t, T_t, C_L_t = super().time_discrete_terms()
+        
+        pnp1, unp1, Tnp1, Cnp1_L = fenics.split(self._solutions[0])
+        
+        pn, un, Tn, Cn_L = fenics.split(self._solutions[1])
+        
+        phinp1 = self.semi_phasefield(T = Tnp1, C = Cnp1_L)
+        
+        phin = self.semi_phasefield(T = Tn, C = Cn_L)
+        
+        if self.time_order == 1:
+        
+            phi_t = phaseflow.backward_difference_formulas.apply_backward_euler(
+                Delta_t = self._timestep_sizes[0], 
+                u = (phinp1, phin))
+        
+        if self.time_order > 1:
+        
+            pnm1, unm1, Tnm1, Cnm1_L = fenics.split(self._solutions[2])
             
-            Parameters
-            ----------
-            phi : float
-                0. <= phi <= 1.
-            """
-            return P_L + (P_S - P_L)*phi
+            phinm1 = self.semi_phasefield(T = Tnm1, C = Cnm1_L)
+        
+        if self.time_order == 2:
+        
+            phi_t = phaseflow.backward_difference_formulas.apply_bdf2(
+                Delta_t = (self._timestep_sizes[0], self._timestep_sizes[1]),
+                u = (phinp1, phin, phinm1))
+                
+        if self.time_order > 2:
             
-        return P
-        
-    
-    def apply_time_discretization(self, Delta_t, u):
-    
-        u_t = phaseflow.backward_difference_formulas.apply_backward_euler(Delta_t, u)
-        
-        return u_t
-    
-    
-    def make_time_discrete_terms(self):
-    
-        p_np1, u_np1, T_np1 = fenics.split(self.state.solution)
-        
-        p_n, u_n, T_n = fenics.split(self.old_state.solution)
-        
-        u = [u_np1, u_n]
-        
-        T = [T_np1, T_n]
-        
-        _phi = self.make_semi_phasefield_function()
-        
-        phi = [_phi(T_np1), _phi(T_n)]
-        
-        if self.second_order_time_discretization:
+            raise NotImplementedError()
             
-            p_nm1, u_nm1, T_nm1 = fenics.split(self.old_old_state.solution)
-            
-            u.append(u_nm1)
-            
-            T.append(T_nm1)
-            
-            phi.append(_phi(T_nm1))
+        return u_t, T_t, C_L_t, phi_t
         
-        if self.second_order_time_discretization:
-        
-            Delta_t = [self.fenics_timestep_size, self.old_fenics_timestep_size]
-            
-        else:
-        
-            Delta_t = self.fenics_timestep_size
-        
-        u_t = self.apply_time_discretization(Delta_t, u)
-        
-        T_t = self.apply_time_discretization(Delta_t, T)
-        
-        phi_t = self.apply_time_discretization(Delta_t, phi)  # @todo This is wrong.
-        
-        return u_t, T_t, phi_t
+    def element(self):
     
+        P1 = fenics.FiniteElement('P', self.mesh.ufl_cell(), 1)
+        
+        P2 = fenics.VectorElement('P', self.mesh.ufl_cell(), 2)
+        
+        return fenics.MixedElement([P1, P2, P1, P1])
+        
+    def buoyancy(self, T, C):
+        
+        Ra_T = self.temperature_rayleigh_number
+        
+        Ra_C = self.concentration_rayleigh_number
+        
+        Pr = self.prandtl_number
+        
+        Le = self.lewis_number
+        
+        ghat = fenics.Constant((0., -1.), name = "ghat")
+        
+        return (Ra_T*T + Ra_C/Le*C)/Pr*ghat
+        
+    def governing_form(self):
     
-    def setup_governing_form(self):
-        """ Implement the variational form per @cite{zimmerman2018monolithic}. """
-        Pr = fenics.Constant(self.prandtl_number)
+        Pr = self.prandtl_number
         
-        Ste = fenics.Constant(self.stefan_number)
+        Ste = self.stefan_number
         
-        f_B = self.make_buoyancy_function()
+        Le = self.lewis_number
         
-        phi = self.make_semi_phasefield_function()
+        gamma = self.pressure_penalty_factor
         
-        mu = self.make_phase_dependent_material_property_function(
-            P_L = fenics.Constant(self.liquid_viscosity),
-            P_S = fenics.Constant(self.solid_viscosity))
+        mu_L = self.liquid_viscosity
         
-        gamma = fenics.Constant(self.penalty_parameter)
+        mu_S = self.solid_viscosity
         
-        p, u, T = fenics.split(self.state.solution)
+        p, u, T, C_L = fenics.split(self.solution)
         
-        u_t, T_t, phi_t = self.make_time_discrete_terms()
+        u_t, T_t, C_Lt, phi_t = self.time_discrete_terms()
         
-        psi_p, psi_u, psi_T = fenics.TestFunctions(self.function_space)
+        f_B = self.buoyancy(T = T, C = C_L)
         
-        dx = self.integration_metric
+        phi = self.semi_phasefield(T = T, C = C_L)
         
-        inner, dot, grad, div, sym = fenics.inner, fenics.dot, fenics.grad, fenics.div, fenics.sym
+        mu = mu_L + (mu_S - mu_L)*phi
         
-        self.governing_form = (
-            -psi_p*(div(u) + gamma*p)
-            + dot(psi_u, u_t + f_B(T) + dot(grad(u), u))
-            - div(psi_u)*p 
-            + 2.*mu(phi(T))*inner(sym(grad(psi_u)), sym(grad(u)))
-            + psi_T*(T_t - 1./Ste*phi_t)
+        psi_p, psi_u, psi_T, psi_C = fenics.TestFunctions(self.function_space)
+        
+        inner, dot, grad, div, sym = \
+            fenics.inner, fenics.dot, fenics.grad, fenics.div, fenics.sym
+        
+        mass = -psi_p*div(u)
+        
+        momentum = dot(psi_u, u_t + f_B + dot(grad(u), u)) - div(psi_u)*p \
+            + 2.*mu*inner(sym(grad(psi_u)), sym(grad(u)))
+        
+        enthalpy = psi_T*(T_t - 1./Ste*phi_t) \
             + dot(grad(psi_T), 1./Pr*grad(T) - T*u)
-            )*dx
-       
+        
+        concentration = \
+            psi_C*((1. - phi)*C_Lt - C_L*phi_t) \
+            + dot(grad(psi_C), 1./(Pr*Le)*(1. - phi)*grad(C_L) - C_L*u)
+        
+        stabilization = -gamma*psi_p*p
+        
+        dx = self.integration_measure
+        
+        F =  (mass + momentum + enthalpy + concentration + stabilization)*dx
+        
+        return F
+    
+    def adaptive_goal(self):
 
-    def write_solution(self, file, state):
+        u_t, T_t, C_Lt, phi_t = self.time_discrete_terms()
+        
+        dx = self.integration_measure
+        
+        return -phi_t*dx
+        
+    def coarsen(self, 
+            absolute_tolerances = (1.e-2, 1.e-2, 1.e-2, 1.e-2, 1.e-2),
+            maximum_refinement_cycles = 6, 
+            circumradius_threshold = 0.01):
+    
+        finesim = self.deepcopy()
+        
+        adapted_coares_mesh = self.coarse_mesh()
+        
+        adapted_coarse_function_space = fenics.FunctionSpace(adapted_coares_mesh, self._element)
+        
+        adapted_coarse_solution = fenics.Function(adapted_coarse_function_space)
+        
+        def u0(solution, point):
+        
+            return solution(point)[1]
+            
+        def u1(solution, point):
+        
+            return solution(point)[2]
+        
+        def T(solution, point):
+        
+            return solution(point)[3]
+        
+        def C_L(solution, point):
+        
+            return solution(point)[4]
+        
+        def phi(solution, point):
+            
+            return self.point_value_from_semi_phasefield(T = T(solution, point), C = C_L(solution, point))
+        
+        scalars = (u0, u1, T, C_L, phi)
+        
+        for scalar, tolerance in zip(scalars, absolute_tolerances):
+        
+            adapted_coarse_solution, adapted_coarse_function_space, adapted_coarse_mesh = \
+                phaseflow.refinement.adapt_coarse_solution_to_fine_solution(
+                    scalar = scalar,
+                    coarse_solution = adapted_coarse_solution,
+                    fine_solution = finesim.solution,
+                    element = self._element,
+                    absolute_tolerance = tolerance, 
+                    maximum_refinement_cycles = maximum_refinement_cycles, 
+                    circumradius_threshold = circumradius_threshold)
+                    
+        self.mesh = adapted_coarse_mesh
+        
+    def deepcopy(self):
+    
+        sim = super().deepcopy()
+        
+        sim.temperature_rayleigh_number.assign(self.temperature_rayleigh_number)
+        
+        sim.concentration_rayleigh_number.assign(self.concentration_rayleigh_number)
+        
+        sim.prandtl_number.assign(self.prandtl_number)
+        
+        sim.stefan_number.assign(self.stefan_number)
+        
+        sim.lewis_number.assign(self.lewis_number)
+        
+        sim.pure_liquidus_temperature.assign(self.pure_liquidus_temperature)
+        
+        sim.liquidus_slope.assign(self.liquidus_slope)
+        
+        sim.liquid_viscosity.assign(self.liquid_viscosity)
+        
+        sim.solid_viscosity.assign(self.solid_viscosity)
+        
+        sim.pressure_penalty_factor.assign(self.pressure_penalty_factor)
+        
+        sim.regularization_central_temperature_offset.assign(
+            self.regularization_central_temperature_offset)
+        
+        sim.regularization_smoothing_parameter.assign(self.regularization_smoothing_parameter)
+        
+        return sim
+        
+    def _plot(self, solution, time):
+        """ Plot the adaptive mesh, velocity vector field, temperature field, and phase field. """
+        p, u, T, C_L = fenics.split(solution.leaf_node())
+
+        phi = self.semi_phasefield(T = T, C = C_L)
+        
+        for var, label, colorbar in zip(
+                (solution.function_space().mesh().leaf_node(), u, T, C_L*(1. - phi), phi),
+                ("$\Omega_h$", "$\mathbf{u}$", "$T$", "$C$", "$\phi(T)$"),
+                (False, True, True, True, True)):
+            
+            some_mappable_thing = fenics.plot(var)
+            
+            if colorbar:
+            
+                matplotlib.pyplot.colorbar(some_mappable_thing)
+            
+            matplotlib.pyplot.title(label + ", $t = " + str(time) + "$")
+            
+            matplotlib.pyplot.xlabel("$x$")
+            
+            matplotlib.pyplot.ylabel("$y$")
+            
+            matplotlib.pyplot.show()
+    
+    def write_solution(self, file, solution_index = 0):
         """ Write the solution to a file.
-
         Parameters
         ----------
         file : phaseflow.helpers.SolutionFile
-
             This method should have been called from within the context of the open `file`.
         """
-        phaseflow.helpers.print_once("Writing solution to " + str(file.path))
-
-        pressure, velocity, temperature = state.solution.leaf_node().split()
-
-        pressure.rename("p", "pressure")
-
-        velocity.rename("u", "velocity")
-
-        temperature.rename("T", "temperature")
-
-        for var in [pressure, velocity, temperature]:
-
-            file.write(var, state.time)
-
- 
+        for var, symbol, label in zip(
+                self._solutions[solution_index].leaf_node().split(), 
+                ("p", "u", "T", "C_L"), 
+                ("pressure", "velocity", "temperature", "concentration")):
+        
+            var.rename(symbol, label)
+            
+            file.write(var, self._times[solution_index])
