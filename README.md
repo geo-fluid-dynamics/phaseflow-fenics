@@ -66,7 +66,7 @@ Get the [free community edition of Docker](https://www.docker.com/community-edit
 
 Pull the Docker image and run the container, sharing a folder between the host and container.
 
-    docker run -ti -v $(pwd):/home/fenics/shared --name fenics quay.io/fenicsproject/stable:latest
+    docker run -ti -v $(pwd):/home/fenics/shared --name fenics quay.io/fenicsproject/stable:2017.2.0
 
 Clone Phaseflow's git repository.
 
