@@ -1,3 +1,5 @@
+""" **backward_difference_formulas.py** implements some BDF's for time discretization.
+"""
 import fenics
 
 
