@@ -1,6 +1,5 @@
-""" **phaseflow.py** provides an abstract class for convection-coupled phase-change simulations. 
-
-This also includes a class which implements a convection-coupled melting benchmark simulation.
+""" **phasechange_simulation.py** provides an abstract class for phase-change simulations,
+including the natural and compositional convection of binary alloys. 
 """
 import phaseflow
 import fenics
