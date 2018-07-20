@@ -34,7 +34,7 @@ import matplotlib
 
 
 class AbstractSimulation(metaclass = abc.ABCMeta):
-
+    """ A class for time-dependent simulations with goal-oriented AMR using FeniCS """
     def __init__(self, time_order = 1, integration_measure = fenics.dx):
     
         self.integration_measure = integration_measure
@@ -82,7 +82,7 @@ class AbstractSimulation(metaclass = abc.ABCMeta):
         
     @mesh.setter
     def mesh(self, value):
-    
+        """ Automatically redefine the function space and solutions when the mesh is redefined. """
         oldsim = self.deepcopy()
         
         self._mesh = value
@@ -261,7 +261,7 @@ class AbstractSimulation(metaclass = abc.ABCMeta):
         
     """ The following are some utility methods. """    
     def assign_initial_values(self):
-    
+        """ Set values of all solutions from `self.initial_values()`. """
         initial_values = self.initial_values()
         
         for i in range(len(self._solutions)):
@@ -398,7 +398,7 @@ class AbstractSimulation(metaclass = abc.ABCMeta):
             file.write(var, self._times[solution_index])
             
     def plot(self, solution_index = 0):
-        """ Plot the adaptive mesh, velocity vector field, temperature field, and phase field. """
+        """ Plot the adaptive mesh and all parts of the mixed finite element solution. """
         self._plot(solution = self._solutions[solution_index], time = self._times[solution_index])
         
     def _plot(self, solution, time):

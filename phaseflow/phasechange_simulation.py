@@ -42,7 +42,7 @@ class AbstractSimulation(phaseflow.simulation.AbstractSimulation):
         super().__init__(time_order = time_order, integration_measure = integration_measure)
     
     def phi(self, T, C, T_m, m_L, delta_T, r):
-    
+        """ The regularized semi-phasefield. """
         T_L = delta_T + T_m + m_L*C
         
         tanh = fenics.tanh
@@ -78,7 +78,7 @@ class AbstractSimulation(phaseflow.simulation.AbstractSimulation):
         return self.phi(T = T, C = C, T_m = T_m, m_L = m_L, delta_T = delta_T, r = r)
         
     def time_discrete_terms(self):
-        
+        """ Return the discrete time derivatives which are needed for the variational form. """
         p_t, u_t, T_t, C_L_t = super().time_discrete_terms()
         
         pnp1, unp1, Tnp1, Cnp1_L = fenics.split(self._solutions[0])
@@ -114,7 +114,7 @@ class AbstractSimulation(phaseflow.simulation.AbstractSimulation):
         return u_t, T_t, C_L_t, phi_t
         
     def element(self):
-    
+        """ Return a P1P2P1P1 element for the monolithic solution. """
         P1 = fenics.FiniteElement('P', self.mesh.ufl_cell(), 1)
         
         P2 = fenics.VectorElement('P', self.mesh.ufl_cell(), 2)
@@ -122,7 +122,7 @@ class AbstractSimulation(phaseflow.simulation.AbstractSimulation):
         return fenics.MixedElement([P1, P2, P1, P1])
         
     def buoyancy(self, T, C):
-        
+        """ Extend the model from @cite{zimmerman2018monolithic} with a solute concentration. """
         Ra_T = self.temperature_rayleigh_number
         
         Ra_C = self.concentration_rayleigh_number
@@ -136,7 +136,7 @@ class AbstractSimulation(phaseflow.simulation.AbstractSimulation):
         return (Ra_T*T + Ra_C/Le*C)/Pr*ghat
         
     def governing_form(self):
-    
+        """ Extend the model from @cite{zimmerman2018monolithic} with a solute concentration balance. """
         Pr = self.prandtl_number
         
         Ste = self.stefan_number
@@ -185,7 +185,7 @@ class AbstractSimulation(phaseflow.simulation.AbstractSimulation):
         return F
     
     def adaptive_goal(self):
-
+        """ Choose the melting rate as the goal. """
         u_t, T_t, C_Lt, phi_t = self.time_discrete_terms()
         
         dx = self.integration_measure
@@ -196,7 +196,7 @@ class AbstractSimulation(phaseflow.simulation.AbstractSimulation):
             absolute_tolerances = (1.e-2, 1.e-2, 1.e-2, 1.e-2, 1.e-2),
             maximum_refinement_cycles = 6, 
             circumradius_threshold = 0.01):
-    
+        """ Re-mesh while preserving pointwise accuracy of solution variables. """
         finesim = self.deepcopy()
         
         adapted_coares_mesh = self.coarse_mesh()
@@ -242,7 +242,7 @@ class AbstractSimulation(phaseflow.simulation.AbstractSimulation):
         self.mesh = adapted_coarse_mesh
         
     def deepcopy(self):
-    
+        """ Extends the parent deepcopy method with attributes for this derived class """
         sim = super().deepcopy()
         
         sim.temperature_rayleigh_number.assign(self.temperature_rayleigh_number)
