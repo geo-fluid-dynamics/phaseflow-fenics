@@ -181,7 +181,7 @@ def test__write_solution__ci__():
 
     sim = CompositionalConvectionCoupledMeltingBenchmarkSimulation()
     
-    with phaseflow.simulation.SolutionFile("solution.xdmf") as solution_file:
+    with phaseflow.simulation.SolutionFile(tempfile.mkdtemp() + "/solution.xdmf") as solution_file:
     
         sim.write_solution(solution_file)
 
