@@ -2,10 +2,10 @@ import fenics
 
 
 def apply_backward_euler(Delta_t, u):
-        """ Apply the backward Euler (fully implicit, first order) time discretization method. """
-        u_t = (u[0] - u[1])/Delta_t
-        
-        return u_t
+    """ Apply the backward Euler (fully implicit, first order) time discretization method. """
+    u_t = (u[0] - u[1])/Delta_t
+    
+    return u_t
     
     
 def apply_bdf2(Delta_t, u):

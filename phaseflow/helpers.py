@@ -5,21 +5,6 @@ import os
 import fenics
 
 
-def run_simulation_with_temporary_output(simulation):
-    """ This is needed to run the test suite with Travis-CI. 
-    
-    Otherwise, the process will attempt to write outputs to the working directory,
-    resulting in a permission error.
-    
-    Parameters
-    ----------
-    simulation : phaseflow.Simulation
-    """
-    simulation.prefix_output_dir_with_tempdir = True
-    
-    simulation.run()
-
-
 class Point(fenics.Point):
     """ This class extends `fenics.Point` with a more convenient constructor for 1D/2D/3D. 
     
@@ -44,40 +29,8 @@ class Point(fenics.Point):
         elif len(coordinates) == 3:
         
             fenics.Point.__init__(self, coordinates[0], coordinates[1], coordinates[2])
+
             
-
-class SolutionFile(fenics.XDMFFile):
-    """ This class extends `fenics.XDMFFile` with some minor changes for convenience. 
-    
-    Parameters
-    ----------
-    filepath : string
-    """
-    def __init__(self, filepath):
-
-        fenics.XDMFFile.__init__(self, filepath)
-        
-        self.parameters["functions_share_mesh"] = True  # This refers to the component solution functions.
-
-        self.parameters["flush_output"] = True  # This allows us to view the solution while still running.
-        
-        self.path = filepath  # Mimic the file path attribute from a `file` returned by `open` 
-    
-
-def print_once(message):
-    """ Print only if the process has MPI rank 0.
-    
-    This is called throughout Phaseflow instead of `print` so that MPI runs don't duplicate messages.
-    
-    Parameters
-    ----------
-    message : string
-    """
-    if fenics.dolfin.MPI.rank(fenics.dolfin.mpi_comm_world()) is 0:
-    
-        print(message)
-    
-    
 def mkdir_p(path):
     """ Make a directory if it doesn't exist.
     
