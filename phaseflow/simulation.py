@@ -3,8 +3,10 @@
 We define a simulation as a sequence of time-dependent initial boundary value problems.
 
 This module only provides an abstract base class for simulations. 
-For an example of implementing an instantiable simulation class, 
-see the `phaseflow` module. 
+For an example of implementing a specific set of governing equations, 
+see the `phasechange_simulation` module. 
+For examples of implementing instantiable simulation classes,
+see `test_phasechange_simulation` with its variety of benchmark simulations.
 That module contains the core of the research being done as part of this project, 
 whereas this `simulation` module is general,
 and can be used for entirely different problems.
