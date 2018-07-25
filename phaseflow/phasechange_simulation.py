@@ -282,9 +282,9 @@ class AbstractSimulation(phaseflow.simulation.AbstractSimulation):
                 ("$\Omega_h$", "$\mathbf{u}$", "$T$", "$C$", "$\phi(T)$"),
                 (False, True, True, True, True)):
             
-            some_mappable_thing = fenics.plot(var)
+            some_mappable_thing = phaseflow.plotting.plot(var)
             
-            if colorbar:
+            if colorbar and (self.mesh.topology().dim() > 1):
             
                 matplotlib.pyplot.colorbar(some_mappable_thing)
             
@@ -292,7 +292,9 @@ class AbstractSimulation(phaseflow.simulation.AbstractSimulation):
             
             matplotlib.pyplot.xlabel("$x$")
             
-            matplotlib.pyplot.ylabel("$y$")
+            if colorbar and (self.mesh.topology().dim() > 1):
+            
+                matplotlib.pyplot.ylabel("$y$")
             
             matplotlib.pyplot.show()
     
