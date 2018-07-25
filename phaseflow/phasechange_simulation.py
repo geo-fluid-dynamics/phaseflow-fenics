@@ -273,9 +273,9 @@ class AbstractSimulation(phaseflow.simulation.AbstractSimulation):
         
     def _plot(self, solution, time):
         """ Plot the adaptive mesh, velocity vector field, temperature field, and phase field. """
-        p, u, T, C_L = fenics.split(solution.leaf_node())
-
-        phi = self.semi_phasefield(T = T, C = C_L)
+        p, u, T, C_L = solution.leaf_node().split()
+        
+        phi = fenics.project(self.semi_phasefield(T = T, C = C_L), mesh = self.mesh.leaf_node())
         
         for var, label, colorbar in zip(
                 (solution.function_space().mesh().leaf_node(), u, T, C_L*(1. - phi), phi),
