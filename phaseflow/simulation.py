@@ -270,6 +270,10 @@ class AbstractSimulation(metaclass = abc.ABCMeta):
         
             self._solutions[i].assign(initial_values)
         
+    def reset_initial_guess(self):
+        """ Set the values of the latest solution from the next latest solution. """
+        self._solutions[0].leaf_node().vector()[:] = self._solutions[1].leaf_node().vector()
+        
     def set_solution_on_subdomain(self, subdomain, values):
         """ Abuse `fenics.DirichletBC` to set values of a function on a subdomain. 
         
