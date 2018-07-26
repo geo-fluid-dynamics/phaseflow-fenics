@@ -277,8 +277,10 @@ class AbstractSimulation(phaseflow.simulation.AbstractSimulation):
         
         phi = fenics.project(self.semi_phasefield(T = T, C = C_L), mesh = self.mesh.leaf_node())
         
+        C = fenics.project(C_L*(1. - phi), mesh = self.mesh.leaf_node())
+       
         for var, label, colorbar in zip(
-                (solution.function_space().mesh().leaf_node(), u, T, C_L*(1. - phi), phi),
+                (solution.function_space().mesh().leaf_node(), u, T, C, phi),
                 ("$\Omega_h$", "$\mathbf{u}$", "$T$", "$C$", "$\phi(T)$"),
                 (False, True, True, True, True)):
             
