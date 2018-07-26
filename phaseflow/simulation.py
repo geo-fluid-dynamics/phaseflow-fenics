@@ -405,7 +405,7 @@ class AbstractSimulation(metaclass = abc.ABCMeta):
         
     def _plot(self, solution, time):
 
-        fenics.plot(solution.function_space().mesh().leaf_node())
+        phaseflow.plotting.plot(solution.function_space().mesh().leaf_node())
         
         matplotlib.pyplot.title("$\Omega_h, t = " + str(time) + "$")
         
@@ -419,7 +419,7 @@ class AbstractSimulation(metaclass = abc.ABCMeta):
         
         for i in range(len(w)):
 
-            some_mappable_thing = fenics.plot(w[i])
+            some_mappable_thing = phaseflow.plotting.plot(w[i])
             
             matplotlib.pyplot.colorbar(some_mappable_thing)
             
