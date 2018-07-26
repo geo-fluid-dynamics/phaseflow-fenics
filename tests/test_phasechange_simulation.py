@@ -47,7 +47,7 @@ class CompositionalConvectionCoupledMeltingBenchmarkSimulation(
         
         self.walls = self._Walls()
         
-        self.initial_hot_wall_refinement_cycles = 6
+        self.initial_left_wall_refinement_cycles = 6
         
         super().__init__(
             time_order = time_order, integration_measure = integration_measure)
@@ -78,7 +78,7 @@ class CompositionalConvectionCoupledMeltingBenchmarkSimulation(
     
         mesh = self.coarse_mesh()
         
-        for cycle in range(self.initial_hot_wall_refinement_cycles):
+        for cycle in range(self.initial_left_wall_refinement_cycles):
             
             edge_markers = fenics.MeshFunction("bool", mesh, 1, False)
             
@@ -102,7 +102,7 @@ class CompositionalConvectionCoupledMeltingBenchmarkSimulation(
                 T_h = self.hot_wall_temperature, 
                 T_c = self.cold_wall_temperature,
                 C0_L = self.initial_melt_concentration,
-                x_m0 = 1./2.**(self.initial_hot_wall_refinement_cycles - 1),
+                x_m0 = 1./2.**(self.initial_left_wall_refinement_cycles - 1),
                 element = self.element()),
             self.function_space)
             
@@ -141,7 +141,7 @@ class CompositionalConvectionCoupledMeltingBenchmarkSimulation(
         
         sim.walls = self._Walls()
         
-        sim.initial_hot_wall_refinement_cycles = 0 + self.initial_hot_wall_refinement_cycles
+        sim.initial_left_wall_refinement_cycles = 0 + self.initial_left_wall_refinement_cycles
         
         return sim
         
@@ -348,7 +348,7 @@ def test__coarsen__ci__():
         
         sim.advance()
     
-    sim.coarsen(absolute_tolerances = (1., 1., 1.e-3, 1., 1.))
+    sim.coarsen(absolute_tolerances = (1.e-3, 1., 1.))
     
     for it in range(2):
     
@@ -748,11 +748,11 @@ class StefanProblemBenchmarkSimulation(ConvectionCoupledMeltingBenchmarkSimulati
         
     def initial_mesh(self):
     
-        self.initial_hot_wall_refinement_cycles = 8
+        self.initial_left_wall_refinement_cycles = 8
         
         mesh = self.coarse_mesh()
         
-        for i in range(self.initial_hot_wall_refinement_cycles):
+        for i in range(self.initial_left_wall_refinement_cycles):
         
             cell_markers = fenics.MeshFunction("bool", mesh, mesh.topology().dim(), False)
             
@@ -787,7 +787,7 @@ class StefanProblemBenchmarkSimulation(ConvectionCoupledMeltingBenchmarkSimulati
                 T_h = self.hot_wall_temperature, 
                 T_c = self.cold_wall_temperature,
                 x_m0 = 1./self.initial_uniform_cell_count \
-                    /2.**(self.initial_hot_wall_refinement_cycles - 1),
+                    /2.**(self.initial_left_wall_refinement_cycles - 1),
                 element = self.element()),
             self.function_space)
             
