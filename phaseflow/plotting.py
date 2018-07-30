@@ -22,5 +22,7 @@ def plot(f):
 
     else:
 
-        fenics.plot(f)
+        some_mappable_thing = fenics.plot(f)
         
+    return some_mappable_thing
+    
