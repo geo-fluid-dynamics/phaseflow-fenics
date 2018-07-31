@@ -18,11 +18,9 @@ def plot(f):
 
         sorted_C = [c for _,c in sorted(zip(X, C))]
 
-        matplotlib.pyplot.plot(sorted(X), sorted_C)
+        return matplotlib.pyplot.plot(sorted(X), sorted_C)
 
     else:
 
-        some_mappable_thing = fenics.plot(f)
+        return fenics.plot(f)
         
-    return some_mappable_thing
-    
