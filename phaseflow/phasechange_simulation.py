@@ -12,7 +12,7 @@ class AbstractSimulation(phaseflow.simulation.AbstractSimulation):
     
     This class is abstract, because an instantiable simulation still requires 
     definitions for the mesh, initial values, and boundary conditions. """
-    def __init__(self, time_order = 1, integration_measure = fenics.dx):
+    def __init__(self, time_order = 1, integration_measure = fenics.dx, setup_solver = True):
         
         self.temperature_rayleigh_number = fenics.Constant(1., name = "Ra_T")
         
@@ -38,7 +38,10 @@ class AbstractSimulation(phaseflow.simulation.AbstractSimulation):
         
         self.regularization_smoothing_parameter = fenics.Constant(0.01, name = "r")
     
-        super().__init__(time_order = time_order, integration_measure = integration_measure)
+        super().__init__(
+            time_order = time_order, 
+            integration_measure = integration_measure, 
+            setup_solver = setup_solver)
     
     def phi(self, T, C, T_m, m_L, delta_T, r):
         """ The regularized semi-phasefield. """
@@ -192,7 +195,7 @@ class AbstractSimulation(phaseflow.simulation.AbstractSimulation):
         return -phi_t*dx
         
     def coarsen(self, 
-            absolute_tolerances = (1.e-2, 1.e-2, 1.e-2, 1.e-2, 1.e-2),
+            absolute_tolerances = (1.e-2, 1.e-2, 1.e-2),
             maximum_refinement_cycles = 6, 
             circumradius_threshold = 0.01):
         """ Re-mesh while preserving pointwise accuracy of solution variables. """
@@ -203,14 +206,6 @@ class AbstractSimulation(phaseflow.simulation.AbstractSimulation):
         adapted_coarse_function_space = fenics.FunctionSpace(adapted_coares_mesh, self._element)
         
         adapted_coarse_solution = fenics.Function(adapted_coarse_function_space)
-        
-        def u0(solution, point):
-        
-            return solution(point)[1]
-            
-        def u1(solution, point):
-        
-            return solution(point)[2]
         
         def T(solution, point):
         
@@ -224,7 +219,7 @@ class AbstractSimulation(phaseflow.simulation.AbstractSimulation):
             
             return self.point_value_from_semi_phasefield(T = T(solution, point), C = C_L(solution, point))
         
-        scalars = (u0, u1, T, C_L, phi)
+        scalars = (T, C_L, phi)
         
         for scalar, tolerance in zip(scalars, absolute_tolerances):
         
@@ -238,7 +233,16 @@ class AbstractSimulation(phaseflow.simulation.AbstractSimulation):
                     maximum_refinement_cycles = maximum_refinement_cycles, 
                     circumradius_threshold = circumradius_threshold)
                     
-        self.mesh = adapted_coarse_mesh
+        self._mesh = adapted_coarse_mesh
+        
+        self._function_space = fenics.FunctionSpace(self._mesh, self._element)
+        
+        for i in range(len(self._solutions)):
+            
+            self._solutions[i] = fenics.project(
+                finesim._solutions[i].leaf_node(), self._function_space.leaf_node())
+        
+        self.setup_solver()
         
     def deepcopy(self):
         """ Extends the parent deepcopy method with attributes for this derived class """
