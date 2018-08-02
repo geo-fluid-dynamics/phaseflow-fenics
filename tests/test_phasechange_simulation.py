@@ -9,7 +9,9 @@ class CompositionalConvectionCoupledMeltingBenchmarkSimulation(
         phaseflow.phasechange_simulation.AbstractSimulation):
 
     def __init__(self, 
-            time_order = 1, integration_measure = fenics.dx(metadata={"quadrature_degree":  8})):
+            time_order = 1, 
+            integration_measure = fenics.dx(metadata={"quadrature_degree":  8}),
+            setup_solver = True):
     
         self.hot_wall_temperature = fenics.Constant(1., name = "T_h")
         
@@ -50,7 +52,7 @@ class CompositionalConvectionCoupledMeltingBenchmarkSimulation(
         self.initial_hot_wall_refinement_cycles = 6
         
         super().__init__(
-            time_order = time_order, integration_measure = integration_measure)
+            time_order = time_order, integration_measure = integration_measure, setup_solver = setup_solver)
         
         self.temperature_rayleigh_number.assign(3.27e5)
         
@@ -190,9 +192,13 @@ class ConvectionCoupledMeltingBenchmarkSimulation(CompositionalConvectionCoupled
     
     def __init__(self, 
             time_order = 1, 
-            integration_measure = fenics.dx(metadata={"quadrature_degree":  8})):
+            integration_measure = fenics.dx(metadata={"quadrature_degree":  8}),
+            setup_solver = True):
         
-        super().__init__(time_order = time_order, integration_measure = integration_measure)
+        super().__init__(
+            time_order = time_order, 
+            integration_measure = integration_measure,
+            setup_solver = setup_solver)
         
         self.cold_wall_temperature.assign(-0.01)
         
@@ -348,7 +354,7 @@ def test__coarsen__ci__():
         
         sim.advance()
     
-    sim.coarsen(absolute_tolerances = (1., 1., 1.e-3, 1., 1.))
+    sim.coarsen(absolute_tolerances = (1.e-3, 1., 1.))
     
     for it in range(2):
     
@@ -370,9 +376,12 @@ def test__coarsen__ci__():
 class HeatDrivenCavityBenchmarkSimulation(ConvectionCoupledMeltingBenchmarkSimulation):
 
     def __init__(self, 
-            time_order = 1, integration_measure = fenics.dx(metadata={"quadrature_degree":  8})):
+            time_order = 1, 
+            integration_measure = fenics.dx(metadata={"quadrature_degree":  8}),
+            setup_solver = True):
         
-        super().__init__(time_order = time_order, integration_measure = integration_measure)
+        super().__init__(
+            time_order = time_order, integration_measure = integration_measure, setup_solver = setup_solver)
         
         self.hot_wall_temperature.assign(0.5)
         
@@ -550,7 +559,9 @@ def test__heat_driven_cavity__ci__():
 class LidDrivenCavityBenchmarkSimulation(phaseflow.phasechange_simulation.AbstractSimulation):
 
     def __init__(self, 
-            time_order = 1, integration_measure = fenics.dx(metadata={"quadrature_degree":  8})):
+            time_order = 1, 
+            integration_measure = fenics.dx(metadata={"quadrature_degree":  8}),
+            setup_solver = True):
         
         class Lid(fenics.SubDomain):
 
@@ -576,7 +587,8 @@ class LidDrivenCavityBenchmarkSimulation(phaseflow.phasechange_simulation.Abstra
                 
         self.bottom_wall = BottomWall()
         
-        super().__init__(time_order = time_order, integration_measure = integration_measure)
+        super().__init__(
+            time_order = time_order, integration_measure = integration_measure, setup_solver = setup_solver)
         
         self.timestep_size = 1.e12
         
@@ -721,9 +733,12 @@ def test_write_solution_with_velocity_field_for_paraview_streamlines():
 class StefanProblemBenchmarkSimulation(ConvectionCoupledMeltingBenchmarkSimulation):
 
     def __init__(self, 
-            time_order = 1, integration_measure = fenics.dx(metadata={"quadrature_degree":  8})):
+            time_order = 1, 
+            integration_measure = fenics.dx(metadata={"quadrature_degree":  8}),
+            setup_solver = True):
         
-        super().__init__(time_order = time_order, integration_measure = integration_measure)
+        super().__init__(
+            time_order = time_order, integration_measure = integration_measure, setup_solver = setup_solver)
         
         self.timestep_size = 1.e-3
         

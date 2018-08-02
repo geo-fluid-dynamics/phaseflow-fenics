@@ -37,7 +37,7 @@ import matplotlib
 
 class AbstractSimulation(metaclass = abc.ABCMeta):
     """ A class for time-dependent simulations with goal-oriented AMR using FeniCS """
-    def __init__(self, time_order = 1, integration_measure = fenics.dx):
+    def __init__(self, time_order = 1, integration_measure = fenics.dx, setup_solver = True):
     
         self.integration_measure = integration_measure
         
@@ -65,7 +65,11 @@ class AbstractSimulation(metaclass = abc.ABCMeta):
         
         self.adaptive_solver = None
         
-        self.setup_solver()
+        self.solver_needs_setup = True
+        
+        if setup_solver:
+        
+            self.setup_solver()
     
     @property
     def timestep_size(self):
@@ -85,18 +89,11 @@ class AbstractSimulation(metaclass = abc.ABCMeta):
     @mesh.setter
     def mesh(self, value):
         """ Automatically redefine the function space and solutions when the mesh is redefined. """
-        oldsim = self.deepcopy()
-        
         self._mesh = value
         
-        self._function_space = fenics.FunctionSpace(self._mesh, self._element)
+        self.solver_needs_setup = True
         
-        for i in range(len(self._solutions)):
-        
-            self._solutions[i] = fenics.project(
-                oldsim._solutions[i].leaf_node(), self._function_space.leaf_node())
-            
-        self.setup_solver()
+        self.reinit_solutions()
         
     @property
     def function_space(self):
@@ -140,35 +137,13 @@ class AbstractSimulation(metaclass = abc.ABCMeta):
         """ Redefine this to refine the mesh before adaptive mesh refinement. """
         return self.coarse_mesh()
         
-    def time_discrete_terms(self):
-        """ Apply first-order implicit Euler finite difference method. """
-        wnp1 = fenics.split(self._solutions[0])
+    def reinit_solutions(self):
+        """ Create the function space and solution functions for the current mesh and element. """
+        self._function_space = fenics.FunctionSpace(self._mesh, self._element)
         
-        wn = fenics.split(self._solutions[1])
+        for i in range(len(self._solutions)):
         
-        if self.time_order == 1:
-        
-            return tuple([
-                phaseflow.backward_difference_formulas.apply_backward_euler(
-                    self._timestep_sizes[0], 
-                    (wnp1[i], wn[i])) 
-                for i in range(len(wn))])
-        
-        if self.time_order > 1:
-        
-            wnm1 = fenics.split(self._solutions[2])
-            
-        if self.time_order == 2:
-        
-            return tuple([
-                phaseflow.backward_difference_formulas.apply_bdf2(
-                    (self._timestep_sizes[0], self._timestep_sizes[1]), 
-                    (wnp1[i], wn[i], wnm1[i])) 
-                for i in range(len(wn))])
-            
-        if self.time_order > 2:
-        
-            raise NotImplementedError()
+            self._solutions[i] = fenics.Function(self._function_space)
         
     def setup_solver(self):
         """ Sometimes it is necessary to set up the solver again after breaking
@@ -223,13 +198,18 @@ class AbstractSimulation(metaclass = abc.ABCMeta):
             if save_parameters:
         
                 self.adaptive_solver.parameters = adaptive_solver_parameters.copy()
+                
+        self.solver_needs_setup = False
         
     """ The following methods are used to solve time steps and advance the unsteady simulation. """
-        
     def solve(self, goal_tolerance = None):
         """ Solve the nonlinear variational problem.
         Optionally provide `goal_tolerance` to use the adaptive solver. 
         """
+        if self.solver_needs_setup:
+        
+            self.setup_solver()
+            
         self._times[0] = self._times[1] + self.timestep_size
         
         if goal_tolerance is None:
@@ -261,7 +241,37 @@ class AbstractSimulation(metaclass = abc.ABCMeta):
         
         self._times[1] = 0. + self._times[0]
         
-    """ The following are some utility methods. """    
+    """ The following are some utility methods. """
+    def time_discrete_terms(self):
+        """ Apply first-order implicit Euler finite difference method. """
+        wnp1 = fenics.split(self._solutions[0])
+        
+        wn = fenics.split(self._solutions[1])
+        
+        if self.time_order == 1:
+        
+            return tuple([
+                phaseflow.backward_difference_formulas.apply_backward_euler(
+                    self._timestep_sizes[0], 
+                    (wnp1[i], wn[i])) 
+                for i in range(len(wn))])
+        
+        if self.time_order > 1:
+        
+            wnm1 = fenics.split(self._solutions[2])
+            
+        if self.time_order == 2:
+        
+            return tuple([
+                phaseflow.backward_difference_formulas.apply_bdf2(
+                    (self._timestep_sizes[0], self._timestep_sizes[1]), 
+                    (wnp1[i], wn[i], wnm1[i])) 
+                for i in range(len(wn))])
+            
+        if self.time_order > 2:
+        
+            raise NotImplementedError()
+            
     def assign_initial_values(self):
         """ Set values of all solutions from `self.initial_values()`. """
         initial_values = self.initial_values()
@@ -269,6 +279,10 @@ class AbstractSimulation(metaclass = abc.ABCMeta):
         for i in range(len(self._solutions)):
         
             self._solutions[i].assign(initial_values)
+        
+    def reset_initial_guess(self):
+        """ Set the values of the latest solution from the next latest solution. """
+        self._solutions[0].leaf_node().vector()[:] = self._solutions[1].leaf_node().vector()
         
     def set_solution_on_subdomain(self, subdomain, values):
         """ Abuse `fenics.DirichletBC` to set values of a function on a subdomain. 
@@ -307,7 +321,10 @@ class AbstractSimulation(metaclass = abc.ABCMeta):
         For example, this is useful for checkpointing small problems in memory,
         or for running a batch of simulations with parameter changes.
         """
-        sim = type(self)(time_order = self.time_order, integration_measure = self.integration_measure())
+        sim = type(self)(
+            time_order = self.time_order, 
+            integration_measure = self.integration_measure(),
+            setup_solver = False)
         
         sim._mesh = fenics.Mesh(self.mesh)
         
@@ -326,6 +343,8 @@ class AbstractSimulation(metaclass = abc.ABCMeta):
             sim._timestep_sizes[i] = self._timestep_sizes[i]
         
         sim.setup_solver()
+        
+        sim.solver.parameters = self.solver.parameters.copy()
         
         return sim
         
