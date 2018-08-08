@@ -131,11 +131,9 @@ class AbstractSimulation(phaseflow.simulation.AbstractSimulation):
         
         Pr = self.prandtl_number
         
-        Le = self.lewis_number
-        
         ghat = fenics.Constant((0., -1.), name = "ghat")
         
-        return (Ra_T*T + Ra_C/Le*C)/Pr*ghat
+        return (Ra_T*T + Ra_C*C)/Pr*ghat
         
     def governing_form(self):
         """ Extend the model from @cite{zimmerman2018monolithic} with a solute concentration balance. """
