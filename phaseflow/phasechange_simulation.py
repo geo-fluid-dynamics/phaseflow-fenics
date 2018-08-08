@@ -248,7 +248,7 @@ class AbstractSimulation(phaseflow.simulation.AbstractSimulation):
         
         sim.temperature_rayleigh_number.assign(self.temperature_rayleigh_number)
         
-        sim.concentration_rayleigh_number.assign(self.concentration_rayleigh_number)
+        sim.buoyancy_ratio.assign(self.buoyancy_ratio)
         
         sim.prandtl_number.assign(self.prandtl_number)
         
@@ -283,7 +283,7 @@ class AbstractSimulation(phaseflow.simulation.AbstractSimulation):
        
         for var, label, colorbar in zip(
                 (solution.function_space().mesh().leaf_node(), u, T, C, phi),
-                ("$\Omega_h$", "$\mathbf{u}$", "$T$", "$C$", "$\phi(T)$"),
+                ("$\Omega_h$", "$\mathbf{u}$", "$T$", "$C$", "$\phi(T,C)$"),
                 (False, True, True, True, True)):
             
             some_mappable_thing = phaseflow.plotting.plot(var)
