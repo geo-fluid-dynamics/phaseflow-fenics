@@ -16,7 +16,7 @@ class AbstractSimulation(phaseflow.simulation.AbstractSimulation):
         
         self.temperature_rayleigh_number = fenics.Constant(1., name = "Ra_T")
         
-        self.concentration_rayleigh_number = fenics.Constant(1., name = "Ra_C")
+        self.buoyancy_ratio = fenics.Constant(1., name = "R_rho")
         
         self.prandtl_number = fenics.Constant(1., name = "Pr")
         
@@ -127,15 +127,13 @@ class AbstractSimulation(phaseflow.simulation.AbstractSimulation):
         """ Extend the model from @cite{zimmerman2018monolithic} with a solute concentration. """
         Ra_T = self.temperature_rayleigh_number
         
-        Ra_C = self.concentration_rayleigh_number
+        R_rho = self.buoyancy_ratio
         
         Pr = self.prandtl_number
         
-        Le = self.lewis_number
-        
         ghat = fenics.Constant((0., -1.), name = "ghat")
         
-        return (Ra_T*T + Ra_C/Le*C)/Pr*ghat
+        return Ra_T/Pr*(T - C/R_rho)*ghat
         
     def governing_form(self):
         """ Extend the model from @cite{zimmerman2018monolithic} with a solute concentration balance. """
@@ -250,7 +248,7 @@ class AbstractSimulation(phaseflow.simulation.AbstractSimulation):
         
         sim.temperature_rayleigh_number.assign(self.temperature_rayleigh_number)
         
-        sim.concentration_rayleigh_number.assign(self.concentration_rayleigh_number)
+        sim.buoyancy_ratio.assign(self.buoyancy_ratio)
         
         sim.prandtl_number.assign(self.prandtl_number)
         
@@ -285,7 +283,7 @@ class AbstractSimulation(phaseflow.simulation.AbstractSimulation):
        
         for var, label, colorbar in zip(
                 (solution.function_space().mesh().leaf_node(), u, T, C, phi),
-                ("$\Omega_h$", "$\mathbf{u}$", "$T$", "$C$", "$\phi(T)$"),
+                ("$\Omega_h$", "$\mathbf{u}$", "$T$", "$C$", "$\phi(T,C)$"),
                 (False, True, True, True, True)):
             
             some_mappable_thing = phaseflow.plotting.plot(var)
