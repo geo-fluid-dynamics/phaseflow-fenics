@@ -83,9 +83,9 @@ class AbstractSimulation(phaseflow.simulation.AbstractSimulation):
         """ Return the discrete time derivatives which are needed for the variational form. """
         p_t, u_t, T_t, C_L_t = super().time_discrete_terms()
         
-        pnp1, unp1, Tnp1, Cnp1_L = fenics.split(self._solutions[0])
+        pnp1, unp1, Tnp1, Cnp1_L = fenics.split(self._solutions[0].leaf_node())
         
-        pn, un, Tn, Cn_L = fenics.split(self._solutions[1])
+        pn, un, Tn, Cn_L = fenics.split(self._solutions[1].leaf_node())
         
         phinp1 = self.semi_phasefield(T = Tnp1, C = Cnp1_L)
         
@@ -149,7 +149,7 @@ class AbstractSimulation(phaseflow.simulation.AbstractSimulation):
         
         mu_S = self.solid_viscosity
         
-        p, u, T, C_L = fenics.split(self.solution)
+        p, u, T, C_L = fenics.split(self.solution.leaf_node())
         
         u_t, T_t, C_Lt, phi_t = self.time_discrete_terms()
         
