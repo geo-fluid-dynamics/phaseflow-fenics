@@ -16,7 +16,7 @@ class AbstractSimulation(phaseflow.simulation.AbstractSimulation):
         
         self.temperature_rayleigh_number = fenics.Constant(1., name = "Ra_T")
         
-        self.buoyancy_ratio = fenics.Constant(1., name = "R_rho")
+        self.concentration_buoyancy_ratio = fenics.Constant(1., name = "R_rho")
         
         self.prandtl_number = fenics.Constant(1., name = "Pr")
         
