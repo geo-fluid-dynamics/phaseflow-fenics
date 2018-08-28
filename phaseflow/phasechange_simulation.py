@@ -258,7 +258,7 @@ class AbstractSimulation(phaseflow.simulation.AbstractSimulation):
         
         sim.temperature_rayleigh_number.assign(self.temperature_rayleigh_number)
         
-        sim.buoyancy_ratio.assign(self.buoyancy_ratio)
+        sim.concentration_buoyancy_ratio.assign(self.concentration_buoyancy_ratio)
         
         sim.prandtl_number.assign(self.prandtl_number)
         
