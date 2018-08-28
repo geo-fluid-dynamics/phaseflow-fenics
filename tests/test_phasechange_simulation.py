@@ -354,7 +354,7 @@ def test__coarsen__ci__():
         
         sim.advance()
     
-    sim.coarsen(absolute_tolerances = (1.e-3, 1., 1.))
+    sim.coarsen(absolute_tolerances = (1., 1., 1.e-3, 1., 1.))
     
     for it in range(2):
     

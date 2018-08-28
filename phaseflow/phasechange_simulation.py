@@ -193,7 +193,7 @@ class AbstractSimulation(phaseflow.simulation.AbstractSimulation):
         return -phi_t*dx
         
     def coarsen(self, 
-            absolute_tolerances = (1.e-2, 1.e-2, 1.e-2),
+            absolute_tolerances = (1.e-2, 1.e-2, 1.e-2, 1.e-2, 1.e-2),
             maximum_refinement_cycles = 6, 
             circumradius_threshold = 0.01):
         """ Re-mesh while preserving pointwise accuracy of solution variables. """
@@ -205,6 +205,16 @@ class AbstractSimulation(phaseflow.simulation.AbstractSimulation):
         
         adapted_coarse_solution = fenics.Function(adapted_coarse_function_space)
         
+        assert(self.mesh.topology().dim() == 2)
+        
+        def u0(solution, point):
+        
+            return solution(point)[1]
+            
+        def u1(solution, point):
+        
+            return solution(point)[2]
+            
         def T(solution, point):
         
             return solution(point)[3]
@@ -217,7 +227,7 @@ class AbstractSimulation(phaseflow.simulation.AbstractSimulation):
             
             return self.point_value_from_semi_phasefield(T = T(solution, point), C = C_L(solution, point))
         
-        scalars = (T, C_L, phi)
+        scalars = (u0, u1, T, C_L, phi)
         
         for scalar, tolerance in zip(scalars, absolute_tolerances):
         
