@@ -56,7 +56,7 @@ class CompositionalConvectionCoupledMeltingBenchmarkSimulation(
         
         self.temperature_rayleigh_number.assign(3.27e5)
         
-        self.buoyancy_ratio.assign(1./3.)
+        self.concentration_buoyancy_ratio.assign(3.)
         
         self.prandtl_number.assign(56.2)
         
@@ -208,7 +208,7 @@ class ConvectionCoupledMeltingBenchmarkSimulation(CompositionalConvectionCoupled
         
         self.temperature_rayleigh_number.assign(3.27e5)
         
-        self.buoyancy_ratio.assign(1.e32)
+        self.concentration_buoyancy_ratio.assign(0.)
         
         self.prandtl_number.assign(56.2)
         
@@ -412,7 +412,7 @@ class HeatDrivenCavityBenchmarkSimulation(ConvectionCoupledMeltingBenchmarkSimul
         self.stefan_number.assign(1.e32)
         
         """ Disable concentration equation """
-        self.buoyancy_ratio.assign(1.e32)
+        self.concentration_buoyancy_ratio.assign(0.)
         
         self.lewis_number.assign(1.e32)
         
@@ -620,7 +620,7 @@ class WaterHeatDrivenCavityBenchmarkSimulation(phaseflow.phasechange_simulation.
         self.stefan_number.assign(1.e32)
         
         """ Disable concentration equation """
-        self.buoyancy_ratio.assign(1.e32)
+        self.concentration_buoyancy_ratio.assign(0.)
         
         self.lewis_number.assign(1.e32)
         
@@ -885,7 +885,7 @@ class LidDrivenCavityBenchmarkSimulation(phaseflow.phasechange_simulation.Abstra
         
         self.temperature_rayleigh_number.assign(0.)
         
-        self.buoyancy_ratio.assign(1.e32)
+        self.concentration_buoyancy_ratio.assign(0.)
         
         self.lewis_number.assign(1.e32)
         

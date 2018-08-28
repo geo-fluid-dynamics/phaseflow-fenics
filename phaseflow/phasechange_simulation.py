@@ -127,13 +127,13 @@ class AbstractSimulation(phaseflow.simulation.AbstractSimulation):
         """ Extend the model from @cite{zimmerman2018monolithic} with a solute concentration. """
         Ra_T = self.temperature_rayleigh_number
         
-        R_rho = self.buoyancy_ratio
+        R_BC = self.concentration_buoyancy_ratio
         
         Pr = self.prandtl_number
         
         ghat = fenics.Constant((0., -1.), name = "ghat")
         
-        return Ra_T/Pr*(T - C/R_rho)*ghat
+        return Ra_T/Pr*(T - R_BC*C)*ghat
         
     def governing_form(self):
         """ Extend the model from @cite{zimmerman2018monolithic} with a solute concentration balance. """
