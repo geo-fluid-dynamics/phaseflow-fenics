@@ -216,6 +216,8 @@ class ConvectionCoupledMeltingBenchmarkSimulation(CompositionalConvectionCoupled
         
         self.lewis_number.assign(1.e32)
         
+        self.liquidus_slope.assign(0.)
+        
         self.regularization_central_temperature_offset.assign(0.01)
         
         self.regularization_smoothing_parameter.assign(0.025)
@@ -405,7 +407,7 @@ class HeatDrivenCavityBenchmarkSimulation(ConvectionCoupledMeltingBenchmarkSimul
         """
         self.pure_liquidus_temperature.assign(0.)
         
-        self.regularization_central_temperature_offset.assign(0.)
+        self.regularization_central_temperature_offset.assign(-1.)
         
         self.solid_viscosity.assign(self.liquid_viscosity)
         
