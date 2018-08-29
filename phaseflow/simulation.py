@@ -198,7 +198,7 @@ class AbstractSimulation(metaclass = abc.ABCMeta):
             if save_parameters:
         
                 self.adaptive_solver.parameters = adaptive_solver_parameters.copy()
-                
+        
         self.solver_needs_setup = False
         
     """ The following methods are used to solve time steps and advance the unsteady simulation. """
@@ -244,9 +244,9 @@ class AbstractSimulation(metaclass = abc.ABCMeta):
     """ The following are some utility methods. """
     def time_discrete_terms(self):
         """ Apply first-order implicit Euler finite difference method. """
-        wnp1 = fenics.split(self._solutions[0])
+        wnp1 = fenics.split(self._solutions[0].leaf_node())
         
-        wn = fenics.split(self._solutions[1])
+        wn = fenics.split(self._solutions[1].leaf_node())
         
         if self.time_order == 1:
         
@@ -258,7 +258,7 @@ class AbstractSimulation(metaclass = abc.ABCMeta):
         
         if self.time_order > 1:
         
-            wnm1 = fenics.split(self._solutions[2])
+            wnm1 = fenics.split(self._solutions[2].leaf_node())
             
         if self.time_order == 2:
         

@@ -16,7 +16,7 @@ class AbstractSimulation(phaseflow.simulation.AbstractSimulation):
         
         self.temperature_rayleigh_number = fenics.Constant(1., name = "Ra_T")
         
-        self.concentration_rayleigh_number = fenics.Constant(1., name = "Ra_C")
+        self.concentration_buoyancy_ratio = fenics.Constant(1., name = "R_BC")
         
         self.prandtl_number = fenics.Constant(1., name = "Pr")
         
@@ -83,9 +83,9 @@ class AbstractSimulation(phaseflow.simulation.AbstractSimulation):
         """ Return the discrete time derivatives which are needed for the variational form. """
         p_t, u_t, T_t, C_L_t = super().time_discrete_terms()
         
-        pnp1, unp1, Tnp1, Cnp1_L = fenics.split(self._solutions[0])
+        pnp1, unp1, Tnp1, Cnp1_L = fenics.split(self._solutions[0].leaf_node())
         
-        pn, un, Tn, Cn_L = fenics.split(self._solutions[1])
+        pn, un, Tn, Cn_L = fenics.split(self._solutions[1].leaf_node())
         
         phinp1 = self.semi_phasefield(T = Tnp1, C = Cnp1_L)
         
@@ -127,15 +127,13 @@ class AbstractSimulation(phaseflow.simulation.AbstractSimulation):
         """ Extend the model from @cite{zimmerman2018monolithic} with a solute concentration. """
         Ra_T = self.temperature_rayleigh_number
         
-        Ra_C = self.concentration_rayleigh_number
+        R_BC = self.concentration_buoyancy_ratio
         
         Pr = self.prandtl_number
         
-        Le = self.lewis_number
-        
         ghat = fenics.Constant((0., -1.), name = "ghat")
         
-        return (Ra_T*T + Ra_C/Le*C)/Pr*ghat
+        return Ra_T/Pr*(T - R_BC*C)*ghat
         
     def governing_form(self):
         """ Extend the model from @cite{zimmerman2018monolithic} with a solute concentration balance. """
@@ -151,7 +149,7 @@ class AbstractSimulation(phaseflow.simulation.AbstractSimulation):
         
         mu_S = self.solid_viscosity
         
-        p, u, T, C_L = fenics.split(self.solution)
+        p, u, T, C_L = fenics.split(self.solution.leaf_node())
         
         u_t, T_t, C_Lt, phi_t = self.time_discrete_terms()
         
@@ -195,7 +193,7 @@ class AbstractSimulation(phaseflow.simulation.AbstractSimulation):
         return -phi_t*dx
         
     def coarsen(self, 
-            absolute_tolerances = (1.e-2, 1.e-2, 1.e-2),
+            absolute_tolerances = (1.e-2, 1.e-2, 1.e-2, 1.e-2, 1.e-2),
             maximum_refinement_cycles = 6, 
             circumradius_threshold = 0.01):
         """ Re-mesh while preserving pointwise accuracy of solution variables. """
@@ -207,6 +205,16 @@ class AbstractSimulation(phaseflow.simulation.AbstractSimulation):
         
         adapted_coarse_solution = fenics.Function(adapted_coarse_function_space)
         
+        assert(self.mesh.topology().dim() == 2)
+        
+        def u0(solution, point):
+        
+            return solution(point)[1]
+            
+        def u1(solution, point):
+        
+            return solution(point)[2]
+            
         def T(solution, point):
         
             return solution(point)[3]
@@ -219,7 +227,7 @@ class AbstractSimulation(phaseflow.simulation.AbstractSimulation):
             
             return self.point_value_from_semi_phasefield(T = T(solution, point), C = C_L(solution, point))
         
-        scalars = (T, C_L, phi)
+        scalars = (u0, u1, T, C_L, phi)
         
         for scalar, tolerance in zip(scalars, absolute_tolerances):
         
@@ -250,7 +258,7 @@ class AbstractSimulation(phaseflow.simulation.AbstractSimulation):
         
         sim.temperature_rayleigh_number.assign(self.temperature_rayleigh_number)
         
-        sim.concentration_rayleigh_number.assign(self.concentration_rayleigh_number)
+        sim.concentration_buoyancy_ratio.assign(self.concentration_buoyancy_ratio)
         
         sim.prandtl_number.assign(self.prandtl_number)
         
@@ -285,7 +293,7 @@ class AbstractSimulation(phaseflow.simulation.AbstractSimulation):
        
         for var, label, colorbar in zip(
                 (solution.function_space().mesh().leaf_node(), u, T, C, phi),
-                ("$\Omega_h$", "$\mathbf{u}$", "$T$", "$C$", "$\phi(T)$"),
+                ("$\Omega_h$", "$\mathbf{u}$", "$T$", "$C$", "$\phi(T,C)$"),
                 (False, True, True, True, True)):
             
             some_mappable_thing = phaseflow.plotting.plot(var)

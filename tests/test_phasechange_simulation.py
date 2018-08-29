@@ -56,7 +56,7 @@ class CompositionalConvectionCoupledMeltingBenchmarkSimulation(
         
         self.temperature_rayleigh_number.assign(3.27e5)
         
-        self.concentration_rayleigh_number.assign(1.e6)
+        self.concentration_buoyancy_ratio.assign(3.)
         
         self.prandtl_number.assign(56.2)
         
@@ -208,13 +208,15 @@ class ConvectionCoupledMeltingBenchmarkSimulation(CompositionalConvectionCoupled
         
         self.temperature_rayleigh_number.assign(3.27e5)
         
-        self.concentration_rayleigh_number.assign(0.)
+        self.concentration_buoyancy_ratio.assign(0.)
         
         self.prandtl_number.assign(56.2)
         
         self.stefan_number.assign(0.045)
         
         self.lewis_number.assign(1.e32)
+        
+        self.liquidus_slope.assign(0.)
         
         self.regularization_central_temperature_offset.assign(0.01)
         
@@ -354,7 +356,7 @@ def test__coarsen__ci__():
         
         sim.advance()
     
-    sim.coarsen(absolute_tolerances = (1.e-3, 1., 1.))
+    sim.coarsen(absolute_tolerances = (1., 1., 1.e-3, 1., 1.))
     
     for it in range(2):
     
@@ -381,7 +383,9 @@ class HeatDrivenCavityBenchmarkSimulation(ConvectionCoupledMeltingBenchmarkSimul
             setup_solver = True):
         
         super().__init__(
-            time_order = time_order, integration_measure = integration_measure, setup_solver = setup_solver)
+            time_order = time_order, 
+            integration_measure = integration_measure, 
+            setup_solver = setup_solver)
         
         self.hot_wall_temperature.assign(0.5)
         
@@ -403,14 +407,14 @@ class HeatDrivenCavityBenchmarkSimulation(ConvectionCoupledMeltingBenchmarkSimul
         """
         self.pure_liquidus_temperature.assign(0.)
         
-        self.regularization_central_temperature_offset.assign(0.)
+        self.regularization_central_temperature_offset.assign(-1.)
         
         self.solid_viscosity.assign(self.liquid_viscosity)
         
         self.stefan_number.assign(1.e32)
         
         """ Disable concentration equation """
-        self.concentration_rayleigh_number.assign(0.)
+        self.concentration_buoyancy_ratio.assign(0.)
         
         self.lewis_number.assign(1.e32)
         
@@ -462,27 +466,21 @@ class HeatDrivenCavityBenchmarkSimulation(ConvectionCoupledMeltingBenchmarkSimul
     
         nhat = fenics.FacetNormal(self.mesh)
     
-        p, u, T, C_L = fenics.split(self.solution)
-        
-        class ColdWall(fenics.SubDomain):
-
-            def inside(self, x, on_boundary):
-
-                return on_boundary and fenics.near(x[0], 1.)
-            
-        cold_wall_id = 2
+        p, u, T, C_L = fenics.split(self.solution.leaf_node())
         
         mesh_function = fenics.MeshFunction(
             "size_t", 
-            self.mesh, 
+            self.mesh.leaf_node(), 
             self.mesh.topology().dim() - 1)
         
-        ColdWall().mark(mesh_function, cold_wall_id)
+        cold_wall_id = 2
+        
+        self.cold_wall.mark(mesh_function, cold_wall_id)
         
         dot, grad = fenics.dot, fenics.grad
         
         ds = fenics.ds(
-            domain = self.mesh, 
+            domain = self.mesh.leaf_node(), 
             subdomain_data = mesh_function, 
             subdomain_id = cold_wall_id)
         
@@ -547,15 +545,306 @@ def test__heat_driven_cavity__ci__():
         
     assert(steady)
     
-    integrate = fenics.assemble
-    
-    cold_wall_heat_flux = integrate(sim.cold_wall_heat_flux_integrand())
+    cold_wall_heat_flux = fenics.assemble(sim.cold_wall_heat_flux_integrand())
     
     print("Integrated cold wall heat flux = " + str(cold_wall_heat_flux))
     
     assert(abs(cold_wall_heat_flux - verified_cold_wall_heat_flux) < tolerance)
     
 
+class WaterHeatDrivenCavityBenchmarkSimulation(phaseflow.phasechange_simulation.AbstractSimulation):
+    """ This class implements a benchmark simulation for the heat-driven cavity with water. """
+    def __init__(self, 
+            time_order = 1, 
+            integration_measure = fenics.dx(metadata={"quadrature_degree":  8}),
+            setup_solver = True):
+        
+        self.hot_wall_temperature_degC = fenics.Constant(
+            10., name = "T_h_degC")
+        
+        self.cold_wall_temperature_degC = fenics.Constant(
+            0., name = "T_c_degC")
+        
+        self.pure_liquidus_temperature_degC = fenics.Constant(
+            0., name = "T_m_degC")
+        
+        self.pure_liquidus_temperature = self.T(
+            self.pure_liquidus_temperature_degC)
+        
+        class HotWall(fenics.SubDomain):
+
+            def inside(self, x, on_boundary):
+
+                return on_boundary and fenics.near(x[0], 0.)
+                
+        class ColdWall(fenics.SubDomain):
+
+            def inside(self, x, on_boundary):
+
+                return on_boundary and fenics.near(x[0], 1.)
+                
+        class Walls(fenics.SubDomain):
+
+            def inside(self, x, on_boundary):
+
+                return on_boundary
+
+        self._HotWall = HotWall
+        
+        self.hot_wall = self._HotWall()
+       
+        self._ColdWall = ColdWall
+        
+        self.cold_wall = self._ColdWall()
+        
+        self._Walls = Walls
+        
+        self.walls = self._Walls()
+        
+        super().__init__(
+            time_order = time_order, 
+            integration_measure = integration_measure, 
+            setup_solver = setup_solver)
+        
+        self.temperature_rayleigh_number.assign(2.518084e6)
+        
+        self.prandtl_number.assign(6.99)
+        
+        """ Disable freezing. """
+        self.pure_liquidus_temperature.assign(0.)
+        
+        self.regularization_central_temperature_offset.assign(0.)
+        
+        self.solid_viscosity.assign(self.liquid_viscosity)
+        
+        self.stefan_number.assign(1.e32)
+        
+        """ Disable concentration equation """
+        self.concentration_buoyancy_ratio.assign(0.)
+        
+        self.lewis_number.assign(1.e32)
+        
+        self.liquidus_slope.assign(0.)
+        
+    def T(self, T_degC):
+        """ Normalize the temperature per the scaling of the governing equations. """
+        T_h_degC = self.hot_wall_temperature_degC
+    
+        T_c_degC = self.cold_wall_temperature_degC
+        
+        T_m_degC = self.pure_liquidus_temperature_degC
+        
+        return (T_degC - T_m_degC)/(T_h_degC - T_c_degC)
+        
+    def T_degC(self, T):
+    
+        T_h_degC = self.hot_wall_temperature_degC
+    
+        T_c_degC = self.cold_wall_temperature_degC
+        
+        T_m_degC = self.pure_liquidus_temperature_degC
+
+        return T*(T_h_degC - T_c_degC) + T_m_degC
+        
+    def solve(self, goal_tolerance = None):
+        """ Validate parameters before solving. """
+        assert(self.pure_liquidus_temperature.__float__() == self.T(self.pure_liquidus_temperature_degC).__float__())
+        
+        super().solve(goal_tolerance = goal_tolerance)
+        
+    def buoyancy(self, T, C):
+
+        T_anomaly_degC = fenics.Constant(4.0293)  # [deg C]
+        
+        rho_anomaly_SI = fenics.Constant(999.972)  # [kg/m^3]
+        
+        w = fenics.Constant(9.2793e-6)  # [(deg C)^(-q)]
+        
+        q = fenics.Constant(1.894816)
+        
+        def rho_of_T_degC(T_degC):
+            """ Eq. (24) from @cite{danaila2014newton} """
+            return rho_anomaly_SI*(1. - w*abs(T_degC - T_anomaly_degC)**q)
+            
+        def rho(T):
+            """ The normalized temperature is used by Eq. (25) from @cite{danaila2014newton} """
+            return rho_of_T_degC(self.T_degC(T))
+        
+        beta = fenics.Constant(6.91e-5)  # [K^-1]
+        
+        T_hot_degC = self.hot_wall_temperature_degC
+    
+        T_cold_degC = self.cold_wall_temperature_degC
+        
+        Pr = self.prandtl_number
+        
+        Ra_T = self.temperature_rayleigh_number
+        
+        ghat = fenics.Constant((0., -1.), name = "ghat")
+        
+        T_m = self.pure_liquidus_temperature
+        
+        return Ra_T/Pr/(beta*(T_hot_degC - T_cold_degC))* \
+            (rho(T_m) - rho(T))/rho(T_m)*ghat
+            # Eq. (25) from @cite{danaila2014newton}
+        
+    def coarse_mesh(self):
+        
+        return fenics.UnitSquareMesh(2, 2)
+        
+    def initial_mesh(self):
+        
+        return self.coarse_mesh()
+    
+    def initial_values(self):
+        
+        initial_values = fenics.interpolate(
+            fenics.Expression(
+                ("0.", 
+                 "0.", 
+                 "0.", 
+                 "(T_c - T_h)*x[0] + T_h", 
+                 "0."),
+                T_h = self.T(self.hot_wall_temperature_degC).__float__(), 
+                T_c = self.T(self.cold_wall_temperature_degC).__float__(),
+                element = self.element()),
+            self.function_space)
+            
+        return initial_values
+    
+    def boundary_conditions(self):
+        
+        return [
+            fenics.DirichletBC(
+                self.function_space.sub(1), 
+                (0., 0.), 
+                self.walls),
+            fenics.DirichletBC(
+                self.function_space.sub(2), 
+                self.T(self.hot_wall_temperature_degC).__float__(), 
+                self.hot_wall),
+            fenics.DirichletBC(
+                self.function_space.sub(2), 
+                self.T(self.cold_wall_temperature_degC).__float__(), 
+                self.cold_wall)]
+        
+    def cold_wall_heat_flux_integrand(self):
+    
+        nhat = fenics.FacetNormal(self.mesh)
+    
+        p, u, T, C = fenics.split(self.solution)
+        
+        mesh_function = fenics.MeshFunction(
+            "size_t", 
+            self.mesh, 
+            self.mesh.topology().dim() - 1)
+        
+        cold_wall_id = 2
+        
+        self.cold_wall.mark(mesh_function, cold_wall_id)
+        
+        dot, grad = fenics.dot, fenics.grad
+        
+        ds = fenics.ds(
+            domain = self.mesh, 
+            subdomain_data = mesh_function, 
+            subdomain_id = cold_wall_id)
+        
+        return dot(grad(T), nhat)*ds
+        
+    def adaptive_goal(self):
+        """ The default refinement algorithm has a 'known bug' which prevents us from 
+        integrating a goal over a subdomain, referenced in the following:
+        - https://fenicsproject.org/qa/6719/using-adapt-on-a-meshfunction-looking-for-a-working-example/
+        - https://bitbucket.org/fenics-project/dolfin/issues/105/most-refinement-algorithms-do-not-set
+        So we follow their advice and set the following algorithim.
+        """
+        fenics.parameters["refinement_algorithm"] = "plaza_with_parent_facets"
+        
+        return self.cold_wall_heat_flux_integrand()
+        
+    def deepcopy(self):
+    
+        sim = super().deepcopy()
+        
+        sim.hot_wall_temperature_degC.assign(self.hot_wall_temperature_degC)
+        
+        sim.cold_wall_temperature_degC.assign(self.cold_wall_temperature_degC)
+        
+        sim.hot_wall = self._HotWall()
+        
+        sim.cold_wall = self._ColdWall()
+        
+        sim.walls = self._Walls()
+        
+        return sim
+    
+    
+def test__heat_driven_cavity_water__ci__():
+
+    verified_cold_wall_heat_flux = -7.5
+    
+    sim = WaterHeatDrivenCavityBenchmarkSimulation()
+
+    sim.assign_initial_values()
+
+    sim.timestep_size = 1.e-3
+
+    sim.solver.parameters["newton_solver"]["maximum_iterations"] = 8
+
+    sim.solve(goal_tolerance = 0.0001)
+    
+    for it in range(20):
+
+        sim.advance()
+
+        print("Solving time step number " + str(it))
+
+        sim.timestep_size = 2.*sim.timestep_size
+
+        for attempts in range(3):
+
+            try:
+
+                print("Trying time step size " + str(sim.timestep_size))
+
+                sim.solve(goal_tolerance = 0.05)
+
+                failed = False
+
+                break
+
+            except:
+
+                sim.timestep_size = sim.timestep_size/2.
+
+                sim.reset_initial_guess()
+
+                failed = True
+
+        if failed:
+
+            break
+
+        _unsteadiness = unsteadiness(sim)
+        
+        print("Unsteadiness = " + str(_unsteadiness))
+
+        steady_tolerance = 0.01
+        
+        if _unsteadiness <= steady_tolerance:
+
+            print("Reached steady state (tol = " + str(steady_tolerance) + ")")
+
+            break
+
+    cold_wall_heat_flux = fenics.assemble(sim.cold_wall_heat_flux_integrand())
+
+    print("Integrated cold wall heat flux = " + str(cold_wall_heat_flux))
+    
+    assert(abs(cold_wall_heat_flux - verified_cold_wall_heat_flux) < 0.1)
+    
+    
 class LidDrivenCavityBenchmarkSimulation(phaseflow.phasechange_simulation.AbstractSimulation):
 
     def __init__(self, 
@@ -588,13 +877,15 @@ class LidDrivenCavityBenchmarkSimulation(phaseflow.phasechange_simulation.Abstra
         self.bottom_wall = BottomWall()
         
         super().__init__(
-            time_order = time_order, integration_measure = integration_measure, setup_solver = setup_solver)
+            time_order = time_order, 
+            integration_measure = integration_measure, 
+            setup_solver = setup_solver)
         
         self.timestep_size = 1.e12
         
         self.temperature_rayleigh_number.assign(0.)
         
-        self.concentration_rayleigh_number.assign(0.)
+        self.concentration_buoyancy_ratio.assign(0.)
         
         self.lewis_number.assign(1.e32)
         
@@ -738,7 +1029,9 @@ class StefanProblemBenchmarkSimulation(ConvectionCoupledMeltingBenchmarkSimulati
             setup_solver = True):
         
         super().__init__(
-            time_order = time_order, integration_measure = integration_measure, setup_solver = setup_solver)
+            time_order = time_order, 
+            integration_measure = integration_measure, 
+            setup_solver = setup_solver)
         
         self.timestep_size = 1.e-3
         
