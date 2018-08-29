@@ -466,11 +466,11 @@ class HeatDrivenCavityBenchmarkSimulation(ConvectionCoupledMeltingBenchmarkSimul
     
         nhat = fenics.FacetNormal(self.mesh)
     
-        p, u, T, C_L = fenics.split(self.solution)
+        p, u, T, C_L = fenics.split(self.solution.leaf_node())
         
         mesh_function = fenics.MeshFunction(
             "size_t", 
-            self.mesh, 
+            self.mesh.leaf_node(), 
             self.mesh.topology().dim() - 1)
         
         cold_wall_id = 2
@@ -480,7 +480,7 @@ class HeatDrivenCavityBenchmarkSimulation(ConvectionCoupledMeltingBenchmarkSimul
         dot, grad = fenics.dot, fenics.grad
         
         ds = fenics.ds(
-            domain = self.mesh, 
+            domain = self.mesh.leaf_node(), 
             subdomain_data = mesh_function, 
             subdomain_id = cold_wall_id)
         
@@ -545,9 +545,7 @@ def test__heat_driven_cavity__ci__():
         
     assert(steady)
     
-    integrate = fenics.assemble
-    
-    cold_wall_heat_flux = integrate(sim.cold_wall_heat_flux_integrand())
+    cold_wall_heat_flux = fenics.assemble(sim.cold_wall_heat_flux_integrand())
     
     print("Integrated cold wall heat flux = " + str(cold_wall_heat_flux))
     
