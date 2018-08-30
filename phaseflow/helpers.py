@@ -1,7 +1,5 @@
 """ **helpers.py** contains a variety of patching code. """
-import inspect
-import errno    
-import os
+import pathlib
 import fenics
 
 
@@ -31,32 +29,23 @@ class Point(fenics.Point):
             fenics.Point.__init__(self, coordinates[0], coordinates[1], coordinates[2])
 
             
-def mkdir_p(path):
+def mkdir_p(pathstring):
     """ Make a directory if it doesn't exist.
     
     This is needed because `open` does not create directories.
     
-    Code from https://stackoverflow.com/questions/600268/mkdir-p-functionality-in-python 
+    Now this just calls the appropriate function from pathlib.
+    Older versions were more complicated.
     
     Parameters
     ----------
     path : string
     """
-    try:
+    path = pathlib.Path(pathstring)
     
-        os.makedirs(path)
-        
-    except OSError as exc:  # Python >2.5
-    
-        if exc.errno == errno.EEXIST and os.path.isdir(path):
-        
-            pass
-            
-        else:
-        
-            raise
+    path.mkdir(parents = True, exist_ok = True)
 
-            
+    
 if __name__=="__main__":
 
     pass
