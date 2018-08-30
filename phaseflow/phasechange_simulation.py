@@ -283,7 +283,7 @@ class AbstractSimulation(phaseflow.simulation.AbstractSimulation):
         
         return sim
         
-    def _plot(self, solution, time):
+    def _plot(self, solution, time, savefigs = False, outdir = ""):
         """ Plot the adaptive mesh, velocity vector field, temperature field, and phase field. """
         p, u, T, C_L = solution.leaf_node().split()
         
@@ -291,10 +291,11 @@ class AbstractSimulation(phaseflow.simulation.AbstractSimulation):
         
         C = fenics.project(C_L*(1. - phi), mesh = self.mesh.leaf_node())
        
-        for var, label, colorbar in zip(
+        for var, label, colorbar, varname in zip(
                 (solution.function_space().mesh().leaf_node(), u, T, C, phi),
                 ("$\Omega_h$", "$\mathbf{u}$", "$T$", "$C$", "$\phi(T,C)$"),
-                (False, True, True, True, True)):
+                (False, True, True, True, True),
+                ("mesh", "u", "T", "C", "phi")):
             
             some_mappable_thing = phaseflow.plotting.plot(var)
             
@@ -309,6 +310,10 @@ class AbstractSimulation(phaseflow.simulation.AbstractSimulation):
             if colorbar and (self.mesh.topology().dim() > 1):
             
                 matplotlib.pyplot.ylabel("$y$")
+            
+            if savefigs:
+            
+                matplotlib.pyplot.savefig(outdir + "/" + varname + "_t" + str(time) + ".png")
             
             matplotlib.pyplot.show()
     

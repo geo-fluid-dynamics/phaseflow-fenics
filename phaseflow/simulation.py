@@ -418,11 +418,16 @@ class AbstractSimulation(metaclass = abc.ABCMeta):
 
             file.write(var, self._times[solution_index])
             
-    def plot(self, solution_index = 0):
+    def plot(self, solution_index = 0, savefigs = False, outdir = ""):
         """ Plot the adaptive mesh and all parts of the mixed finite element solution. """
-        self._plot(solution = self._solutions[solution_index], time = self._times[solution_index])
+        if not (outdir == ""):
         
-    def _plot(self, solution, time):
+            phaseflow.helpers.mkdir_p(outdir)
+        
+        self._plot(solution = self._solutions[solution_index], time = self._times[solution_index],
+                   savefigs = savefigs, outdir = outdir)
+        
+    def _plot(self, solution, time, savefigs = False, outdir = ""):
 
         phaseflow.plotting.plot(solution.function_space().mesh().leaf_node())
         
@@ -431,6 +436,10 @@ class AbstractSimulation(metaclass = abc.ABCMeta):
         matplotlib.pyplot.xlabel("$x$")
         
         matplotlib.pyplot.ylabel("$y$")
+        
+        if savefigs:
+        
+            matplotlib.pyplot.savefig(fname = outdir + "/mesh_t" + str(time) + ".png")
         
         matplotlib.pyplot.show()
         
@@ -447,6 +456,8 @@ class AbstractSimulation(metaclass = abc.ABCMeta):
             matplotlib.pyplot.xlabel("$x$")
             
             matplotlib.pyplot.ylabel("$y$")
+            
+            matplotlib.pyplot.savefig(fname = outdir + "/w" + str(i) + "_t" + str(time) + ".png")
             
             matplotlib.pyplot.show()
         
