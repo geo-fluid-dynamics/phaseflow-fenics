@@ -58,9 +58,9 @@ class CompositionalConvectionCoupledMeltingBenchmarkSimulation(
         
         self.prandtl_number.assign(56.2)
         
-        Ra_T = self.temperature_rayleigh_number.__float()__
+        Ra_T = self.temperature_rayleigh_number.__float__()
         
-        Pr = self.prandtl_number.__float()__
+        Pr = self.prandtl_number.__float__()
         
         self.concentration_buoyancy_factor.assign(3.*Ra_T/Pr)
         
