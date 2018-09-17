@@ -90,7 +90,7 @@ class AbstractSimulation(phaseflow.simulation.AbstractSimulation):
         
     def time_discrete_terms(self):
         """ Return the discrete time derivatives which are needed for the variational form. """
-        p_t, u_t, T_t, C_L_t = super().time_discrete_terms()
+        p_t, u_t, T_t, C_t = super().time_discrete_terms()
         
         pnp1, unp1, Tnp1, Cnp1_L = fenics.split(self._solutions[0].leaf_node())
         
@@ -122,7 +122,7 @@ class AbstractSimulation(phaseflow.simulation.AbstractSimulation):
             
             raise NotImplementedError()
             
-        return u_t, T_t, C_L_t, phi_t
+        return u_t, T_t, C_t, phi_t
         
     def element(self):
         """ Return a P1P2P1P1 element for the monolithic solution. """
@@ -158,13 +158,13 @@ class AbstractSimulation(phaseflow.simulation.AbstractSimulation):
         
         mu_S = self.solid_viscosity
         
-        p, u, T, C_L = fenics.split(self.solution.leaf_node())
+        p, u, T, C = fenics.split(self.solution.leaf_node())
         
-        u_t, T_t, C_Lt, phi_t = self.time_discrete_terms()
+        u_t, T_t, C_t, phi_t = self.time_discrete_terms()
         
-        b = self.buoyancy(T = T, C = C_L)
+        b = self.buoyancy(T = T, C = C)
         
-        phi = self.semi_phasefield(T = T, C = C_L)
+        phi = self.semi_phasefield(T = T, C = C)
         
         mu = mu_L + (mu_S - mu_L)*phi
         
@@ -182,8 +182,8 @@ class AbstractSimulation(phaseflow.simulation.AbstractSimulation):
             + dot(grad(psi_T), 1./Pr*grad(T) - T*u)
         
         concentration = \
-            psi_C*((1. - phi)*C_Lt - C_L*phi_t) \
-            + dot(grad(psi_C), 1./Sc*(1. - phi)*grad(C_L) - C_L*u)
+            psi_C*((1. - phi)*C_t - C*phi_t) \
+            + dot(grad(psi_C), 1./Sc*(1. - phi)*grad(C) - C*u)
         
         stabilization = -gamma*psi_p*p
         
@@ -195,7 +195,7 @@ class AbstractSimulation(phaseflow.simulation.AbstractSimulation):
     
     def adaptive_goal(self):
         """ Choose the melting rate as the goal. """
-        u_t, T_t, C_Lt, phi_t = self.time_discrete_terms()
+        u_t, T_t, C_t, phi_t = self.time_discrete_terms()
         
         dx = self.integration_measure
         
@@ -320,15 +320,15 @@ class AbstractSimulation(phaseflow.simulation.AbstractSimulation):
         
             return solution(point)[3]
         
-        def C_L(solution, point):
+        def C(solution, point):
         
             return solution(point)[4]
         
         def phi(solution, point):
             
-            return self.point_value_from_semi_phasefield(T = T(solution, point), C = C_L(solution, point))
+            return self.point_value_from_semi_phasefield(T = T(solution, point), C = C(solution, point))
         
-        scalars = (u0, u1, T, C_L, phi)
+        scalars = (u0, u1, T, C, phi)
         
         for scalar, tolerance in zip(scalars, absolute_tolerances):
         
@@ -386,11 +386,11 @@ class AbstractSimulation(phaseflow.simulation.AbstractSimulation):
         
     def _plot(self, solution, time, savefigs = False, outdir = ""):
         """ Plot the adaptive mesh, velocity vector field, temperature field, and phase field. """
-        p, u, T, C_L = solution.leaf_node().split()
+        p, u, T, C = solution.leaf_node().split()
         
-        phi = fenics.project(self.semi_phasefield(T = T, C = C_L), mesh = self.mesh.leaf_node())
+        phi = fenics.project(self.semi_phasefield(T = T, C = C), mesh = self.mesh.leaf_node())
         
-        C = fenics.project(C_L*(1. - phi), mesh = self.mesh.leaf_node())
+        C = fenics.project(C*(1. - phi), mesh = self.mesh.leaf_node())
        
         for var, label, colorbar, varname in zip(
                 (solution.function_space().mesh().leaf_node(), u, T, C, phi),
@@ -427,7 +427,7 @@ class AbstractSimulation(phaseflow.simulation.AbstractSimulation):
         """
         for var, symbol, label in zip(
                 self._solutions[solution_index].leaf_node().split(), 
-                ("p", "u", "T", "C_L"), 
+                ("p", "u", "T", "C"), 
                 ("pressure", "velocity", "temperature", "concentration")):
         
             var.rename(symbol, label)

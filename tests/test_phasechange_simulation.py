@@ -125,9 +125,9 @@ class CompositionalConvectionCoupledMeltingBenchmarkSimulation(
         
     def adaptive_goal(self):
 
-        p, u, T, C_L = fenics.split(self.solution)
+        p, u, T, C = fenics.split(self.solution)
         
-        phi = self.semi_phasefield(T = T, C = C_L)
+        phi = self.semi_phasefield(T = T, C = C)
         
         dx = self.integration_measure
         
@@ -174,9 +174,9 @@ def test__compositional_convection_coupled_melting_benchmark__amr__regression__c
         
         sim.advance()
     
-    p_fine, u_fine, T_fine, C_L_fine = fenics.split(sim.solution)
+    p_fine, u_fine, T_fine, C_fine = fenics.split(sim.solution)
     
-    phi = sim.semi_phasefield(T = T_fine, C = C_L_fine)
+    phi = sim.semi_phasefield(T = T_fine, C = C_fine)
     
     expected_solid_area =  0.7405
     
@@ -232,7 +232,7 @@ class ConvectionCoupledMeltingBenchmarkSimulation(CompositionalConvectionCoupled
     
     def adaptive_goal(self):
 
-        u_t, T_t, C_Lt, phi_t = self.time_discrete_terms()
+        u_t, T_t, Ct, phi_t = self.time_discrete_terms()
         
         dx = self.integration_measure
         
@@ -255,9 +255,9 @@ def test__convection_coupled_melting_benchmark__amr__regression__ci__():
         
         sim.advance()
     
-    p_fine, u_fine, T_fine, C_L_fine = fenics.split(sim.solution)
+    p_fine, u_fine, T_fine, C_fine = fenics.split(sim.solution)
     
-    phi = sim.semi_phasefield(T = T_fine, C = C_L_fine)
+    phi = sim.semi_phasefield(T = T_fine, C = C_fine)
     
     solid_area = fenics.assemble(phi*fenics.dx)
     
@@ -288,9 +288,9 @@ def test__deepcopy__ci__():
         
         sim.advance()
     
-    p_fine, u_fine, T_fine, C_L_fine = fenics.split(sim.solution)
+    p_fine, u_fine, T_fine, C_fine = fenics.split(sim.solution)
     
-    phi = sim.semi_phasefield(T = T_fine, C = C_L_fine)
+    phi = sim.semi_phasefield(T = T_fine, C = C_fine)
     
     solid_area = fenics.assemble(phi*fenics.dx)
     
@@ -304,9 +304,9 @@ def test__deepcopy__ci__():
         
         sim2.advance()
     
-    p_fine, u_fine, T_fine, C_L_fine = fenics.split(sim2.solution)
+    p_fine, u_fine, T_fine, C_fine = fenics.split(sim2.solution)
     
-    phi = sim2.semi_phasefield(T = T_fine, C = C_L_fine)
+    phi = sim2.semi_phasefield(T = T_fine, C = C_fine)
     
     solid_area = fenics.assemble(phi*fenics.dx)
     
@@ -343,9 +343,9 @@ def test__checkpoint__ci__():
         
         sim.advance()
     
-    p_fine, u_fine, T_fine, C_L_fine = fenics.split(sim.solution)
+    p_fine, u_fine, T_fine, C_fine = fenics.split(sim.solution)
     
-    phi = sim.semi_phasefield(T = T_fine, C = C_L_fine)
+    phi = sim.semi_phasefield(T = T_fine, C = C_fine)
     
     solid_area = fenics.assemble(phi*fenics.dx)
     
@@ -372,9 +372,9 @@ def test__coarsen__ci__():
         
         sim.advance()
     
-    p_fine, u_fine, T_fine, C_L_fine = fenics.split(sim.solution)
+    p_fine, u_fine, T_fine, C_fine = fenics.split(sim.solution)
     
-    phi = sim.semi_phasefield(T = T_fine, C = C_L_fine)
+    phi = sim.semi_phasefield(T = T_fine, C = C_fine)
     
     solid_area = fenics.assemble(phi*fenics.dx)
     
@@ -474,7 +474,7 @@ class HeatDrivenCavityBenchmarkSimulation(ConvectionCoupledMeltingBenchmarkSimul
     
         nhat = fenics.FacetNormal(self.mesh)
     
-        p, u, T, C_L = fenics.split(self.solution.leaf_node())
+        p, u, T, C = fenics.split(self.solution.leaf_node())
         
         mesh_function = fenics.MeshFunction(
             "size_t", 
@@ -955,7 +955,7 @@ class LidDrivenCavityBenchmarkSimulation(phaseflow.phasechange_simulation.Abstra
     
         nhat = fenics.FacetNormal(self.mesh)
     
-        p, u, T, C_L = fenics.split(self.solution)
+        p, u, T, C = fenics.split(self.solution)
         
         bottom_wall_id = 2
         
@@ -1123,9 +1123,9 @@ class StefanProblemBenchmarkSimulation(ConvectionCoupledMeltingBenchmarkSimulati
             
     def melted_length_integrand(self):
         
-        p, u, T, C_L = fenics.split(self.solution)
+        p, u, T, C = fenics.split(self.solution)
         
-        phi = self.semi_phasefield(T = T, C = C_L)
+        phi = self.semi_phasefield(T = T, C = C)
         
         dx = self.integration_measure
         
