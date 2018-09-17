@@ -194,12 +194,65 @@ class AbstractSimulation(phaseflow.simulation.AbstractSimulation):
         return F
     
     def adaptive_goal(self):
-        """ Choose the melting rate as the goal. """
-        u_t, T_t, C_t, phi_t = self.time_discrete_terms()
+        """ Choose the solid area as the goal for AMR. """
+        return self.solid_area_integrand()
+        
+    def solid_area_integrand(self):
+        
+        p, u, T, C = fenics.split(self.solution.leaf_node())
+        
+        phi = self.semi_phasefield(T = T, C = C) 
         
         dx = self.integration_measure
         
-        return -phi_t*dx
+        return phi*dx
+        
+    def solute_mass_integrand(self):
+
+        p, u, T, C = fenics.split(self.solution.leaf_node())
+        
+        phi = self.semi_phasefield(T = T, C = C) 
+        
+        dx = self.integration_measure
+        
+        return (1. - phi)*C*dx
+        
+    def area_above_critical_phi_integrand(self, critical_phi = 1.e-6):
+    
+        p, u, T, C = fenics.split(self.solution.leaf_node())
+        
+        _p, _u, _T, _C = self.solution.leaf_node().split()
+        
+        cell_markers = fenics.MeshFunction("size_t", self.mesh.leaf_node(), self.mesh.topology().dim())
+        
+        def phi(x):
+            
+            p = fenics.Point(x[0], x[1])
+            
+            return self.point_value_from_semi_phasefield(T = _T(p), C = _C(p))
+            
+        class AboveCriticalPhi(fenics.SubDomain):
+
+            def inside(self, x, on_boundary):
+        
+                return phi(x) > critical_phi
+        
+        subdomain_id = 2
+        
+        AboveCriticalPhi().mark(cell_markers, subdomain_id)
+        
+        dx_phistar = fenics.dx(
+            domain = self.mesh.leaf_node(), 
+            subdomain_data = cell_markers,
+            subdomain_id = subdomain_id)
+        
+        P1 = fenics.FiniteElement("P", self.mesh.ufl_cell(), 1)
+        
+        V = fenics.FunctionSpace(self.mesh.leaf_node(), P1)
+        
+        unity = fenics.interpolate(fenics.Expression("1.", element = P1), V)
+        
+        return unity*dx_phistar
         
     def solve_with_auto_regularization(self, 
             goal_tolerance = None,

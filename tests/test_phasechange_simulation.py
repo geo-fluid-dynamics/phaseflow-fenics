@@ -123,16 +123,6 @@ class CompositionalConvectionCoupledMeltingBenchmarkSimulation(
             fenics.DirichletBC(self.function_space.sub(2), self.hot_wall_temperature, self.hot_wall),
             fenics.DirichletBC(self.function_space.sub(2), self.cold_wall_temperature, self.cold_wall)]
         
-    def adaptive_goal(self):
-
-        p, u, T, C = fenics.split(self.solution)
-        
-        phi = self.semi_phasefield(T = T, C = C)
-        
-        dx = self.integration_measure
-        
-        return phi*dx
-        
     def deepcopy(self):
     
         sim = super().deepcopy()
