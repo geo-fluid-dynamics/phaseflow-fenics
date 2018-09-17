@@ -162,13 +162,15 @@ def test__compositional_convection_coupled_melting_benchmark__amr__regression__c
     
     sim.timestep_size = 10.
     
+    sim.regularization_smoothing_parameter.assign(0.025)
+    
     for it, epsilon_M in zip(range(4), (0.5e-3, 0.25e-3, 0.125e-3, 0.0625e-3)):
     
-        for r in (0.4, 0.2, 0.1, 0.05, 0.0375, 0.03125, 0.025):
-            
-            sim.regularization_smoothing_parameter.assign(r)
-            
-            sim.solve(goal_tolerance = epsilon_M)
+        if it == 1:
+        
+            sim.regularization_sequence = None
+    
+        sim.solve_with_auto_regularization(goal_tolerance = epsilon_M)
         
         sim.advance()
     
@@ -1182,13 +1184,15 @@ def test__stefan_problem_with_bdf2__regression__ci__():
     
     sim.timestep_size = end_time/float(timestep_count)
     
+    sim.regularization_smoothing_parameter.assign(0.005)
+    
     for it in range(timestep_count):
+    
+        if it == 1:
         
-        for r in (0.02, 0.01, 0.005):
-        
-            sim.regularization_smoothing_parameter.assign(r)
+            sim.regularization_sequence = None
             
-            sim.solve(goal_tolerance = 1.e-7)
+        sim.solve_with_auto_regularization(goal_tolerance = 1.e-7)
         
         sim.advance()
     

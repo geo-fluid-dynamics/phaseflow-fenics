@@ -5,6 +5,7 @@ import phaseflow
 import fenics
 import matplotlib
 import math
+import sys
 
 
 class AbstractSimulation(phaseflow.simulation.AbstractSimulation):
@@ -36,20 +37,28 @@ class AbstractSimulation(phaseflow.simulation.AbstractSimulation):
         
         self.regularization_central_temperature_offset = fenics.Constant(0., name = "delta_T")
         
-        self.regularization_smoothing_parameter = fenics.Constant(0.01, name = "r")
+        self.regularization_smoothing_parameter = fenics.Constant(1./64., name = "r")
     
+        self.regularization_sequence = None
+        
         super().__init__(
             time_order = time_order, 
             integration_measure = integration_measure, 
             setup_solver = setup_solver)
+            
+        if setup_solver:
+        
+            self.solver.parameters["newton_solver"]["maximum_iterations"] = 12
+        
+            self.solver.parameters["newton_solver"]["absolute_tolerance"] = 1.e-9
     
-    def phi(self, T, C, T_m, m_L, delta_T, r):
+    def phi(self, T, C, T_m, m_L, delta_T, s):
         """ The regularized semi-phasefield. """
         T_L = delta_T + T_m + m_L*C
         
         tanh = fenics.tanh
         
-        return 0.5*(1. + tanh((T_L - T)/r))
+        return 0.5*(1. + tanh((T_L - T)/s))
         
     def semi_phasefield(self, T, C):
         """ The semi-phasefield $phi$ given in UFL. """
@@ -59,9 +68,9 @@ class AbstractSimulation(phaseflow.simulation.AbstractSimulation):
         
         delta_T = self.regularization_central_temperature_offset
         
-        r = self.regularization_smoothing_parameter
+        s = self.regularization_smoothing_parameter
         
-        return self.phi(T = T, C = C, T_m = T_m, m_L = m_L, delta_T = delta_T, r = r)
+        return self.phi(T = T, C = C, T_m = T_m, m_L = m_L, delta_T = delta_T, s = s)
         
     def point_value_from_semi_phasefield(self, T, C):
         """ The semi-phasefield $phi$ sutiable for evaluation given a single $T$ and $C$. 
@@ -75,9 +84,9 @@ class AbstractSimulation(phaseflow.simulation.AbstractSimulation):
         
         delta_T = self.regularization_central_temperature_offset.values()[0]
         
-        r = self.regularization_smoothing_parameter.values()[0]
+        s = self.regularization_smoothing_parameter.values()[0]
         
-        return self.phi(T = T, C = C, T_m = T_m, m_L = m_L, delta_T = delta_T, r = r)
+        return self.phi(T = T, C = C, T_m = T_m, m_L = m_L, delta_T = delta_T, s = s)
         
     def time_discrete_terms(self):
         """ Return the discrete time derivatives which are needed for the variational form. """
@@ -191,6 +200,98 @@ class AbstractSimulation(phaseflow.simulation.AbstractSimulation):
         dx = self.integration_measure
         
         return -phi_t*dx
+        
+    def solve_with_auto_regularization(self, 
+            goal_tolerance = None,
+            max_regularization_threshold = 4., 
+            max_attempts = 16,
+            enable_newton_solution_backup = False):
+        """ Catch solver failure and automatically over-regularize the problem, 
+        then successively return to desired regularization.
+        
+        If not using AMR, then the latest successful Newton solution can be saved/loaded to be more efficient
+        with `enable_newton_solution_backup = True`.
+        """
+        if self.regularization_sequence == None:
+        
+            self.regularization_sequence = (self.regularization_smoothing_parameter.__float__(),)
+        
+        first_sigma_to_solve = self.regularization_sequence[0]
+        
+        attempts = range(max_attempts)
+        
+        solved = False
+        
+        for attempt in attempts:
+
+            sigma_start_index = self.regularization_sequence.index(first_sigma_to_solve)
+            
+            try:
+            
+                for sigma in self.regularization_sequence[sigma_start_index:]:
+                    
+                    self.regularization_smoothing_parameter.assign(sigma)
+                    
+                    if enable_newton_solution_backup:
+                    
+                        self.save_newton_solution()
+                    
+                    self.solve(goal_tolerance = goal_tolerance)
+                    
+                solved = True
+                
+                break
+                
+            except RuntimeError:  
+                
+                if "Newton solver did not converge" not in str(sys.exc_info()):
+                
+                    raise
+                
+                current_sigma = self.regularization_smoothing_parameter.__float__()
+                
+                sigmas = self.regularization_sequence
+                
+                print("Failed to solve with sigma = " + str(current_sigma) + 
+                     " from the sequence " + str(sigmas))
+                
+                if attempt == attempts[-1]:
+                    
+                    break
+                    
+                index = sigmas.index(current_sigma)
+                
+                if index == 0:
+                
+                    sigma_to_insert = 2.*sigmas[0]
+                    
+                    new_sigmas = (sigma_to_insert,) + sigmas
+                
+                else:
+                
+                    sigma_to_insert = (current_sigma + sigmas[index - 1])/2.
+                
+                    new_sigmas = sigmas[:index] + (sigma_to_insert,) + sigmas[index:]
+                
+                self.regularization_sequence = new_sigmas
+                
+                print("Inserted new value of " + str(sigma_to_insert))
+                
+                if enable_newton_solution_backup:
+                
+                    self.load_newton_solution()
+                
+                    first_sigma_to_solve = sigma_to_insert
+                
+                else:
+                
+                    self.reset_initial_guess()
+                    
+                    first_sigma_to_solve = self.regularization_sequence[0]
+        
+        self.regularization_smoothing_parameter.assign(self.regularization_sequence[-1])
+        
+        assert(solved)
         
     def coarsen(self, 
             absolute_tolerances = (1.e-2, 1.e-2, 1.e-2, 1.e-2, 1.e-2),
