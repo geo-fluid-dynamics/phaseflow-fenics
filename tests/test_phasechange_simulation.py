@@ -17,7 +17,7 @@ class CompositionalConvectionCoupledMeltingBenchmarkSimulation(
         
         self.cold_wall_temperature = fenics.Constant(-0.11, name = "T_c")
         
-        self.initial_melt_concentration = fenics.Constant(0.1, name = "C0_L")
+        self.initial_melt_concentration = fenics.Constant(1., name = "C0")
    
         class HotWall(fenics.SubDomain):
 
@@ -62,15 +62,17 @@ class CompositionalConvectionCoupledMeltingBenchmarkSimulation(
         
         Pr = self.prandtl_number.__float__()
         
-        self.concentration_buoyancy_factor.assign(3.*Ra_T/Pr)
+        self.concentration_rayleigh_number.assign(-0.3*Ra_T/Pr)
         
         self.stefan_number.assign(0.045)
         
-        self.lewis_number.assign(100.)
+        Le = 100.
+        
+        self.schmidt_number.assign(Pr*Le)
         
         self.pure_liquidus_temperature.assign(0.)
         
-        self.liquidus_slope.assign(-1.)
+        self.liquidus_slope.assign(-0.1)
         
         self.regularization_central_temperature_offset.assign(0.01)
         
@@ -104,10 +106,10 @@ class CompositionalConvectionCoupledMeltingBenchmarkSimulation(
                  "0.", 
                  "0.", 
                  "(T_h - T_c)*(x[0] < x_m0) + T_c", 
-                 "C0_L*(x[0] < x_m0)"),
+                 "C0*(x[0] < x_m0)"),
                 T_h = self.hot_wall_temperature, 
                 T_c = self.cold_wall_temperature,
-                C0_L = self.initial_melt_concentration,
+                C0 = self.initial_melt_concentration,
                 x_m0 = 1./2.**(self.initial_hot_wall_refinement_cycles - 1),
                 element = self.element()),
             self.function_space)
@@ -120,16 +122,6 @@ class CompositionalConvectionCoupledMeltingBenchmarkSimulation(
             fenics.DirichletBC(self.function_space.sub(1), (0., 0.), self.walls),
             fenics.DirichletBC(self.function_space.sub(2), self.hot_wall_temperature, self.hot_wall),
             fenics.DirichletBC(self.function_space.sub(2), self.cold_wall_temperature, self.cold_wall)]
-        
-    def adaptive_goal(self):
-
-        p, u, T, C_L = fenics.split(self.solution)
-        
-        phi = self.semi_phasefield(T = T, C = C_L)
-        
-        dx = self.integration_measure
-        
-        return phi*dx
         
     def deepcopy(self):
     
@@ -160,19 +152,21 @@ def test__compositional_convection_coupled_melting_benchmark__amr__regression__c
     
     sim.timestep_size = 10.
     
+    sim.regularization_smoothing_parameter.assign(0.025)
+    
     for it, epsilon_M in zip(range(4), (0.5e-3, 0.25e-3, 0.125e-3, 0.0625e-3)):
     
-        for r in (0.4, 0.2, 0.1, 0.05, 0.0375, 0.03125, 0.025):
-            
-            sim.regularization_smoothing_parameter.assign(r)
-            
-            sim.solve(goal_tolerance = epsilon_M)
+        if it == 1:
+        
+            sim.regularization_sequence = None
+    
+        sim.solve_with_auto_regularization(goal_tolerance = epsilon_M)
         
         sim.advance()
     
-    p_fine, u_fine, T_fine, C_L_fine = fenics.split(sim.solution)
+    p_fine, u_fine, T_fine, C_fine = fenics.split(sim.solution)
     
-    phi = sim.semi_phasefield(T = T_fine, C = C_L_fine)
+    phi = sim.semi_phasefield(T = T_fine, C = C_fine)
     
     expected_solid_area =  0.7405
     
@@ -206,19 +200,17 @@ class ConvectionCoupledMeltingBenchmarkSimulation(CompositionalConvectionCoupled
         
         self.cold_wall_temperature.assign(-0.01)
         
-        self.initial_melt_concentration.assign(0.)
-        
         self.timestep_size = 10.
         
         self.temperature_rayleigh_number.assign(3.27e5)
         
-        self.concentration_buoyancy_factor.assign(0.)
+        self.concentration_rayleigh_number.assign(0.)
         
         self.prandtl_number.assign(56.2)
         
         self.stefan_number.assign(0.045)
         
-        self.lewis_number.assign(1.e32)
+        self.schmidt_number.assign(1.e32)
         
         self.liquidus_slope.assign(0.)
         
@@ -228,7 +220,7 @@ class ConvectionCoupledMeltingBenchmarkSimulation(CompositionalConvectionCoupled
     
     def adaptive_goal(self):
 
-        u_t, T_t, C_Lt, phi_t = self.time_discrete_terms()
+        u_t, T_t, Ct, phi_t = self.time_discrete_terms()
         
         dx = self.integration_measure
         
@@ -251,9 +243,9 @@ def test__convection_coupled_melting_benchmark__amr__regression__ci__():
         
         sim.advance()
     
-    p_fine, u_fine, T_fine, C_L_fine = fenics.split(sim.solution)
+    p_fine, u_fine, T_fine, C_fine = fenics.split(sim.solution)
     
-    phi = sim.semi_phasefield(T = T_fine, C = C_L_fine)
+    phi = sim.semi_phasefield(T = T_fine, C = C_fine)
     
     solid_area = fenics.assemble(phi*fenics.dx)
     
@@ -284,9 +276,9 @@ def test__deepcopy__ci__():
         
         sim.advance()
     
-    p_fine, u_fine, T_fine, C_L_fine = fenics.split(sim.solution)
+    p_fine, u_fine, T_fine, C_fine = fenics.split(sim.solution)
     
-    phi = sim.semi_phasefield(T = T_fine, C = C_L_fine)
+    phi = sim.semi_phasefield(T = T_fine, C = C_fine)
     
     solid_area = fenics.assemble(phi*fenics.dx)
     
@@ -300,9 +292,9 @@ def test__deepcopy__ci__():
         
         sim2.advance()
     
-    p_fine, u_fine, T_fine, C_L_fine = fenics.split(sim2.solution)
+    p_fine, u_fine, T_fine, C_fine = fenics.split(sim2.solution)
     
-    phi = sim2.semi_phasefield(T = T_fine, C = C_L_fine)
+    phi = sim2.semi_phasefield(T = T_fine, C = C_fine)
     
     solid_area = fenics.assemble(phi*fenics.dx)
     
@@ -339,9 +331,9 @@ def test__checkpoint__ci__():
         
         sim.advance()
     
-    p_fine, u_fine, T_fine, C_L_fine = fenics.split(sim.solution)
+    p_fine, u_fine, T_fine, C_fine = fenics.split(sim.solution)
     
-    phi = sim.semi_phasefield(T = T_fine, C = C_L_fine)
+    phi = sim.semi_phasefield(T = T_fine, C = C_fine)
     
     solid_area = fenics.assemble(phi*fenics.dx)
     
@@ -368,9 +360,9 @@ def test__coarsen__ci__():
         
         sim.advance()
     
-    p_fine, u_fine, T_fine, C_L_fine = fenics.split(sim.solution)
+    p_fine, u_fine, T_fine, C_fine = fenics.split(sim.solution)
     
-    phi = sim.semi_phasefield(T = T_fine, C = C_L_fine)
+    phi = sim.semi_phasefield(T = T_fine, C = C_fine)
     
     solid_area = fenics.assemble(phi*fenics.dx)
     
@@ -418,9 +410,9 @@ class HeatDrivenCavityBenchmarkSimulation(ConvectionCoupledMeltingBenchmarkSimul
         self.stefan_number.assign(1.e32)
         
         """ Disable concentration equation """
-        self.concentration_buoyancy_factor.assign(0.)
+        self.concentration_rayleigh_number.assign(0.)
         
-        self.lewis_number.assign(1.e32)
+        self.schmidt_number.assign(1.e32)
         
         self.liquidus_slope.assign(0.)
         
@@ -438,11 +430,11 @@ class HeatDrivenCavityBenchmarkSimulation(ConvectionCoupledMeltingBenchmarkSimul
         
         T0 = "T_h + (T_c - T_h)*x[0]"
         
-        C0_L = "0."
+        C0 = "0."
         
         w0 = fenics.interpolate(
             fenics.Expression(
-                (p0, u0_0, u0_1, T0, C0_L),
+                (p0, u0_0, u0_1, T0, C0),
                 T_h = self.hot_wall_temperature, 
                 T_c = self.cold_wall_temperature,
                 element = self.element()),
@@ -470,7 +462,7 @@ class HeatDrivenCavityBenchmarkSimulation(ConvectionCoupledMeltingBenchmarkSimul
     
         nhat = fenics.FacetNormal(self.mesh)
     
-        p, u, T, C_L = fenics.split(self.solution.leaf_node())
+        p, u, T, C = fenics.split(self.solution.leaf_node())
         
         mesh_function = fenics.MeshFunction(
             "size_t", 
@@ -624,9 +616,9 @@ class WaterHeatDrivenCavityBenchmarkSimulation(phaseflow.phasechange_simulation.
         self.stefan_number.assign(1.e32)
         
         """ Disable concentration equation """
-        self.concentration_buoyancy_factor.assign(0.)
+        self.concentration_rayleigh_number.assign(0.)
         
-        self.lewis_number.assign(1.e32)
+        self.schmidt_number.assign(1.e32)
         
         self.liquidus_slope.assign(0.)
         
@@ -889,9 +881,9 @@ class LidDrivenCavityBenchmarkSimulation(phaseflow.phasechange_simulation.Abstra
         
         self.temperature_rayleigh_number.assign(0.)
         
-        self.concentration_buoyancy_factor.assign(0.)
+        self.concentration_rayleigh_number.assign(0.)
         
-        self.lewis_number.assign(1.e32)
+        self.schmidt_number.assign(1.e32)
         
         self.prandtl_number.assign(1.)
         
@@ -925,11 +917,11 @@ class LidDrivenCavityBenchmarkSimulation(phaseflow.phasechange_simulation.Abstra
         
     def initial_values(self):
         
-        p0, u0_0, u0_1, T0, C0_L = "0.", "1.", "0.", "0.", "0."
+        p0, u0_0, u0_1, T0, C0 = "0.", "1.", "0.", "0.", "0."
         
         w0 = fenics.interpolate(
             fenics.Expression(
-                (p0, u0_0, u0_1, T0, C0_L),
+                (p0, u0_0, u0_1, T0, C0),
                 element = self.element()),
             self.function_space)
         
@@ -951,7 +943,7 @@ class LidDrivenCavityBenchmarkSimulation(phaseflow.phasechange_simulation.Abstra
     
         nhat = fenics.FacetNormal(self.mesh)
     
-        p, u, T, C_L = fenics.split(self.solution)
+        p, u, T, C = fenics.split(self.solution)
         
         bottom_wall_id = 2
         
@@ -1119,9 +1111,9 @@ class StefanProblemBenchmarkSimulation(ConvectionCoupledMeltingBenchmarkSimulati
             
     def melted_length_integrand(self):
         
-        p, u, T, C_L = fenics.split(self.solution)
+        p, u, T, C = fenics.split(self.solution)
         
-        phi = self.semi_phasefield(T = T, C = C_L)
+        phi = self.semi_phasefield(T = T, C = C)
         
         dx = self.integration_measure
         
@@ -1180,13 +1172,15 @@ def test__stefan_problem_with_bdf2__regression__ci__():
     
     sim.timestep_size = end_time/float(timestep_count)
     
+    sim.regularization_smoothing_parameter.assign(0.005)
+    
     for it in range(timestep_count):
+    
+        if it == 1:
         
-        for r in (0.02, 0.01, 0.005):
-        
-            sim.regularization_smoothing_parameter.assign(r)
+            sim.regularization_sequence = None
             
-            sim.solve(goal_tolerance = 1.e-7)
+        sim.solve_with_auto_regularization(goal_tolerance = 1.e-7)
         
         sim.advance()
     
