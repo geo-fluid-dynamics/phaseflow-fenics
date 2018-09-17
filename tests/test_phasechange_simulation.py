@@ -17,7 +17,7 @@ class CompositionalConvectionCoupledMeltingBenchmarkSimulation(
         
         self.cold_wall_temperature = fenics.Constant(-0.11, name = "T_c")
         
-        self.initial_melt_concentration = fenics.Constant(0.1, name = "C0_L")
+        self.initial_melt_concentration = fenics.Constant(1., name = "C0")
    
         class HotWall(fenics.SubDomain):
 
@@ -62,7 +62,7 @@ class CompositionalConvectionCoupledMeltingBenchmarkSimulation(
         
         Pr = self.prandtl_number.__float__()
         
-        self.concentration_rayleigh_number.assign(-3.*Ra_T/Pr)
+        self.concentration_rayleigh_number.assign(-0.3*Ra_T/Pr)
         
         self.stefan_number.assign(0.045)
         
@@ -72,7 +72,7 @@ class CompositionalConvectionCoupledMeltingBenchmarkSimulation(
         
         self.pure_liquidus_temperature.assign(0.)
         
-        self.liquidus_slope.assign(-1.)
+        self.liquidus_slope.assign(-0.1)
         
         self.regularization_central_temperature_offset.assign(0.01)
         
@@ -106,10 +106,10 @@ class CompositionalConvectionCoupledMeltingBenchmarkSimulation(
                  "0.", 
                  "0.", 
                  "(T_h - T_c)*(x[0] < x_m0) + T_c", 
-                 "C0_L*(x[0] < x_m0)"),
+                 "C0*(x[0] < x_m0)"),
                 T_h = self.hot_wall_temperature, 
                 T_c = self.cold_wall_temperature,
-                C0_L = self.initial_melt_concentration,
+                C0 = self.initial_melt_concentration,
                 x_m0 = 1./2.**(self.initial_hot_wall_refinement_cycles - 1),
                 element = self.element()),
             self.function_space)
@@ -199,8 +199,6 @@ class ConvectionCoupledMeltingBenchmarkSimulation(CompositionalConvectionCoupled
             setup_solver = setup_solver)
         
         self.cold_wall_temperature.assign(-0.01)
-        
-        self.initial_melt_concentration.assign(0.)
         
         self.timestep_size = 10.
         
@@ -432,11 +430,11 @@ class HeatDrivenCavityBenchmarkSimulation(ConvectionCoupledMeltingBenchmarkSimul
         
         T0 = "T_h + (T_c - T_h)*x[0]"
         
-        C0_L = "0."
+        C0 = "0."
         
         w0 = fenics.interpolate(
             fenics.Expression(
-                (p0, u0_0, u0_1, T0, C0_L),
+                (p0, u0_0, u0_1, T0, C0),
                 T_h = self.hot_wall_temperature, 
                 T_c = self.cold_wall_temperature,
                 element = self.element()),
@@ -919,11 +917,11 @@ class LidDrivenCavityBenchmarkSimulation(phaseflow.phasechange_simulation.Abstra
         
     def initial_values(self):
         
-        p0, u0_0, u0_1, T0, C0_L = "0.", "1.", "0.", "0.", "0."
+        p0, u0_0, u0_1, T0, C0 = "0.", "1.", "0.", "0.", "0."
         
         w0 = fenics.interpolate(
             fenics.Expression(
-                (p0, u0_0, u0_1, T0, C0_L),
+                (p0, u0_0, u0_1, T0, C0),
                 element = self.element()),
             self.function_space)
         
