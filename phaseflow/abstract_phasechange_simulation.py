@@ -8,7 +8,7 @@ import math
 import sys
 
 
-class AbstractSimulation(phaseflow.simulation.AbstractSimulation):
+class AbstractPhaseChangeSimulation(phaseflow.abstract_simulation.AbstractSimulation):
     """ Implement the general model for phase-change coupled with natural and compositional convection.
     
     This class is abstract, because an instantiable simulation still requires 
@@ -48,7 +48,7 @@ class AbstractSimulation(phaseflow.simulation.AbstractSimulation):
             
         if setup_solver:
         
-            self.solver.parameters["newton_solver"]["maximum_iterations"] = 12
+            self.solver.parameters["newton_solver"]["maximum_iterations"] = 20
         
             self.solver.parameters["newton_solver"]["absolute_tolerance"] = 1.e-9
     
@@ -269,7 +269,7 @@ class AbstractSimulation(phaseflow.simulation.AbstractSimulation):
         
             self.regularization_sequence = (self.regularization_smoothing_parameter.__float__(),)
         
-        first_sigma_to_solve = self.regularization_sequence[0]
+        first_s_to_solve = self.regularization_sequence[0]
         
         attempts = range(max_attempts)
         
@@ -277,13 +277,13 @@ class AbstractSimulation(phaseflow.simulation.AbstractSimulation):
         
         for attempt in attempts:
 
-            sigma_start_index = self.regularization_sequence.index(first_sigma_to_solve)
+            s_start_index = self.regularization_sequence.index(first_s_to_solve)
             
             try:
             
-                for sigma in self.regularization_sequence[sigma_start_index:]:
+                for s in self.regularization_sequence[s_start_index:]:
                     
-                    self.regularization_smoothing_parameter.assign(sigma)
+                    self.regularization_smoothing_parameter.assign(s)
                     
                     if enable_newton_solution_backup:
                     
@@ -301,46 +301,46 @@ class AbstractSimulation(phaseflow.simulation.AbstractSimulation):
                 
                     raise
                 
-                current_sigma = self.regularization_smoothing_parameter.__float__()
+                current_s = self.regularization_smoothing_parameter.__float__()
                 
-                sigmas = self.regularization_sequence
+                ss = self.regularization_sequence
                 
-                print("Failed to solve with sigma = " + str(current_sigma) + 
-                     " from the sequence " + str(sigmas))
+                print("Failed to solve with s = " + str(current_s) + 
+                     " from the sequence " + str(ss))
                 
                 if attempt == attempts[-1]:
                     
                     break
                     
-                index = sigmas.index(current_sigma)
+                index = ss.index(current_s)
                 
                 if index == 0:
                 
-                    sigma_to_insert = 2.*sigmas[0]
+                    s_to_insert = 2.*ss[0]
                     
-                    new_sigmas = (sigma_to_insert,) + sigmas
+                    new_ss = (s_to_insert,) + ss
                 
                 else:
                 
-                    sigma_to_insert = (current_sigma + sigmas[index - 1])/2.
+                    s_to_insert = (current_s + ss[index - 1])/2.
                 
-                    new_sigmas = sigmas[:index] + (sigma_to_insert,) + sigmas[index:]
+                    new_ss = ss[:index] + (s_to_insert,) + ss[index:]
                 
-                self.regularization_sequence = new_sigmas
+                self.regularization_sequence = new_ss
                 
-                print("Inserted new value of " + str(sigma_to_insert))
+                print("Inserted new value of " + str(s_to_insert))
                 
                 if enable_newton_solution_backup:
                 
                     self.load_newton_solution()
                 
-                    first_sigma_to_solve = sigma_to_insert
+                    first_s_to_solve = s_to_insert
                 
                 else:
                 
                     self.reset_initial_guess()
                     
-                    first_sigma_to_solve = self.regularization_sequence[0]
+                    first_s_to_solve = self.regularization_sequence[0]
         
         self.regularization_smoothing_parameter.assign(self.regularization_sequence[-1])
         

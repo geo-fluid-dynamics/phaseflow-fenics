@@ -72,6 +72,8 @@ class AbstractSimulation(metaclass = abc.ABCMeta):
         if setup_solver:
         
             self.setup_solver()
+            
+        self.output_dir = ""
     
     @property
     def timestep_size(self):
@@ -502,21 +504,3 @@ def share_solver_parameters(share_to_parameters, share_from_parameters):
         except KeyError:
         
             share_solver_parameters(share_to_parameters[key], share_from_parameters[key])
-
-            
-class SolutionFile(fenics.XDMFFile):
-    """ This class extends `fenics.XDMFFile` with some minor changes for convenience. 
-    
-    Parameters
-    ----------
-    filepath : string
-    """
-    def __init__(self, filepath):
-
-        fenics.XDMFFile.__init__(self, filepath)
-        
-        self.parameters["functions_share_mesh"] = True  # This refers to the component solution functions.
-
-        self.parameters["flush_output"] = True  # This allows us to view the solution while still running.
-        
-        self.path = filepath  # Mimic the file path attribute from a `file` returned by `open` 
