@@ -33,6 +33,7 @@ import fenics
 import abc
 import numpy
 import matplotlib
+import os
 
 
 class AbstractSimulation(metaclass = abc.ABCMeta):
@@ -390,6 +391,8 @@ class AbstractSimulation(metaclass = abc.ABCMeta):
 
     def write_checkpoint(self, filepath):
         """Write solutions, times, and timestep sizes to a checkpoint file."""
+        print("Writing checkpoint to " + filepath)
+        
         with fenics.HDF5File(self.mesh.mpi_comm(), filepath, "w") as h5:
             
             h5.write(self._solutions[0].function_space().mesh().leaf_node(), "mesh")
@@ -406,6 +409,8 @@ class AbstractSimulation(metaclass = abc.ABCMeta):
     def read_checkpoint(self, filepath):
         """Read solutions and times from a checkpoint file."""
         self._mesh = fenics.Mesh()
+        
+        print("Reading checkpoint from " + filepath)
             
         with fenics.HDF5File(self.mesh.mpi_comm(), filepath, "r") as h5:
         
@@ -440,9 +445,23 @@ class AbstractSimulation(metaclass = abc.ABCMeta):
         file : fenics.XDMFFile
             This method should have been called from within the context of the open `file`.
         """
+        print("Writing solution to " + file.path)
+        
         for var in self._solutions[solution_index].leaf_node().split():
 
             file.write(var, self._times[solution_index])
+            
+    def convert_checkpoints_to_xdmf_solution(self, checkpoint_dir, xdmf_solution_filepath):
+    
+        with phaseflow.helpers.SolutionFile(xdmf_solution_filepath) as xdmf_solution_file:
+        
+            for filename in os.listdir(checkpoint_dir):
+            
+                if ("checkpoint" in filename) and filename.endswith(".h5"):
+                
+                    self.read_checkpoint(checkpoint_dir + "/" + filename)
+        
+                    self.write_solution(xdmf_solution_file)
             
     def plot(self, solution_index = 0, savefigs = False, outdir = ""):
         """ Plot the adaptive mesh and all parts of the mixed finite element solution. """
