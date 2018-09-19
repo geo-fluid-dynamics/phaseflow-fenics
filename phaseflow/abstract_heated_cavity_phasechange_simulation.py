@@ -4,11 +4,6 @@ on the unit square with hot and cold vertical walls, and adiabatic horizontal wa
 import phaseflow
 import fenics
 
-import pkg_resources
-print("Using:")
-print("fenics-"+fenics.dolfin.__version__)
-print("phaseflow-"+pkg_resources.get_distribution("phaseflow").version)
-
 
 class AbstractHeatedCavityPhaseChangeSimulation(phaseflow.abstract_phasechange_simulation.AbstractPhaseChangeSimulation):
 
