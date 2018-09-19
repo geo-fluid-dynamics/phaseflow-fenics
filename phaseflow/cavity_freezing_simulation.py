@@ -131,16 +131,12 @@ class CavityFreezingSimulation(
         
         phaseflow.helpers.mkdir_p(self.output_dir)
         
-        checkpoint_dir = self.output_dir + "checkpoint/"
-        
-        phaseflow.helpers.mkdir_p(checkpoint_dir)
-        
         
         if (self.temperature_rayleigh_number.__float__() > 1.e-8):
         
             self.solve_steady_state_heat_driven_cavity()
             
-            self.write_checkpoint(checkpoint_dir + "steady.h5")
+            self.write_checkpoint(self.output_dir + "checkpoint_steady.h5")
         
         self.setup_freezing_problem()
         
@@ -214,7 +210,7 @@ class CavityFreezingSimulation(
             
             if phaseflow.helpers.float_in(self.time, checkpoint_times):
                 
-                self.write_checkpoint(self.checkpoint_dir + "t" + str(self.time) + ".h5")
+                self.write_checkpoint(self.output_dir + "checkpoint_t" + str(self.time) + ".h5")
             
             timestep += 1
             
