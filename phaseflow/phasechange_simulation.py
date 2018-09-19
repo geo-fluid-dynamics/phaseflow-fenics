@@ -16,13 +16,13 @@ class AbstractSimulation(phaseflow.simulation.AbstractSimulation):
         
         self.temperature_rayleigh_number = fenics.Constant(1., name = "Ra_T")
         
-        self.concentration_buoyancy_factor = fenics.Constant(1., name = "Z")
+        self.concentration_rayleigh_number = fenics.Constant(-1., name = "Ra_C")
         
         self.prandtl_number = fenics.Constant(1., name = "Pr")
         
         self.stefan_number = fenics.Constant(1., name = "Ste")
         
-        self.lewis_number = fenics.Constant(1., name = "Le")
+        self.schmidt_number = fenics.Constant(1., name = "Sc")
         
         self.pure_liquidus_temperature = fenics.Constant(0., name = "T_m")
         
@@ -125,15 +125,15 @@ class AbstractSimulation(phaseflow.simulation.AbstractSimulation):
         
     def buoyancy(self, T, C):
         """ Extend the model from @cite{zimmerman2018monolithic} with a solute concentration. """
-        Ra_T = self.temperature_rayleigh_number
-        
         Pr = self.prandtl_number
         
-        Z = self.concentration_buoyancy_factor
+        Ra_T = self.temperature_rayleigh_number
+        
+        Ra_C = self.concentration_rayleigh_number
         
         ghat = fenics.Constant((0., -1.), name = "ghat")
         
-        return (Ra_T/Pr*T - Z*C)*ghat
+        return 1./Pr*(Ra_T*T + Ra_C*C)*ghat
         
     def governing_form(self):
         """ Extend the model from @cite{zimmerman2018monolithic} with a solute concentration balance. """
@@ -141,7 +141,7 @@ class AbstractSimulation(phaseflow.simulation.AbstractSimulation):
         
         Ste = self.stefan_number
         
-        Le = self.lewis_number
+        Sc = self.schmidt_number
         
         gamma = self.pressure_penalty_factor
         
@@ -153,7 +153,7 @@ class AbstractSimulation(phaseflow.simulation.AbstractSimulation):
         
         u_t, T_t, C_Lt, phi_t = self.time_discrete_terms()
         
-        f_B = self.buoyancy(T = T, C = C_L)
+        b = self.buoyancy(T = T, C = C_L)
         
         phi = self.semi_phasefield(T = T, C = C_L)
         
@@ -166,7 +166,7 @@ class AbstractSimulation(phaseflow.simulation.AbstractSimulation):
         
         mass = -psi_p*div(u)
         
-        momentum = dot(psi_u, u_t + f_B + dot(grad(u), u)) - div(psi_u)*p \
+        momentum = dot(psi_u, u_t + b + dot(grad(u), u)) - div(psi_u)*p \
             + 2.*mu*inner(sym(grad(psi_u)), sym(grad(u)))
         
         enthalpy = psi_T*(T_t - 1./Ste*phi_t) \
@@ -174,7 +174,7 @@ class AbstractSimulation(phaseflow.simulation.AbstractSimulation):
         
         concentration = \
             psi_C*((1. - phi)*C_Lt - C_L*phi_t) \
-            + dot(grad(psi_C), 1./(Pr*Le)*(1. - phi)*grad(C_L) - C_L*u)
+            + dot(grad(psi_C), 1./Sc*(1. - phi)*grad(C_L) - C_L*u)
         
         stabilization = -gamma*psi_p*p
         
@@ -258,13 +258,13 @@ class AbstractSimulation(phaseflow.simulation.AbstractSimulation):
         
         sim.temperature_rayleigh_number.assign(self.temperature_rayleigh_number)
         
-        sim.concentration_buoyancy_factor.assign(self.concentration_buoyancy_factor)
+        sim.concentration_rayleigh_number.assign(self.concentration_rayleigh_number)
         
         sim.prandtl_number.assign(self.prandtl_number)
         
         sim.stefan_number.assign(self.stefan_number)
         
-        sim.lewis_number.assign(self.lewis_number)
+        sim.schmidt_number.assign(self.schmidt_number)
         
         sim.pure_liquidus_temperature.assign(self.pure_liquidus_temperature)
         

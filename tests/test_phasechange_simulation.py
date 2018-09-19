@@ -62,11 +62,13 @@ class CompositionalConvectionCoupledMeltingBenchmarkSimulation(
         
         Pr = self.prandtl_number.__float__()
         
-        self.concentration_buoyancy_factor.assign(3.*Ra_T/Pr)
+        self.concentration_rayleigh_number.assign(-3.*Ra_T/Pr)
         
         self.stefan_number.assign(0.045)
         
-        self.lewis_number.assign(100.)
+        Le = 100.
+        
+        self.schmidt_number.assign(Pr*Le)
         
         self.pure_liquidus_temperature.assign(0.)
         
@@ -212,13 +214,13 @@ class ConvectionCoupledMeltingBenchmarkSimulation(CompositionalConvectionCoupled
         
         self.temperature_rayleigh_number.assign(3.27e5)
         
-        self.concentration_buoyancy_factor.assign(0.)
+        self.concentration_rayleigh_number.assign(0.)
         
         self.prandtl_number.assign(56.2)
         
         self.stefan_number.assign(0.045)
         
-        self.lewis_number.assign(1.e32)
+        self.schmidt_number.assign(1.e32)
         
         self.liquidus_slope.assign(0.)
         
@@ -418,9 +420,9 @@ class HeatDrivenCavityBenchmarkSimulation(ConvectionCoupledMeltingBenchmarkSimul
         self.stefan_number.assign(1.e32)
         
         """ Disable concentration equation """
-        self.concentration_buoyancy_factor.assign(0.)
+        self.concentration_rayleigh_number.assign(0.)
         
-        self.lewis_number.assign(1.e32)
+        self.schmidt_number.assign(1.e32)
         
         self.liquidus_slope.assign(0.)
         
@@ -624,9 +626,9 @@ class WaterHeatDrivenCavityBenchmarkSimulation(phaseflow.phasechange_simulation.
         self.stefan_number.assign(1.e32)
         
         """ Disable concentration equation """
-        self.concentration_buoyancy_factor.assign(0.)
+        self.concentration_rayleigh_number.assign(0.)
         
-        self.lewis_number.assign(1.e32)
+        self.schmidt_number.assign(1.e32)
         
         self.liquidus_slope.assign(0.)
         
@@ -889,9 +891,9 @@ class LidDrivenCavityBenchmarkSimulation(phaseflow.phasechange_simulation.Abstra
         
         self.temperature_rayleigh_number.assign(0.)
         
-        self.concentration_buoyancy_factor.assign(0.)
+        self.concentration_rayleigh_number.assign(0.)
         
-        self.lewis_number.assign(1.e32)
+        self.schmidt_number.assign(1.e32)
         
         self.prandtl_number.assign(1.)
         
