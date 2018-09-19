@@ -415,14 +415,32 @@ class StefanProblemBenchmarkSimulation(
             time_order = time_order, 
             integration_measure = integration_measure, 
             setup_solver = setup_solver)
+            
+        self.hot_wall_temperature.assign(1.)
         
-        self.timestep_size = 1.e-3
-        
-        self.temperature_rayleigh_number.assign(0.)
+        self.cold_wall_temperature.assign(-0.01)
         
         self.prandtl_number.assign(1.)
         
+        self.stefan_number.assign(0.045)
+        
+        
+        self.timestep_size = 1.e-3
+        
         self.regularization_smoothing_parameter.assign(0.005)
+        
+        self.regularization_central_temperature_offset.assign(0.01)
+        
+        
+        self.temperature_rayleigh_number.assign(0.)
+        
+        self.concentration_rayleigh_number.assign(0.)
+        
+        self.initial_concentration.assign(0.)
+        
+        self.liquidus_slope.assign(0.)
+        
+        self.schmidt_number.assign(1.e32)
         
     def buoyancy(self, T, C):
         """ While theoretically we can disable buoyancy via the Rayleigh number,
