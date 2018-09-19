@@ -63,6 +63,8 @@ class AbstractSimulation(metaclass = abc.ABCMeta):
         
             self._solutions.append(fenics.Function(self.function_space))
         
+        self.newton_solution = fenics.Function(self.function_space)
+        
         self.adaptive_solver = None
         
         self.solver_needs_setup = True
@@ -214,7 +216,7 @@ class AbstractSimulation(metaclass = abc.ABCMeta):
         
         if goal_tolerance is None:
         
-            self.solver.solve()
+            status = self.solver.solve()
             
         else:
             
@@ -222,7 +224,9 @@ class AbstractSimulation(metaclass = abc.ABCMeta):
                 self.adaptive_solver.parameters["nonlinear_variational_solver"],
                 self.solver.parameters)
                     
-            self.adaptive_solver.solve(goal_tolerance)
+            status = self.adaptive_solver.solve(goal_tolerance)
+            
+        return status
         
     def advance(self):
         """ Move solutions backward in the queue to prepare for a new time step. 
@@ -283,6 +287,26 @@ class AbstractSimulation(metaclass = abc.ABCMeta):
     def reset_initial_guess(self):
         """ Set the values of the latest solution from the next latest solution. """
         self._solutions[0].leaf_node().vector()[:] = self._solutions[1].leaf_node().vector()
+        
+    def save_newton_solution(self):
+        """ When not using AMR, we can save a copy of the solution from the latest successful Newton iteration.
+        This can be useful, since a failed Newton iteration will blow up the solution, replacing it with garbage.
+        
+        This will fail if the mesh has been changed by the adaptive solver 
+        and `self.newton_solution` has not been reinitialized with 
+        `self.newton_solution = fenics.Function(self.function_space)`.
+        """
+        self.newton_solution.vector()[:] = self._solutions[0].vector()
+        
+    def load_newton_solution(self):
+        """ When not using AMR, we can load a copy of the solution from the latest successful Newton iteration.
+        This can be useful, since a failed Newton iteration will blow up the solution, replacing it with garbage.
+        
+        This will fail if the mesh has been changed by the adaptive solver 
+        and `self.newton_solution` has not been reinitialized with 
+        `self.newton_solution = fenics.Function(self.function_space)`.
+        """
+        self._solutions[0].vector()[:] = self.newton_solution.vector()
         
     def set_solution_on_subdomain(self, subdomain, values):
         """ Abuse `fenics.DirichletBC` to set values of a function on a subdomain. 
