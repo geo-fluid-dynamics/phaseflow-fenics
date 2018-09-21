@@ -33,6 +33,7 @@ import fenics
 import abc
 import numpy
 import matplotlib
+import os
 
 
 class AbstractSimulation(metaclass = abc.ABCMeta):
@@ -63,6 +64,8 @@ class AbstractSimulation(metaclass = abc.ABCMeta):
         
             self._solutions.append(fenics.Function(self.function_space))
         
+        self.newton_solution = fenics.Function(self.function_space)
+        
         self.adaptive_solver = None
         
         self.solver_needs_setup = True
@@ -70,6 +73,8 @@ class AbstractSimulation(metaclass = abc.ABCMeta):
         if setup_solver:
         
             self.setup_solver()
+            
+        self.output_dir = ""
     
     @property
     def timestep_size(self):
@@ -214,7 +219,7 @@ class AbstractSimulation(metaclass = abc.ABCMeta):
         
         if goal_tolerance is None:
         
-            self.solver.solve()
+            status = self.solver.solve()
             
         else:
             
@@ -222,7 +227,9 @@ class AbstractSimulation(metaclass = abc.ABCMeta):
                 self.adaptive_solver.parameters["nonlinear_variational_solver"],
                 self.solver.parameters)
                     
-            self.adaptive_solver.solve(goal_tolerance)
+            status = self.adaptive_solver.solve(goal_tolerance)
+            
+        return status
         
     def advance(self):
         """ Move solutions backward in the queue to prepare for a new time step. 
@@ -283,6 +290,26 @@ class AbstractSimulation(metaclass = abc.ABCMeta):
     def reset_initial_guess(self):
         """ Set the values of the latest solution from the next latest solution. """
         self._solutions[0].leaf_node().vector()[:] = self._solutions[1].leaf_node().vector()
+        
+    def save_newton_solution(self):
+        """ When not using AMR, we can save a copy of the solution from the latest successful Newton iteration.
+        This can be useful, since a failed Newton iteration will blow up the solution, replacing it with garbage.
+        
+        This will fail if the mesh has been changed by the adaptive solver 
+        and `self.newton_solution` has not been reinitialized with 
+        `self.newton_solution = fenics.Function(self.function_space)`.
+        """
+        self.newton_solution.vector()[:] = self._solutions[0].vector()
+        
+    def load_newton_solution(self):
+        """ When not using AMR, we can load a copy of the solution from the latest successful Newton iteration.
+        This can be useful, since a failed Newton iteration will blow up the solution, replacing it with garbage.
+        
+        This will fail if the mesh has been changed by the adaptive solver 
+        and `self.newton_solution` has not been reinitialized with 
+        `self.newton_solution = fenics.Function(self.function_space)`.
+        """
+        self._solutions[0].vector()[:] = self.newton_solution.vector()
         
     def set_solution_on_subdomain(self, subdomain, values):
         """ Abuse `fenics.DirichletBC` to set values of a function on a subdomain. 
@@ -364,6 +391,8 @@ class AbstractSimulation(metaclass = abc.ABCMeta):
 
     def write_checkpoint(self, filepath):
         """Write solutions, times, and timestep sizes to a checkpoint file."""
+        print("Writing checkpoint to " + filepath)
+        
         with fenics.HDF5File(self.mesh.mpi_comm(), filepath, "w") as h5:
             
             h5.write(self._solutions[0].function_space().mesh().leaf_node(), "mesh")
@@ -380,6 +409,8 @@ class AbstractSimulation(metaclass = abc.ABCMeta):
     def read_checkpoint(self, filepath):
         """Read solutions and times from a checkpoint file."""
         self._mesh = fenics.Mesh()
+        
+        print("Reading checkpoint from " + filepath)
             
         with fenics.HDF5File(self.mesh.mpi_comm(), filepath, "r") as h5:
         
@@ -414,9 +445,23 @@ class AbstractSimulation(metaclass = abc.ABCMeta):
         file : fenics.XDMFFile
             This method should have been called from within the context of the open `file`.
         """
+        print("Writing solution to " + file.path)
+        
         for var in self._solutions[solution_index].leaf_node().split():
 
             file.write(var, self._times[solution_index])
+            
+    def convert_checkpoints_to_xdmf_solution(self, checkpoint_dir, xdmf_solution_filepath):
+    
+        with phaseflow.helpers.SolutionFile(xdmf_solution_filepath) as xdmf_solution_file:
+        
+            for filename in os.listdir(checkpoint_dir):
+            
+                if ("checkpoint" in filename) and filename.endswith(".h5"):
+                
+                    self.read_checkpoint(checkpoint_dir + "/" + filename)
+        
+                    self.write_solution(xdmf_solution_file)
             
     def plot(self, solution_index = 0, savefigs = False, outdir = ""):
         """ Plot the adaptive mesh and all parts of the mixed finite element solution. """
@@ -478,21 +523,3 @@ def share_solver_parameters(share_to_parameters, share_from_parameters):
         except KeyError:
         
             share_solver_parameters(share_to_parameters[key], share_from_parameters[key])
-
-            
-class SolutionFile(fenics.XDMFFile):
-    """ This class extends `fenics.XDMFFile` with some minor changes for convenience. 
-    
-    Parameters
-    ----------
-    filepath : string
-    """
-    def __init__(self, filepath):
-
-        fenics.XDMFFile.__init__(self, filepath)
-        
-        self.parameters["functions_share_mesh"] = True  # This refers to the component solution functions.
-
-        self.parameters["flush_output"] = True  # This allows us to view the solution while still running.
-        
-        self.path = filepath  # Mimic the file path attribute from a `file` returned by `open` 
