@@ -502,7 +502,9 @@ class AbstractSimulation(metaclass = abc.ABCMeta):
             
             matplotlib.pyplot.ylabel("$y$")
             
-            matplotlib.pyplot.savefig(fname = outdir + "/w" + str(i) + "_t" + str(time) + ".png")
+            if savefigs:
+            
+                matplotlib.pyplot.savefig(fname = outdir + "/w" + str(i) + "_t" + str(time) + ".png")
             
             matplotlib.pyplot.show()
         
