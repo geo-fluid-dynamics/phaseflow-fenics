@@ -12,7 +12,7 @@ with open("LICENSE.txt") as f:
 
 setuptools.setup(
     name = "phaseflow",
-    version = "0.7.5-alpha",
+    version = "0.8.0-alpha",
     description = "Simulate convection-coupled melting and solidification of phase-change materials",
     long_description = readme,
     author= "Alexander G. Zimmerman",
