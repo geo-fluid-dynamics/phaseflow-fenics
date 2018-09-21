@@ -117,19 +117,11 @@ def test__cavity_melting_without_concentration__amr__regression__ci__():
     
     sim.assign_initial_values()
     
-    sim.output_dir += "test__cavity_melting_without_concentration/"
-    
-    with phaseflow.helpers.SolutionFile(sim.output_dir + "solution.xdmf") as solution_file:
-
-        sim.write_solution(solution_file)
+    for it in range(5):
         
-        for it in range(5):
-            
-            sim.solve(goal_tolerance = 4.e-5)
+        sim.solve(goal_tolerance = 4.e-5)
         
-            sim.write_solution(solution_file)
-            
-            sim.advance()
+        sim.advance()
     
     p_fine, u_fine, T_fine, C_fine = fenics.split(sim.solution)
     
