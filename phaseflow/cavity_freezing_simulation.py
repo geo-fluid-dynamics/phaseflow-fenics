@@ -142,11 +142,11 @@ class CavityFreezingSimulation(
             
             self.advance()
             
-            self.setup_freezing_problem()
+        self.setup_freezing_problem()
         
-            if plot:
+        if plot and (self.time == 0.):
         
-                self.plot(savefigs = savefigs)
+            self.plot(savefigs = savefigs)
         
         table_filepath = self.output_dir + "DifferentiallyHeatedCavity_QoI_Table.txt"
         
@@ -199,6 +199,8 @@ class CavityFreezingSimulation(
         while (self.time < (endtime - time_tolerance)):
             
             write_newline()
+            
+            self.time = self._times[1] + self.timestep_size
             
             write_parameters()
             
