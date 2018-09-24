@@ -178,3 +178,13 @@ def test_write_solution_with_velocity_field_for_paraview_streamlines():
     with phaseflow.abstract_simulation.SolutionFile("test__lid_driven_cavity.xdmf") as file:
     
         sim.write_solution(file)
+
+
+def test__plot():
+
+    sim = LidDrivenCavityBenchmarkSimulation()
+    
+    sim.output_dir = "test__plot/"
+    
+    sim.plot(savefigs = True)
+    
