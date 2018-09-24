@@ -27,6 +27,8 @@ class CavityFreezingSimulation(
         
         self.cold_wall_temperature.assign(0.25)
         
+        self.timestep = 0
+        
         if setup_solver:
         
             self.solver.parameters["newton_solver"]["maximum_iterations"] = 12
@@ -56,13 +58,13 @@ class CavityFreezingSimulation(
             self,
             steady_q_tolerance = 0.01, 
             max_timesteps = 20):
-        """ Disable freezing. """
+        
         Delta_t = self.timestep_size 
         
         self.cold_wall_temperature.assign(self.cold_wall_temperature_before_freezing)
         
         self.regularization_central_temperature_offset.assign(-1.)
-
+        
         self.assign_initial_values()
         
         self.timestep_size = 1.e-3
@@ -127,19 +129,26 @@ class CavityFreezingSimulation(
         
         self.regularization_central_temperature_offset.assign(0.)
         
-    def run(self, endtime = 1., checkpoint_times = (0., 1.)):
+    def run(self, endtime = 1., checkpoint_times = (0., 1.), max_regularization_attempts = 16, 
+            plot = False, savefigs = False):
         
         phaseflow.helpers.mkdir_p(self.output_dir)
         
+        assert(self.temperature_rayleigh_number.__float__() > 1.e-8)
         
-        if (self.temperature_rayleigh_number.__float__() > 1.e-8):
+        if self.timestep == 0:
         
             self.solve_steady_state_heat_driven_cavity()
             
             self.write_checkpoint(self.output_dir + "checkpoint_steady.h5")
+            
+            self.advance()
+            
+            self.setup_freezing_problem()
         
-        self.setup_freezing_problem()
+            if plot:
         
+                self.plot(savefigs = savefigs)
         
         table_filepath = self.output_dir + "DifferentiallyHeatedCavity_QoI_Table.txt"
         
@@ -187,24 +196,15 @@ class CavityFreezingSimulation(
         
         time_tolerance = 1.e-8
         
-        timestep = 0
-        
         while (self.time < (endtime - time_tolerance)):
             
-            if timestep == 1:
-                """ Reset the sequence, since the refined sequence may
-                have only been necessary for the first time step. """
-                self.regularization_sequence = None
-                
-            if timestep > 0:
-            
-                self.advance()
-                
             write_newline()
                 
             write_parameters()
             
-            self.solve_with_auto_regularization()
+            self.solve_with_auto_regularization(
+                enable_newton_solution_backup = True,
+                max_attempts = max_regularization_attempts)
             
             write_results()
             
@@ -212,7 +212,13 @@ class CavityFreezingSimulation(
                 
                 self.write_checkpoint(self.output_dir + "checkpoint_t" + str(self.time) + ".h5")
             
-            timestep += 1
+            if plot:
+        
+                self.plot(savefigs = savefigs)
+            
+            self.timestep += 1
+            
+            self.advance()
             
         write_newline()
         
