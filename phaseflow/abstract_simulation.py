@@ -463,16 +463,18 @@ class AbstractSimulation(metaclass = abc.ABCMeta):
         
                     self.write_solution(xdmf_solution_file)
             
-    def plot(self, solution_index = 0, savefigs = False, outdir = ""):
+    def plot(self, solution_index = 0, savefigs = False):
         """ Plot the adaptive mesh and all parts of the mixed finite element solution. """
-        if not (outdir == ""):
+        if not (self.output_dir == ""):
         
-            phaseflow.helpers.mkdir_p(outdir)
+            phaseflow.helpers.mkdir_p(self.output_dir)
         
-        self._plot(solution = self._solutions[solution_index], time = self._times[solution_index],
-                   savefigs = savefigs, outdir = outdir)
+        self._plot(
+            solution = self._solutions[solution_index], 
+            time = self._times[solution_index],
+            savefigs = savefigs)
         
-    def _plot(self, solution, time, savefigs = False, outdir = ""):
+    def _plot(self, solution, time, savefigs = False):
 
         phaseflow.plotting.plot(solution.function_space().mesh().leaf_node())
         
@@ -484,7 +486,7 @@ class AbstractSimulation(metaclass = abc.ABCMeta):
         
         if savefigs:
         
-            matplotlib.pyplot.savefig(fname = outdir + "/mesh_t" + str(time) + ".png")
+            matplotlib.pyplot.savefig(fname = self.output_dir + "mesh_t" + str(time) + ".png")
         
         matplotlib.pyplot.show()
         
@@ -504,7 +506,7 @@ class AbstractSimulation(metaclass = abc.ABCMeta):
             
             if savefigs:
             
-                matplotlib.pyplot.savefig(fname = outdir + "/w" + str(i) + "_t" + str(time) + ".png")
+                matplotlib.pyplot.savefig(fname = self.output_dir + "w" + str(i) + "_t" + str(time) + ".png")
             
             matplotlib.pyplot.show()
         

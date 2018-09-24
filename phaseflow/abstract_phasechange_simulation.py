@@ -437,7 +437,7 @@ class AbstractPhaseChangeSimulation(phaseflow.abstract_simulation.AbstractSimula
         
         return sim
         
-    def _plot(self, solution, time, savefigs = False, outdir = ""):
+    def _plot(self, solution, time, savefigs = False):
         """ Plot the adaptive mesh, velocity vector field, temperature field, and phase field. """
         p, u, T, C = solution.leaf_node().split()
         
@@ -467,7 +467,7 @@ class AbstractPhaseChangeSimulation(phaseflow.abstract_simulation.AbstractSimula
             
             if savefigs:
             
-                matplotlib.pyplot.savefig(outdir + "/" + varname + "_t" + str(time) + ".png")
+                matplotlib.pyplot.savefig(self.output_dir + varname + "_t" + str(time) + ".png")
             
             matplotlib.pyplot.show()
     
