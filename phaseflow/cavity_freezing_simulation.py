@@ -200,7 +200,7 @@ class CavityFreezingSimulation(
             
             write_newline()
             
-            self.time = self._times[1] + self.timestep_size
+            self._times[0] = self._times[1] + self.timestep_size
             
             write_parameters()
             
