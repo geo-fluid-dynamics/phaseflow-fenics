@@ -311,7 +311,13 @@ class AbstractPhaseChangeSimulation(phaseflow.abstract_simulation.AbstractSimula
                 if attempt == attempts[-1]:
                     
                     break
+                
+                if current_s >= max_regularization_threshold:
+                
+                    print("Exceeded maximum regularization (s_max = " + str(max_regularization_threshold) + ")")
                     
+                    break
+                
                 index = ss.index(current_s)
                 
                 if index == 0:

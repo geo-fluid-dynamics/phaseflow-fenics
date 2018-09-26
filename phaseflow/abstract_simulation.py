@@ -436,6 +436,8 @@ class AbstractSimulation(metaclass = abc.ABCMeta):
                 
                 self._times[i] = time.get_local()[0]
         
+        self.newton_solution = fenics.Function(self.function_space)
+        
         self.setup_solver()
         
     def write_solution(self, file, solution_index = 0):

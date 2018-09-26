@@ -27,8 +27,6 @@ class CavityFreezingSimulation(
         
         self.cold_wall_temperature.assign(0.25)
         
-        self.timestep = 0
-        
         if setup_solver:
         
             self.solver.parameters["newton_solver"]["maximum_iterations"] = 12
@@ -136,7 +134,7 @@ class CavityFreezingSimulation(
         
         assert(self.temperature_rayleigh_number.__float__() > 1.e-8)
         
-        if self.timestep == 0:
+        if self.time == 0.:
         
             self.solve_steady_state_heat_driven_cavity()
             
@@ -144,11 +142,11 @@ class CavityFreezingSimulation(
             
             self.advance()
             
-            self.setup_freezing_problem()
+        self.setup_freezing_problem()
         
-            if plot:
+        if plot and (self.time == 0.):
         
-                self.plot(savefigs = savefigs)
+            self.plot(savefigs = savefigs)
         
         table_filepath = self.output_dir + "DifferentiallyHeatedCavity_QoI_Table.txt"
         
@@ -190,16 +188,20 @@ class CavityFreezingSimulation(
                 
                 results_file.write("\n")
         
-        write_parameters()
-        
-        write_results()
+        if self.time == 0.:
+            
+            write_parameters()
+            
+            write_results()
         
         time_tolerance = 1.e-8
         
         while (self.time < (endtime - time_tolerance)):
             
             write_newline()
-                
+            
+            self._times[0] = self._times[1] + self.timestep_size
+            
             write_parameters()
             
             self.solve_with_auto_regularization(
@@ -215,8 +217,6 @@ class CavityFreezingSimulation(
             if plot:
         
                 self.plot(savefigs = savefigs)
-            
-            self.timestep += 1
             
             self.advance()
             
