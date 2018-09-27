@@ -453,7 +453,7 @@ class AbstractPhaseChangeSimulation(phaseflow.abstract_simulation.AbstractSimula
        
         for var, label, colorbar, varname in zip(
                 (solution.function_space().mesh().leaf_node(), u, T, C, phi),
-                ("$\Omega_h$", "$\mathbf{u}$", "$T$", "$C$", "$\phi(T,C)$"),
+                ("$\Omega_h$", "$\mathbf{u}$", "$T$", "$C$", "$\phi$"),
                 (False, True, True, True, True),
                 ("mesh", "u", "T", "C", "phi")):
             
