@@ -52,6 +52,35 @@ class CavityFreezingSimulation(
             
         return initial_values
         
+    def set_constant_concentration(self, value):
+        
+        function_space_copy = fenics.FunctionSpace(self.mesh, self.element())
+
+        new_solution = fenics.Function(function_space_copy)
+
+        new_solution.vector()[:] = self.solution.vector()
+        
+        class WholeDomain(fenics.SubDomain):
+
+            def inside(self, x, on_boundary):
+
+                return True
+                
+        hack = fenics.DirichletBC(
+            function_space_copy.sub(3),
+            value,
+            WholeDomain())
+
+        hack.apply(new_solution.vector())
+
+        for solution in self._solutions:
+            
+            solution.vector()[:] = new_solution.vector()
+        
+        for i in range(len(self._times)):
+            
+            self._times[i] = 0.
+        
     def solve_steady_state_heat_driven_cavity(
             self,
             steady_q_tolerance = 0.01, 
@@ -64,6 +93,8 @@ class CavityFreezingSimulation(
         self.regularization_central_temperature_offset.assign(-1.)
         
         self.assign_initial_values()
+        
+        self.set_constant_concentration(0.)
         
         self.timestep_size = 1.e-3
         
@@ -91,33 +122,7 @@ class CavityFreezingSimulation(
 
         assert(steady)
         
-        """ Remove accumulated errors in the concentration field, which should now be constant. """
-        function_space_copy = fenics.FunctionSpace(self.mesh, self.element())
-
-        new_solution = fenics.Function(function_space_copy)
-
-        new_solution.vector()[:] = self.solution.vector()
-        
-        class WholeDomain(fenics.SubDomain):
-
-            def inside(self, x, on_boundary):
-
-                return True
-                
-        hack = fenics.DirichletBC(
-            function_space_copy.sub(3),
-            self.initial_concentration,
-            WholeDomain())
-
-        hack.apply(new_solution.vector())
-
-        for solution in self._solutions:
-            
-            solution.vector()[:] = new_solution.vector()
-        
-        for i in range(len(self._times)):
-            
-            self._times[i] = 0.
+        self.set_constant_concentration(self.initial_concentration)
         
         self.timestep_size = Delta_t
         
