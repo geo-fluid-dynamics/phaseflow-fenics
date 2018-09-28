@@ -9,7 +9,8 @@ class CavityFreezingSimulation(
             time_order = 1, 
             integration_measure = fenics.dx(metadata={"quadrature_degree":  8}),
             uniform_gridsize = 20,
-            setup_solver = True):
+            setup_solver = True,
+            stabilize_with_supg = False):
         
         self.uniform_gridsize = uniform_gridsize
         
@@ -21,6 +22,7 @@ class CavityFreezingSimulation(
             time_order = time_order, 
             integration_measure = integration_measure, 
             setup_solver = setup_solver,
+            stabilize_with_supg = stabilize_with_supg,
             initial_uniform_gridsize = uniform_gridsize)
         
         self.hot_wall_temperature.assign(1.25)

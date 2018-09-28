@@ -13,7 +13,11 @@ class AbstractPhaseChangeSimulation(phaseflow.abstract_simulation.AbstractSimula
     
     This class is abstract, because an instantiable simulation still requires 
     definitions for the mesh, initial values, and boundary conditions. """
-    def __init__(self, time_order = 1, integration_measure = fenics.dx, setup_solver = True):
+    def __init__(self, 
+            time_order = 1, 
+            integration_measure = fenics.dx, 
+            setup_solver = True,
+            stabilize_with_supg = False):
         
         self.temperature_rayleigh_number = fenics.Constant(1., name = "Ra_T")
         
@@ -34,6 +38,8 @@ class AbstractPhaseChangeSimulation(phaseflow.abstract_simulation.AbstractSimula
         self.solid_viscosity = fenics.Constant(1.e8, name = "mu_S")
         
         self.pressure_penalty_factor = fenics.Constant(1.e-7, name = "gamma")
+        
+        self.stabilize_with_supg = stabilize_with_supg
         
         self.regularization_central_temperature_offset = fenics.Constant(0., name = "delta_T")
         
@@ -185,11 +191,26 @@ class AbstractPhaseChangeSimulation(phaseflow.abstract_simulation.AbstractSimula
             psi_C*((1. - phi)*C_t - C*phi_t) \
             + dot(grad(psi_C), 1./Sc*(1. - phi)*grad(C) - C*u)
         
-        stabilization = -gamma*psi_p*p
+        
+        penalty_stab = -gamma*psi_p*p
         
         dx = self.integration_measure
         
-        F =  (mass + momentum + enthalpy + concentration + stabilization)*dx
+        F =  (mass + momentum + enthalpy + concentration + penalty_stab)*dx
+        
+        if self.stabilize_with_supg:
+        
+            h = fenics.CellDiameter(self.mesh)
+            
+            sqrt = fenics.sqrt
+            
+            tau = h/(2.*sqrt(dot(u, u)))
+            
+            P = dot(u, grad(psi_C))
+            
+            R = (1. - phi)*C_t + dot(u, grad(C)) - 1./Sc*div((1. - phi)*grad(C)) - C*phi_t
+            
+            F += P*tau*R*dx
         
         return F
     

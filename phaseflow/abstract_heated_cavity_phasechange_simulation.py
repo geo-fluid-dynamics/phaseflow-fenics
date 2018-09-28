@@ -11,7 +11,8 @@ class AbstractHeatedCavityPhaseChangeSimulation(phaseflow.abstract_phasechange_s
             time_order = 1, 
             integration_measure = fenics.dx(metadata={"quadrature_degree":  8}),
             initial_uniform_gridsize = 20,
-            setup_solver = True):
+            setup_solver = True,
+            stabilize_with_supg = False):
     
         self.hot_wall_temperature = fenics.Constant(1., name = "T_h")
         
@@ -54,7 +55,8 @@ class AbstractHeatedCavityPhaseChangeSimulation(phaseflow.abstract_phasechange_s
         super().__init__(
             time_order = time_order, 
             integration_measure = integration_measure, 
-            setup_solver = setup_solver)
+            setup_solver = setup_solver,
+            stabilize_with_supg = stabilize_with_supg)
         
     def coarse_mesh(self):
         
