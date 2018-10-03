@@ -10,7 +10,7 @@ def test__compositional_convection_coupled_melting_benchmark__amr__regression__c
     
     sim.assign_initial_values()
     
-    sim.timestep_size = 10.
+    sim.timestep_size.assign(10.)
     
     for it, epsilon_M in zip(range(4), (0.5e-3, 0.25e-3, 0.125e-3, 0.0625e-3)):
     
@@ -71,7 +71,7 @@ class CavityMeltingSimulationWithoutConcentration(phaseflow.cavity_melting_simul
         self.liquidus_slope.assign(0.)
         
         
-        self.timestep_size = 10.
+        self.timestep_size.assign(10.)
         
         self.temperature_rayleigh_number.assign(3.27e5)
         

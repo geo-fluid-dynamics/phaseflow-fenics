@@ -40,7 +40,7 @@ class LidDrivenCavityBenchmarkSimulation(phaseflow.abstract_phasechange_simulati
             integration_measure = integration_measure, 
             setup_solver = setup_solver)
         
-        self.timestep_size = 1.e12
+        self.timestep_size.assign(1.e12)
         
         self.temperature_rayleigh_number.assign(0.)
         

@@ -79,12 +79,7 @@ class AbstractSimulation(metaclass = abc.ABCMeta):
     @property
     def timestep_size(self):
     
-        return self._timestep_sizes[0].values()[0]
-        
-    @timestep_size.setter
-    def timestep_size(self, value):
-    
-        self._timestep_sizes[0].assign(value)
+        return self._timestep_sizes[0]
     
     @property
     def mesh(self):
@@ -215,7 +210,7 @@ class AbstractSimulation(metaclass = abc.ABCMeta):
         
             self.setup_solver()
             
-        self._times[0] = self._times[1] + self.timestep_size
+        self._times[0] = self._times[1] + self.timestep_size.__float__()
         
         if goal_tolerance is None:
         

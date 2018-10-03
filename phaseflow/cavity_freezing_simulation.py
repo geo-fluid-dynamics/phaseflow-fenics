@@ -86,7 +86,7 @@ class CavityFreezingSimulation(
             steady_q_tolerance = 0.01, 
             max_timesteps = 20):
         
-        Delta_t = self.timestep_size 
+        original_timestep_size = self.timestep_size.__float__()
         
         self.cold_wall_temperature.assign(self.cold_wall_temperature_before_freezing)
         
@@ -96,7 +96,7 @@ class CavityFreezingSimulation(
         
         self.set_constant_concentration(0.)
         
-        self.timestep_size = 1.e-3
+        self.timestep_size.assign(1.e-3)
         
         steady = False
         
@@ -118,13 +118,13 @@ class CavityFreezingSimulation(
                 
             q_old = 0. + q
             
-            self.timestep_size = 2.*self.timestep_size
+            self.timestep_size.assign(2.*self.timestep_size.__float__())
 
         assert(steady)
         
         self.set_constant_concentration(self.initial_concentration)
         
-        self.timestep_size = Delta_t
+        self.timestep_size.assign(original_timestep_size)
         
     def setup_freezing_problem(self):
         

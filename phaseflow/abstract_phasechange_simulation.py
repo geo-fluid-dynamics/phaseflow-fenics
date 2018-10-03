@@ -15,29 +15,30 @@ class AbstractPhaseChangeSimulation(phaseflow.abstract_simulation.AbstractSimula
     definitions for the mesh, initial values, and boundary conditions. """
     def __init__(self, time_order = 1, integration_measure = fenics.dx, setup_solver = True):
         
-        self.temperature_rayleigh_number = fenics.Constant(1., name = "Ra_T")
+        self._temperature_rayleigh_number = fenics.Constant(1., name = "Ra_T")
         
-        self.concentration_rayleigh_number = fenics.Constant(-1., name = "Ra_C")
+        self._concentration_rayleigh_number = fenics.Constant(-1., name = "Ra_C")
         
-        self.prandtl_number = fenics.Constant(1., name = "Pr")
+        self._prandtl_number = fenics.Constant(1., name = "Pr")
         
-        self.stefan_number = fenics.Constant(1., name = "Ste")
+        self._stefan_number = fenics.Constant(1., name = "Ste")
         
-        self.schmidt_number = fenics.Constant(1., name = "Sc")
+        self._schmidt_number = fenics.Constant(1., name = "Sc")
         
-        self.pure_liquidus_temperature = fenics.Constant(0., name = "T_m")
+        self._pure_liquidus_temperature = fenics.Constant(0., name = "T_m")
         
-        self.liquidus_slope = fenics.Constant(-1., name = "m_L")
+        self._liquidus_slope = fenics.Constant(-1., name = "m_L")
         
-        self.liquid_viscosity = fenics.Constant(1., name = "mu_L")
+        self._liquid_viscosity = fenics.Constant(1., name = "mu_L")
         
-        self.solid_viscosity = fenics.Constant(1.e8, name = "mu_S")
+        self._solid_viscosity = fenics.Constant(1.e8, name = "mu_S")
         
-        self.pressure_penalty_factor = fenics.Constant(1.e-7, name = "gamma")
+        self._pressure_penalty_factor = fenics.Constant(1.e-7, name = "gamma")
         
-        self.regularization_central_temperature_offset = fenics.Constant(0., name = "delta_T")
+        self._regularization_central_temperature_offset = fenics.Constant(
+            0., name = "delta_T")
         
-        self.regularization_smoothing_parameter = fenics.Constant(1./64., name = "r")
+        self._regularization_smoothing_parameter = fenics.Constant(1./64., name = "r")
     
         self.regularization_sequence = None
         
@@ -52,6 +53,76 @@ class AbstractPhaseChangeSimulation(phaseflow.abstract_simulation.AbstractSimula
         
             self.solver.parameters["newton_solver"]["absolute_tolerance"] = 1.e-9
     
+    @property
+    def temperature_rayleigh_number(self):
+    
+        return self._temperature_rayleigh_number
+    
+    @property
+    def concentration_rayleigh_number(self):
+    
+        return self._concentration_rayleigh_number
+        
+    @property
+    def prandtl_number(self):
+    
+        return self._prandtl_number
+        
+    @property
+    def stefan_number(self):
+    
+        return self._stefan_number
+    
+    @property
+    def schmidt_number(self):
+    
+        return self._schmidt_number
+        
+    @property
+    def prandtl_number(self):
+    
+        return self._prandtl_number
+        
+    @property
+    def pure_liquidus_temperature(self):
+    
+        return self._pure_liquidus_temperature
+        
+    @property
+    def liquidus_slope(self):
+    
+        return self._liquidus_slope
+        
+    @property
+    def prandtl_number(self):
+    
+        return self._prandtl_number
+        
+    @property
+    def liquid_viscosity(self):
+    
+        return self._liquid_viscosity
+        
+    @property
+    def solid_viscosity(self):
+    
+        return self._solid_viscosity
+        
+    @property
+    def pressure_penalty_factor(self):
+    
+        return self._pressure_penalty_factor
+    
+    @property
+    def regularization_central_temperature_offset(self):
+    
+        return self._regularization_central_temperature_offset
+        
+    @property
+    def regularization_smoothing_parameter(self):
+    
+        return self._regularization_smoothing_parameter
+        
     def phi(self, T, C, T_m, m_L, delta_T, s):
         """ The regularized semi-phasefield. """
         T_L = delta_T + T_m + m_L*C
