@@ -68,6 +68,8 @@ class AbstractSimulation(metaclass = abc.ABCMeta):
         
         self.adaptive_solver = None
         
+        self.solver_status = {"iterations": 0, "solved": False}
+        
         self.solver_needs_setup = True
         
         if setup_solver:
@@ -214,7 +216,7 @@ class AbstractSimulation(metaclass = abc.ABCMeta):
         
         if goal_tolerance is None:
         
-            status = self.solver.solve()
+            solver_status = self.solver.solve()
             
         else:
             
@@ -222,9 +224,19 @@ class AbstractSimulation(metaclass = abc.ABCMeta):
                 self.adaptive_solver.parameters["nonlinear_variational_solver"],
                 self.solver.parameters)
                     
-            status = self.adaptive_solver.solve(goal_tolerance)
+            solver_status = self.adaptive_solver.solve(goal_tolerance)
             
-        return status
+        self.solver_status["iterations"] = solver_status[0]
+        
+        if solver_status[1]:
+        
+            self.solver_status["solved"] = True
+            
+        elif not solver_status[1]:
+        
+            self.solver_status["solved"] = False
+        
+        return solver_status
         
     def advance(self):
         """ Move solutions backward in the queue to prepare for a new time step. 

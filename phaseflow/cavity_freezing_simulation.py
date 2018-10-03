@@ -132,7 +132,7 @@ class CavityFreezingSimulation(
         
         self.regularization_central_temperature_offset.assign(0.)
         
-    def write_table_header(self, table_filepath):
+    def write_results_table_header(self, table_filepath):
         
         with open(table_filepath, "a") as table_file:
 
@@ -144,7 +144,7 @@ class CavityFreezingSimulation(
                 ", phi_min, phi_max" + \
                 "\n")
                 
-    def write_table_row(self, table_filepath):
+    def write_results_table_row(self, table_filepath):
     
         with open(table_filepath, "a") as table_file:
         
@@ -220,15 +220,17 @@ class CavityFreezingSimulation(
         
             self.plot(savefigs = savefigs)
         
-        table_filepath = self.output_dir + "Table.txt"
+        results_table_filepath = self.output_dir + "ResultsTable.txt"
         
-        print("Writing table to " + str(table_filepath))
+        print("Writing table to " + str(results_table_filepath))
         
-        self.write_table_header(table_filepath)
+        self.write_results_table_header(results_table_filepath)
+        
+        self.write_nonlinear_solver_table_header()
         
         if self.time == 0.:
             
-            self.write_table_row(table_filepath)
+            self.write_results_table_row(results_table_filepath)
         
         time_tolerance = 1.e-8
         
@@ -238,7 +240,7 @@ class CavityFreezingSimulation(
                 enable_newton_solution_backup = True,
                 max_attempts = max_regularization_attempts)
             
-            self.write_table_row(table_filepath)
+            self.write_results_table_row(results_table_filepath)
             
             with open(self.output_dir + "regularization_history.txt", "a") \
                     as regularization_history_file:

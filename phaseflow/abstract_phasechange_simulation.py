@@ -46,7 +46,9 @@ class AbstractPhaseChangeSimulation(phaseflow.abstract_simulation.AbstractSimula
             time_order = time_order, 
             integration_measure = integration_measure, 
             setup_solver = setup_solver)
-            
+
+        self.nonlinear_solver_table_filename = "NonlinearSolverTable.txt"
+        
         if setup_solver:
         
             self.solver.parameters["newton_solver"]["maximum_iterations"] = 20
@@ -360,10 +362,19 @@ class AbstractPhaseChangeSimulation(phaseflow.abstract_simulation.AbstractSimula
                     
                         self.save_newton_solution()
                     
+                    """ Try/catch block prevents us from directly checking the 
+                    number of iterations when the solver fails."""
+                    self.solver_status["iterations"] = \
+                        self.solver.parameters["newton_solver"]["maximum_iterations"]
+                    
+                    self.solver_status["solved"] = False
+                        
                     self.solve(goal_tolerance = goal_tolerance)
                     
-                solved = True
-                
+                    self.solver_status["solved"] = True
+                    
+                    self.write_nonlinear_solver_table_row()
+                    
                 break
                 
             except RuntimeError:  
@@ -371,6 +382,8 @@ class AbstractPhaseChangeSimulation(phaseflow.abstract_simulation.AbstractSimula
                 if "Newton solver did not converge" not in str(sys.exc_info()):
                 
                     raise
+                
+                self.write_nonlinear_solver_table_row()
                 
                 current_s = self.regularization_smoothing_parameter.__float__()
                 
@@ -421,7 +434,7 @@ class AbstractPhaseChangeSimulation(phaseflow.abstract_simulation.AbstractSimula
         
         self.regularization_smoothing_parameter.assign(self.regularization_sequence[-1])
         
-        assert(solved)
+        assert(self.solver_status["solved"])
         
     def coarsen(self, 
             absolute_tolerances = (1.e-2, 1.e-2, 1.e-2, 1.e-2, 1.e-2),
@@ -563,3 +576,23 @@ class AbstractPhaseChangeSimulation(phaseflow.abstract_simulation.AbstractSimula
             var.rename(symbol, label)
             
             file.write(var, self._times[solution_index])
+
+    def write_nonlinear_solver_table_header(self):
+        
+        with open(self.output_dir + self.nonlinear_solver_table_filename, "a") as table_file:
+
+            table_file.write(
+                "AbsoluteTolerance, RelativeTolerance, Time, SmoothingParameter, IterationCount, Solved\n")
+                
+    def write_nonlinear_solver_table_row(self):
+        
+        with open(self.output_dir + self.nonlinear_solver_table_filename, "a") as table_file:
+            
+            table_file.write(
+                str(self.solver.parameters["newton_solver"]["absolute_tolerance"]) + ", " + \
+                str(self.solver.parameters["newton_solver"]["relative_tolerance"]) + ", " + \
+                str(self.time) + ", " + \
+                str(self.regularization_smoothing_parameter.__float__()) + ", " + \
+                str(self.solver_status["iterations"]) + ", " + \
+                str(self.solver_status["solved"]) + "\n")
+                
