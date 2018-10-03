@@ -520,13 +520,13 @@ class AbstractPhaseChangeSimulation(phaseflow.abstract_simulation.AbstractSimula
         
         phi = fenics.project(self.semi_phasefield(T = T, C = C), mesh = self.mesh.leaf_node())
         
-        C = fenics.project(C*(1. - phi), mesh = self.mesh.leaf_node())
+        Cbar = fenics.project(C*(1. - phi), mesh = self.mesh.leaf_node())
        
         for var, label, colorbar, varname in zip(
-                (solution.function_space().mesh().leaf_node(), u, T, C, phi),
-                ("$\Omega_h$", "$\mathbf{u}$", "$T$", "$C$", "$\phi$"),
-                (False, True, True, True, True),
-                ("mesh", "u", "T", "C", "phi")):
+                (solution.function_space().mesh().leaf_node(), p, u, T, Cbar, phi),
+                ("$\Omega_h$", "$p$", "$\mathbf{u}$", "$T$", "$\overline{C}$", "$\phi$"),
+                (False, True, True, True, True, True),
+                ("mesh", "p", "u", "T", "Cbar", "phi")):
             
             some_mappable_thing = phaseflow.plotting.plot(var)
             
