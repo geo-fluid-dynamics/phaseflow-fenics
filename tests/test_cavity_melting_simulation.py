@@ -8,6 +8,11 @@ def test__compositional_convection_coupled_melting_benchmark__amr__regression__c
     
     sim = phaseflow.cavity_melting_simulation.CavityMeltingSimulation()
     
+    sim.output_dir = tempfile.mkdtemp() + \
+        "/test__compositional_convection_coupled_melting/"
+    
+    phaseflow.helpers.mkdir_p(sim.output_dir)
+    
     sim.assign_initial_values()
     
     sim.timestep_size.assign(10.)
