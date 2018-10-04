@@ -218,25 +218,22 @@ class AbstractSimulation(metaclass = abc.ABCMeta):
         
             solver_status = self.solver.solve()
             
+            self.solver_status["iterations"] = solver_status[0]
+            
         else:
             
             share_solver_parameters(
                 self.adaptive_solver.parameters["nonlinear_variational_solver"],
                 self.solver.parameters)
                     
-            solver_status = self.adaptive_solver.solve(goal_tolerance)
+            self.adaptive_solver.solve(goal_tolerance)
             
-        self.solver_status["iterations"] = solver_status[0]
-        
-        if solver_status[1]:
-        
-            self.solver_status["solved"] = True
+            """ `fenics.AdaptiveNonlinearVariationalSolver` does not return status."""
+            self.solver_status["iterations"] = "NA"
             
-        elif not solver_status[1]:
+        self.solver_status["solved"] = True
         
-            self.solver_status["solved"] = False
-        
-        return solver_status
+        return self.solver_status
         
     def advance(self):
         """ Move solutions backward in the queue to prepare for a new time step. 
