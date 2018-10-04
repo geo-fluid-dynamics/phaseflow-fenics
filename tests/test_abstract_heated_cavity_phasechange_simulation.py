@@ -1,5 +1,6 @@
 import phaseflow
 import fenics
+import tempfile
 
 
 class HeatDrivenCavityBenchmarkSimulation(
@@ -527,6 +528,10 @@ def test__stefan_problem_with_bdf2__regression__ci__():
     expected_melted_length = 0.094662
     
     sim = StefanProblemBenchmarkSimulation(time_order = 2)
+    
+    sim.output_dir = tempfile.mkdtemp() + "/test__stefan_problem_with_bdf2/"
+    
+    phaseflow.helpers.mkdir_p(sim.output_dir)
     
     sim.assign_initial_values()
     
