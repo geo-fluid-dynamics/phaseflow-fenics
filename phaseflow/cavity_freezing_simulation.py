@@ -86,7 +86,7 @@ class CavityFreezingSimulation(
             steady_q_tolerance = 0.01, 
             max_timesteps = 20):
         
-        Delta_t = self.timestep_size 
+        original_timestep_size = self.timestep_size.__float__()
         
         self.cold_wall_temperature.assign(self.cold_wall_temperature_before_freezing)
         
@@ -96,7 +96,7 @@ class CavityFreezingSimulation(
         
         self.set_constant_concentration(0.)
         
-        self.timestep_size = 1.e-3
+        self.timestep_size.assign(1.e-3)
         
         steady = False
         
@@ -118,13 +118,13 @@ class CavityFreezingSimulation(
                 
             q_old = 0. + q
             
-            self.timestep_size = 2.*self.timestep_size
+            self.timestep_size.assign(2.*self.timestep_size.__float__())
 
         assert(steady)
         
         self.set_constant_concentration(self.initial_concentration)
         
-        self.timestep_size = Delta_t
+        self.timestep_size.assign(original_timestep_size)
         
     def setup_freezing_problem(self):
         
@@ -132,8 +132,75 @@ class CavityFreezingSimulation(
         
         self.regularization_central_temperature_offset.assign(0.)
         
-    def run(self, endtime = 1., checkpoint_times = (0., 1.), max_regularization_attempts = 16, 
-            plot = False, savefigs = False):
+    def write_results_table_header(self, table_filepath):
+        
+        with open(table_filepath, "a") as table_file:
+
+            table_file.write(
+                "gamma, mu_S, Ra_T, Ra_C, Pr, Ste, Sc, m_L" + \
+                ", T_m, delta_T, s, h, Delta_t, TimeOrder, t" + \
+                ", A_S, A_phistar, M_C" + \
+                ", p_min, p_max, u_Linf_norm, T_min, T_max, C_min, C_max" + \
+                ", phi_min, phi_max" + \
+                "\n")
+                
+    def write_results_table_row(self, table_filepath):
+    
+        with open(table_filepath, "a") as table_file:
+        
+            table_file.write(
+                str(self.pressure_penalty_factor.__float__()) + "," \
+                + str(self.solid_viscosity.__float__()) + "," \
+                + str(self.temperature_rayleigh_number.__float__()) + "," \
+                + str(self.concentration_rayleigh_number.__float__()) + ", " \
+                + str(self.prandtl_number.__float__()) + ", " \
+                + str(self.stefan_number.__float__()) + ", " \
+                + str(self.schmidt_number.__float__()) + ", " \
+                + str(self.liquidus_slope.__float__()) + ", " \
+                + str(self.pure_liquidus_temperature.__float__()) + ", " \
+                + str(self.regularization_central_temperature_offset.__float__()) + ", " \
+                + str(self.regularization_smoothing_parameter.__float__()) + ", " \
+                + str(1./float(self.uniform_gridsize)) + ", " \
+                + str(self.timestep_size.__float__()) + ", " \
+                + str(self.time_order) + ", " \
+                + str(self.time) + ", ")
+                
+            solid_area = fenics.assemble(self.solid_area_integrand())
+            
+            area_above_critical_phi = fenics.assemble(
+                self.area_above_critical_phi_integrand())
+            
+            solute_mass = fenics.assemble(self.solute_mass_integrand())
+            
+            p, u, T, C = self.solution.leaf_node().split(deepcopy = True)
+            
+            phi = fenics.project(
+                self.semi_phasefield(T = T, C = C), mesh = self.mesh.leaf_node())
+    
+            Cbar = fenics.project(C*(1. - phi), mesh = self.mesh.leaf_node())
+    
+            table_file.write(
+                str(solid_area) + ", " \
+                + str(area_above_critical_phi) + ", " \
+                + str(solute_mass) + ", " \
+                + str(p.vector().min()) + ", " \
+                + str(p.vector().max()) + ", " \
+                + str(fenics.norm(u.vector(), "linf"))  + ", " \
+                + str(T.vector().min()) + ", " \
+                + str(T.vector().max()) + ", " \
+                + str(Cbar.vector().min()) + ", " \
+                + str(Cbar.vector().max()) + ", " \
+                + str(phi.vector().min()) + ", " \
+                + str(phi.vector().max()))
+            
+            table_file.write("\n")
+        
+    def run(self,
+            endtime = 1., 
+            checkpoint_times = (0., 1.),            
+            max_regularization_attempts = 16, 
+            plot = False, 
+            savefigs = False):
         
         phaseflow.helpers.mkdir_p(self.output_dir)
         
@@ -153,67 +220,32 @@ class CavityFreezingSimulation(
         
             self.plot(savefigs = savefigs)
         
-        table_filepath = self.output_dir + "DifferentiallyHeatedCavity_QoI_Table.txt"
+        results_table_filepath = self.output_dir + "ResultsTable.txt"
         
-        with open(table_filepath, "a") as results_file:
-
-            results_file.write(
-                "Ra_T, Ra_C, Sc, m_L, s, h, Delta_t, TimeOrder, t, A_S, M_C, A_phistar\n")
-                
-        def write_parameters():
+        print("Writing table to " + str(results_table_filepath))
         
-            with open(table_filepath, "a") as results_file:
-            
-                results_file.write(
-                    str(self.temperature_rayleigh_number.__float__()) + "," \
-                    + str(self.concentration_rayleigh_number.__float__()) + ", " \
-                    + str(self.schmidt_number.__float__()) + ", " \
-                    + str(self.liquidus_slope.__float__()) + ", " \
-                    + str(self.regularization_smoothing_parameter.__float__()) + ", " \
-                    + str(1./float(self.uniform_gridsize)) + ", " \
-                    + str(self.timestep_size.__float__()) + ", " \
-                    + str(self.time_order) + ", " \
-                    + str(self.time) + ", ")
-                    
-        def write_results():
+        self.write_results_table_header(results_table_filepath)
         
-            with open(table_filepath, "a") as results_file:
-            
-                solid_area = fenics.assemble(self.solid_area_integrand())
-                
-                solute_mass = fenics.assemble(self.solute_mass_integrand())
-                
-                area_above_critical_phi = fenics.assemble(self.area_above_critical_phi_integrand())
-                
-                results_file.write(str(solid_area) + ", " + str(solute_mass) + ", " + str(area_above_critical_phi))
-        
-        def write_newline():
-        
-            with open(table_filepath, "a") as results_file:
-                
-                results_file.write("\n")
+        self.write_nonlinear_solver_table_header()
         
         if self.time == 0.:
             
-            write_parameters()
-            
-            write_results()
+            self.write_results_table_row(results_table_filepath)
         
         time_tolerance = 1.e-8
         
         while (self.time < (endtime - time_tolerance)):
             
-            write_newline()
-            
-            self._times[0] = self._times[1] + self.timestep_size
-            
-            write_parameters()
-            
             self.solve_with_auto_regularization(
                 enable_newton_solution_backup = True,
                 max_attempts = max_regularization_attempts)
             
-            write_results()
+            self.write_results_table_row(results_table_filepath)
+            
+            with open(self.output_dir + "regularization_history.txt", "a") \
+                    as regularization_history_file:
+                
+                regularization_history_file.write(str(self.regularization_sequence))
             
             if phaseflow.helpers.float_in(self.time, checkpoint_times):
                 
@@ -225,5 +257,3 @@ class CavityFreezingSimulation(
             
             self.advance()
             
-        write_newline()
-        

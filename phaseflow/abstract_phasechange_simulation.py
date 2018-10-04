@@ -15,29 +15,30 @@ class AbstractPhaseChangeSimulation(phaseflow.abstract_simulation.AbstractSimula
     definitions for the mesh, initial values, and boundary conditions. """
     def __init__(self, time_order = 1, integration_measure = fenics.dx, setup_solver = True):
         
-        self.temperature_rayleigh_number = fenics.Constant(1., name = "Ra_T")
+        self._temperature_rayleigh_number = fenics.Constant(1., name = "Ra_T")
         
-        self.concentration_rayleigh_number = fenics.Constant(-1., name = "Ra_C")
+        self._concentration_rayleigh_number = fenics.Constant(-1., name = "Ra_C")
         
-        self.prandtl_number = fenics.Constant(1., name = "Pr")
+        self._prandtl_number = fenics.Constant(1., name = "Pr")
         
-        self.stefan_number = fenics.Constant(1., name = "Ste")
+        self._stefan_number = fenics.Constant(1., name = "Ste")
         
-        self.schmidt_number = fenics.Constant(1., name = "Sc")
+        self._schmidt_number = fenics.Constant(1., name = "Sc")
         
-        self.pure_liquidus_temperature = fenics.Constant(0., name = "T_m")
+        self._pure_liquidus_temperature = fenics.Constant(0., name = "T_m")
         
-        self.liquidus_slope = fenics.Constant(-1., name = "m_L")
+        self._liquidus_slope = fenics.Constant(-1., name = "m_L")
         
-        self.liquid_viscosity = fenics.Constant(1., name = "mu_L")
+        self._liquid_viscosity = fenics.Constant(1., name = "mu_L")
         
-        self.solid_viscosity = fenics.Constant(1.e8, name = "mu_S")
+        self._solid_viscosity = fenics.Constant(1.e8, name = "mu_S")
         
-        self.pressure_penalty_factor = fenics.Constant(1.e-7, name = "gamma")
+        self._pressure_penalty_factor = fenics.Constant(1.e-7, name = "gamma")
         
-        self.regularization_central_temperature_offset = fenics.Constant(0., name = "delta_T")
+        self._regularization_central_temperature_offset = fenics.Constant(
+            0., name = "delta_T")
         
-        self.regularization_smoothing_parameter = fenics.Constant(1./64., name = "r")
+        self._regularization_smoothing_parameter = fenics.Constant(1./64., name = "r")
     
         self.regularization_sequence = None
         
@@ -45,13 +46,85 @@ class AbstractPhaseChangeSimulation(phaseflow.abstract_simulation.AbstractSimula
             time_order = time_order, 
             integration_measure = integration_measure, 
             setup_solver = setup_solver)
-            
+
+        self.nonlinear_solver_table_filename = "NonlinearSolverTable.txt"
+        
         if setup_solver:
         
             self.solver.parameters["newton_solver"]["maximum_iterations"] = 20
         
             self.solver.parameters["newton_solver"]["absolute_tolerance"] = 1.e-9
     
+    @property
+    def temperature_rayleigh_number(self):
+    
+        return self._temperature_rayleigh_number
+    
+    @property
+    def concentration_rayleigh_number(self):
+    
+        return self._concentration_rayleigh_number
+        
+    @property
+    def prandtl_number(self):
+    
+        return self._prandtl_number
+        
+    @property
+    def stefan_number(self):
+    
+        return self._stefan_number
+    
+    @property
+    def schmidt_number(self):
+    
+        return self._schmidt_number
+        
+    @property
+    def prandtl_number(self):
+    
+        return self._prandtl_number
+        
+    @property
+    def pure_liquidus_temperature(self):
+    
+        return self._pure_liquidus_temperature
+        
+    @property
+    def liquidus_slope(self):
+    
+        return self._liquidus_slope
+        
+    @property
+    def prandtl_number(self):
+    
+        return self._prandtl_number
+        
+    @property
+    def liquid_viscosity(self):
+    
+        return self._liquid_viscosity
+        
+    @property
+    def solid_viscosity(self):
+    
+        return self._solid_viscosity
+        
+    @property
+    def pressure_penalty_factor(self):
+    
+        return self._pressure_penalty_factor
+    
+    @property
+    def regularization_central_temperature_offset(self):
+    
+        return self._regularization_central_temperature_offset
+        
+    @property
+    def regularization_smoothing_parameter(self):
+    
+        return self._regularization_smoothing_parameter
+        
     def phi(self, T, C, T_m, m_L, delta_T, s):
         """ The regularized semi-phasefield. """
         T_L = delta_T + T_m + m_L*C
@@ -289,10 +362,19 @@ class AbstractPhaseChangeSimulation(phaseflow.abstract_simulation.AbstractSimula
                     
                         self.save_newton_solution()
                     
+                    """ Try/catch block prevents us from directly checking the 
+                    number of iterations when the solver fails."""
+                    self.solver_status["iterations"] = \
+                        self.solver.parameters["newton_solver"]["maximum_iterations"]
+                    
+                    self.solver_status["solved"] = False
+                        
                     self.solve(goal_tolerance = goal_tolerance)
                     
-                solved = True
-                
+                    self.solver_status["solved"] = True
+                    
+                    self.write_nonlinear_solver_table_row()
+                    
                 break
                 
             except RuntimeError:  
@@ -300,6 +382,8 @@ class AbstractPhaseChangeSimulation(phaseflow.abstract_simulation.AbstractSimula
                 if "Newton solver did not converge" not in str(sys.exc_info()):
                 
                     raise
+                
+                self.write_nonlinear_solver_table_row()
                 
                 current_s = self.regularization_smoothing_parameter.__float__()
                 
@@ -350,7 +434,7 @@ class AbstractPhaseChangeSimulation(phaseflow.abstract_simulation.AbstractSimula
         
         self.regularization_smoothing_parameter.assign(self.regularization_sequence[-1])
         
-        assert(solved)
+        assert(self.solver_status["solved"])
         
     def coarsen(self, 
             absolute_tolerances = (1.e-2, 1.e-2, 1.e-2, 1.e-2, 1.e-2),
@@ -449,13 +533,13 @@ class AbstractPhaseChangeSimulation(phaseflow.abstract_simulation.AbstractSimula
         
         phi = fenics.project(self.semi_phasefield(T = T, C = C), mesh = self.mesh.leaf_node())
         
-        C = fenics.project(C*(1. - phi), mesh = self.mesh.leaf_node())
+        Cbar = fenics.project(C*(1. - phi), mesh = self.mesh.leaf_node())
        
         for var, label, colorbar, varname in zip(
-                (solution.function_space().mesh().leaf_node(), u, T, C, phi),
-                ("$\Omega_h$", "$\mathbf{u}$", "$T$", "$C$", "$\phi$"),
-                (False, True, True, True, True),
-                ("mesh", "u", "T", "C", "phi")):
+                (solution.function_space().mesh().leaf_node(), p, u, T, Cbar, phi),
+                ("$\Omega_h$", "$p$", "$\mathbf{u}$", "$T$", "$\overline{C}$", "$\phi$"),
+                (False, True, True, True, True, True),
+                ("mesh", "p", "u", "T", "Cbar", "phi")):
             
             some_mappable_thing = phaseflow.plotting.plot(var)
             
@@ -492,3 +576,23 @@ class AbstractPhaseChangeSimulation(phaseflow.abstract_simulation.AbstractSimula
             var.rename(symbol, label)
             
             file.write(var, self._times[solution_index])
+
+    def write_nonlinear_solver_table_header(self):
+        
+        with open(self.output_dir + self.nonlinear_solver_table_filename, "a") as table_file:
+
+            table_file.write(
+                "AbsoluteTolerance, RelativeTolerance, Time, SmoothingParameter, IterationCount, Solved\n")
+                
+    def write_nonlinear_solver_table_row(self):
+        
+        with open(self.output_dir + self.nonlinear_solver_table_filename, "a") as table_file:
+            
+            table_file.write(
+                str(self.solver.parameters["newton_solver"]["absolute_tolerance"]) + ", " + \
+                str(self.solver.parameters["newton_solver"]["relative_tolerance"]) + ", " + \
+                str(self.time) + ", " + \
+                str(self.regularization_smoothing_parameter.__float__()) + ", " + \
+                str(self.solver_status["iterations"]) + ", " + \
+                str(self.solver_status["solved"]) + "\n")
+                

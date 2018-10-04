@@ -68,6 +68,8 @@ class AbstractSimulation(metaclass = abc.ABCMeta):
         
         self.adaptive_solver = None
         
+        self.solver_status = {"iterations": 0, "solved": False}
+        
         self.solver_needs_setup = True
         
         if setup_solver:
@@ -79,12 +81,7 @@ class AbstractSimulation(metaclass = abc.ABCMeta):
     @property
     def timestep_size(self):
     
-        return self._timestep_sizes[0].values()[0]
-        
-    @timestep_size.setter
-    def timestep_size(self, value):
-    
-        self._timestep_sizes[0].assign(value)
+        return self._timestep_sizes[0]
     
     @property
     def mesh(self):
@@ -215,11 +212,13 @@ class AbstractSimulation(metaclass = abc.ABCMeta):
         
             self.setup_solver()
             
-        self._times[0] = self._times[1] + self.timestep_size
+        self._times[0] = self._times[1] + self.timestep_size.__float__()
         
         if goal_tolerance is None:
         
-            status = self.solver.solve()
+            solver_status = self.solver.solve()
+            
+            self.solver_status["iterations"] = solver_status[0]
             
         else:
             
@@ -227,9 +226,14 @@ class AbstractSimulation(metaclass = abc.ABCMeta):
                 self.adaptive_solver.parameters["nonlinear_variational_solver"],
                 self.solver.parameters)
                     
-            status = self.adaptive_solver.solve(goal_tolerance)
+            self.adaptive_solver.solve(goal_tolerance)
             
-        return status
+            """ `fenics.AdaptiveNonlinearVariationalSolver` does not return status."""
+            self.solver_status["iterations"] = "NA"
+            
+        self.solver_status["solved"] = True
+        
+        return self.solver_status
         
     def advance(self):
         """ Move solutions backward in the queue to prepare for a new time step. 

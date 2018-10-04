@@ -26,7 +26,7 @@ def test__cavity_freezing_simulation__ci__():
     sim.output_dir = tempfile.mkdtemp() + "/test__cavity_freezing_simulation/"
     
     
-    sim.timestep_size = 1.
+    sim.timestep_size.assign(1.)
     
     endtime = 3.
     

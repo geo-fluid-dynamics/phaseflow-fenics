@@ -1,5 +1,6 @@
 import phaseflow
 import fenics
+import tempfile
 
 
 class HeatDrivenCavityBenchmarkSimulation(
@@ -22,7 +23,7 @@ class HeatDrivenCavityBenchmarkSimulation(
         
         self.cold_wall_temperature.assign(-0.5)
         
-        self.timestep_size = 1.e-3
+        self.timestep_size.assign(1.e-3)
         
         self.temperature_rayleigh_number.assign(1.e6)
         
@@ -128,7 +129,7 @@ def test__heat_driven_cavity__ci__():
             
             break
             
-        sim.timestep_size *= 2.
+        sim.timestep_size.assign(2.*sim.timestep_size.__float__())
         
     assert(steady)
     
@@ -147,47 +148,11 @@ class WaterHeatDrivenCavityBenchmarkSimulation(
             integration_measure = fenics.dx(metadata={"quadrature_degree":  8}),
             setup_solver = True):
         
-        self.hot_wall_temperature_degC = fenics.Constant(
-            10., name = "T_h_degC")
+        self.hot_wall_temperature_degC = 10.
         
-        self.cold_wall_temperature_degC = fenics.Constant(
-            0., name = "T_c_degC")
+        self.cold_wall_temperature_degC = 0.
         
-        self.pure_liquidus_temperature_degC = fenics.Constant(
-            0., name = "T_m_degC")
-        
-        self.pure_liquidus_temperature = self.T(
-            self.pure_liquidus_temperature_degC)
-        
-        class HotWall(fenics.SubDomain):
-
-            def inside(self, x, on_boundary):
-
-                return on_boundary and fenics.near(x[0], 0.)
-                
-        class ColdWall(fenics.SubDomain):
-
-            def inside(self, x, on_boundary):
-
-                return on_boundary and fenics.near(x[0], 1.)
-                
-        class Walls(fenics.SubDomain):
-
-            def inside(self, x, on_boundary):
-
-                return on_boundary
-
-        self._HotWall = HotWall
-        
-        self.hot_wall = self._HotWall()
-       
-        self._ColdWall = ColdWall
-        
-        self.cold_wall = self._ColdWall()
-        
-        self._Walls = Walls
-        
-        self.walls = self._Walls()
+        self.pure_liquidus_temperature_degC = 0.
         
         super().__init__(
             time_order = time_order, 
@@ -199,7 +164,8 @@ class WaterHeatDrivenCavityBenchmarkSimulation(
         self.prandtl_number.assign(6.99)
         
         """ Disable freezing. """
-        self.pure_liquidus_temperature.assign(0.)
+        self.pure_liquidus_temperature.assign(
+            self.T(self.pure_liquidus_temperature_degC))
         
         self.regularization_central_temperature_offset.assign(0.)
         
@@ -233,12 +199,6 @@ class WaterHeatDrivenCavityBenchmarkSimulation(
         T_m_degC = self.pure_liquidus_temperature_degC
 
         return T*(T_h_degC - T_c_degC) + T_m_degC
-        
-    def solve(self, goal_tolerance = None):
-        """ Validate parameters before solving. """
-        assert(self.pure_liquidus_temperature.__float__() == self.T(self.pure_liquidus_temperature_degC).__float__())
-        
-        super().solve(goal_tolerance = goal_tolerance)
         
     def buoyancy(self, T, C):
 
@@ -293,8 +253,8 @@ class WaterHeatDrivenCavityBenchmarkSimulation(
                  "0.", 
                  "(T_c - T_h)*x[0] + T_h", 
                  "0."),
-                T_h = self.T(self.hot_wall_temperature_degC).__float__(), 
-                T_c = self.T(self.cold_wall_temperature_degC).__float__(),
+                T_h = self.T(self.hot_wall_temperature_degC), 
+                T_c = self.T(self.cold_wall_temperature_degC),
                 element = self.element()),
             self.function_space)
             
@@ -309,11 +269,11 @@ class WaterHeatDrivenCavityBenchmarkSimulation(
                 self.walls),
             fenics.DirichletBC(
                 self.function_space.sub(2), 
-                self.T(self.hot_wall_temperature_degC).__float__(), 
+                self.T(self.hot_wall_temperature_degC),
                 self.hot_wall),
             fenics.DirichletBC(
                 self.function_space.sub(2), 
-                self.T(self.cold_wall_temperature_degC).__float__(), 
+                self.T(self.cold_wall_temperature_degC),
                 self.cold_wall)]
     
     def adaptive_goal(self):
@@ -346,7 +306,7 @@ def test__heat_driven_cavity_water__ci__():
 
     sim.assign_initial_values()
 
-    sim.timestep_size = 1.e-3
+    sim.timestep_size.assign(1.e-3)
 
     sim.solver.parameters["newton_solver"]["maximum_iterations"] = 8
 
@@ -358,13 +318,13 @@ def test__heat_driven_cavity_water__ci__():
 
         print("Solving time step number " + str(it))
 
-        sim.timestep_size = 2.*sim.timestep_size
+        sim.timestep_size.assign(2.*sim.timestep_size.__float__())
 
         for attempts in range(3):
 
             try:
 
-                print("Trying time step size " + str(sim.timestep_size))
+                print("Trying time step size " + str(sim.timestep_size.__float__()))
 
                 sim.solve(goal_tolerance = 0.05)
 
@@ -374,7 +334,7 @@ def test__heat_driven_cavity_water__ci__():
 
             except:
 
-                sim.timestep_size = sim.timestep_size/2.
+                sim.timestep_size.assign(sim.timestep_size.__float__()/2.)
 
                 sim.reset_initial_guess()
 
@@ -425,7 +385,7 @@ class StefanProblemBenchmarkSimulation(
         self.stefan_number.assign(0.045)
         
         
-        self.timestep_size = 1.e-3
+        self.timestep_size.assign(1.e-3)
         
         self.regularization_smoothing_parameter.assign(0.005)
         
@@ -550,7 +510,7 @@ def test__stefan_problem__ci__():
     
     timestep_count = 100
     
-    sim.timestep_size = end_time/float(timestep_count)
+    sim.timestep_size.assign(end_time/float(timestep_count))
     
     for it in range(timestep_count):
         
@@ -569,13 +529,17 @@ def test__stefan_problem_with_bdf2__regression__ci__():
     
     sim = StefanProblemBenchmarkSimulation(time_order = 2)
     
+    sim.output_dir = tempfile.mkdtemp() + "/test__stefan_problem_with_bdf2/"
+    
+    phaseflow.helpers.mkdir_p(sim.output_dir)
+    
     sim.assign_initial_values()
     
     end_time = 0.1
     
     timestep_count = 25
     
-    sim.timestep_size = end_time/float(timestep_count)
+    sim.timestep_size.assign(end_time/float(timestep_count))
     
     sim.regularization_smoothing_parameter.assign(0.005)
     
