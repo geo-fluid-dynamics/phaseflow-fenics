@@ -9,4 +9,4 @@ from . import abstract_heated_cavity_phasechange_simulation
 
 from . import cavity_freezing_simulation
 from . import cavity_melting_simulation
-
+from . import cavity_melting_and_refreezing_cycle_simulation
