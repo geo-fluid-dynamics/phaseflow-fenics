@@ -43,7 +43,8 @@ class CavityFreezingSimulation(
                  "0.", 
                  "0.", 
                  "(T_c - T_h)*x[0] + T_h", 
-                 "C_0"),
+                 "C_0",
+                 "0."),
                 T_h = self.hot_wall_temperature, 
                 T_c = self.cold_wall_temperature,
                 C_0 = self.initial_concentration,
@@ -174,11 +175,8 @@ class CavityFreezingSimulation(
             
             solute_mass = fenics.assemble(self.solute_mass_integrand())
             
-            p, u, T, C = self.solution.leaf_node().split(deepcopy = True)
+            p, u, T, C, phi = self.solution.leaf_node().split(deepcopy = True)
             
-            phi = fenics.project(
-                self.semi_phasefield(T = T, C = C), mesh = self.mesh.leaf_node())
-    
             Cbar = fenics.project(C*(1. - phi), mesh = self.mesh.leaf_node())
     
             table_file.write(
@@ -200,6 +198,7 @@ class CavityFreezingSimulation(
     def run(self,
             endtime = 1., 
             checkpoint_times = (0., 1.),            
+            max_regularization_threshold = 4.,
             max_regularization_attempts = 16, 
             plot = False, 
             savefigs = False):
@@ -240,6 +239,7 @@ class CavityFreezingSimulation(
             
             self.solve_with_auto_regularization(
                 enable_newton_solution_backup = True,
+                max_regularization_threshold = max_regularization_threshold,
                 max_attempts = max_regularization_attempts)
             
             self.write_results_table_row(results_table_filepath)

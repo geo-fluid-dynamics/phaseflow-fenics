@@ -125,85 +125,13 @@ class AbstractPhaseChangeSimulation(phaseflow.abstract_simulation.AbstractSimula
     
         return self._regularization_smoothing_parameter
         
-    def phi(self, T, C, T_m, m_L, delta_T, s):
-        """ The regularized semi-phasefield. """
-        T_L = delta_T + T_m + m_L*C
-        
-        tanh = fenics.tanh
-        
-        return 0.5*(1. + tanh((T_L - T)/s))
-        
-    def semi_phasefield(self, T, C):
-        """ The semi-phasefield $phi$ given in UFL. """
-        T_m = self.pure_liquidus_temperature
-        
-        m_L = self.liquidus_slope
-        
-        delta_T = self.regularization_central_temperature_offset
-        
-        s = self.regularization_smoothing_parameter
-        
-        return self.phi(T = T, C = C, T_m = T_m, m_L = m_L, delta_T = delta_T, s = s)
-        
-    def point_value_from_semi_phasefield(self, T, C):
-        """ The semi-phasefield $phi$ sutiable for evaluation given a single $T$ and $C$. 
-        
-        Maybe there is a way to evaluate the UFL expression rather than having to provide this
-        redundant function.
-        """
-        T_m = self.pure_liquidus_temperature.values()[0]
-        
-        m_L = self.liquidus_slope.values()[0]
-        
-        delta_T = self.regularization_central_temperature_offset.values()[0]
-        
-        s = self.regularization_smoothing_parameter.values()[0]
-        
-        return self.phi(T = T, C = C, T_m = T_m, m_L = m_L, delta_T = delta_T, s = s)
-        
-    def time_discrete_terms(self):
-        """ Return the discrete time derivatives which are needed for the variational form. """
-        p_t, u_t, T_t, C_t = super().time_discrete_terms()
-        
-        pnp1, unp1, Tnp1, Cnp1_L = fenics.split(self._solutions[0].leaf_node())
-        
-        pn, un, Tn, Cn_L = fenics.split(self._solutions[1].leaf_node())
-        
-        phinp1 = self.semi_phasefield(T = Tnp1, C = Cnp1_L)
-        
-        phin = self.semi_phasefield(T = Tn, C = Cn_L)
-        
-        if self.time_order == 1:
-        
-            phi_t = phaseflow.backward_difference_formulas.apply_backward_euler(
-                Delta_t = self._timestep_sizes[0], 
-                u = (phinp1, phin))
-        
-        if self.time_order > 1:
-        
-            pnm1, unm1, Tnm1, Cnm1_L = fenics.split(self._solutions[2])
-            
-            phinm1 = self.semi_phasefield(T = Tnm1, C = Cnm1_L)
-        
-        if self.time_order == 2:
-        
-            phi_t = phaseflow.backward_difference_formulas.apply_bdf2(
-                Delta_t = (self._timestep_sizes[0], self._timestep_sizes[1]),
-                u = (phinp1, phin, phinm1))
-                
-        if self.time_order > 2:
-            
-            raise NotImplementedError()
-            
-        return u_t, T_t, C_t, phi_t
-        
     def element(self):
         """ Return a P1P2P1P1 element for the monolithic solution. """
         P1 = fenics.FiniteElement('P', self.mesh.ufl_cell(), 1)
         
         P2 = fenics.VectorElement('P', self.mesh.ufl_cell(), 2)
         
-        return fenics.MixedElement([P1, P2, P1, P1])
+        return fenics.MixedElement([P1, P2, P1, P1, P1])
         
     def buoyancy(self, T, C):
         """ Extend the model from @cite{zimmerman2018monolithic} with a solute concentration. """
@@ -231,17 +159,15 @@ class AbstractPhaseChangeSimulation(phaseflow.abstract_simulation.AbstractSimula
         
         mu_S = self.solid_viscosity
         
-        p, u, T, C = fenics.split(self.solution.leaf_node())
+        p, u, T, C, phi = fenics.split(self.solution.leaf_node())
         
-        u_t, T_t, C_t, phi_t = self.time_discrete_terms()
+        p_t, u_t, T_t, C_t, phi_t = self.time_discrete_terms()
         
         b = self.buoyancy(T = T, C = C)
         
-        phi = self.semi_phasefield(T = T, C = C)
-        
         mu = mu_L + (mu_S - mu_L)*phi
         
-        psi_p, psi_u, psi_T, psi_C = fenics.TestFunctions(self.function_space)
+        psi_p, psi_u, psi_T, psi_C, psi_phi = fenics.TestFunctions(self.function_space)
         
         inner, dot, grad, div, sym = \
             fenics.inner, fenics.dot, fenics.grad, fenics.div, fenics.sym
@@ -258,11 +184,25 @@ class AbstractPhaseChangeSimulation(phaseflow.abstract_simulation.AbstractSimula
             psi_C*((1. - phi)*C_t - C*phi_t) \
             + dot(grad(psi_C), 1./Sc*(1. - phi)*grad(C) - C*u)
         
-        stabilization = -gamma*psi_p*p
+        pressure_penalty_stabilization = -gamma*psi_p*p
+        
+        T_m = self.pure_liquidus_temperature
+        
+        m_L = self.liquidus_slope
+        
+        delta_T = self.regularization_central_temperature_offset
+        
+        s = self.regularization_smoothing_parameter
+        
+        tanh = fenics.tanh
+        
+        T_L = delta_T + T_m + m_L*C
+        
+        phase = psi_phi*(phi - 0.5*(1. + tanh((T_L - T)/s)))
         
         dx = self.integration_measure
         
-        F =  (mass + momentum + enthalpy + concentration + stabilization)*dx
+        F =  (mass + momentum + enthalpy + concentration + phase + pressure_penalty_stabilization)*dx
         
         return F
     
@@ -272,9 +212,7 @@ class AbstractPhaseChangeSimulation(phaseflow.abstract_simulation.AbstractSimula
         
     def solid_area_integrand(self):
         
-        p, u, T, C = fenics.split(self.solution.leaf_node())
-        
-        phi = self.semi_phasefield(T = T, C = C) 
+        p, u, T, C, phi = fenics.split(self.solution.leaf_node())
         
         dx = self.integration_measure
         
@@ -282,9 +220,7 @@ class AbstractPhaseChangeSimulation(phaseflow.abstract_simulation.AbstractSimula
         
     def solute_mass_integrand(self):
 
-        p, u, T, C = fenics.split(self.solution.leaf_node())
-        
-        phi = self.semi_phasefield(T = T, C = C) 
+        p, u, T, C, phi = fenics.split(self.solution.leaf_node())
         
         dx = self.integration_measure
         
@@ -292,9 +228,9 @@ class AbstractPhaseChangeSimulation(phaseflow.abstract_simulation.AbstractSimula
         
     def area_above_critical_phi_integrand(self, critical_phi = 1.e-6):
     
-        p, u, T, C = fenics.split(self.solution.leaf_node())
+        p, u, T, C, phi = fenics.split(self.solution.leaf_node())
         
-        _p, _u, _T, _C = self.solution.leaf_node().split()
+        _p, _u, _T, _C, _phi = self.solution.leaf_node().split()
         
         cell_markers = fenics.MeshFunction("size_t", self.mesh.leaf_node(), self.mesh.topology().dim())
         
@@ -302,7 +238,7 @@ class AbstractPhaseChangeSimulation(phaseflow.abstract_simulation.AbstractSimula
             
             p = fenics.Point(x[0], x[1])
             
-            return self.point_value_from_semi_phasefield(T = _T(p), C = _C(p))
+            return _phi(p)
             
         class AboveCriticalPhi(fenics.SubDomain):
 
@@ -469,7 +405,7 @@ class AbstractPhaseChangeSimulation(phaseflow.abstract_simulation.AbstractSimula
         
         def phi(solution, point):
             
-            return self.point_value_from_semi_phasefield(T = T(solution, point), C = C(solution, point))
+            return solution(point)[5]
         
         scalars = (u0, u1, T, C, phi)
         
@@ -529,9 +465,7 @@ class AbstractPhaseChangeSimulation(phaseflow.abstract_simulation.AbstractSimula
         
     def _plot(self, solution, time, savefigs = False):
         """ Plot the adaptive mesh, velocity vector field, temperature field, and phase field. """
-        p, u, T, C = solution.leaf_node().split()
-        
-        phi = fenics.project(self.semi_phasefield(T = T, C = C), mesh = self.mesh.leaf_node())
+        p, u, T, C, phi = solution.leaf_node().split()
         
         Cbar = fenics.project(C*(1. - phi), mesh = self.mesh.leaf_node())
        
@@ -570,8 +504,8 @@ class AbstractPhaseChangeSimulation(phaseflow.abstract_simulation.AbstractSimula
         """
         for var, symbol, label in zip(
                 self._solutions[solution_index].leaf_node().split(), 
-                ("p", "u", "T", "C"), 
-                ("pressure", "velocity", "temperature", "concentration")):
+                ("p", "u", "T", "C", "phi"), 
+                ("pressure", "velocity", "temperature", "concentration", "phase")):
         
             var.rename(symbol, label)
             

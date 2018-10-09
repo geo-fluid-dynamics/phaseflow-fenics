@@ -100,7 +100,7 @@ class AbstractHeatedCavityPhaseChangeSimulation(phaseflow.abstract_phasechange_s
     
         nhat = fenics.FacetNormal(self.mesh.leaf_node())
     
-        p, u, T, C = fenics.split(self.solution.leaf_node())
+        p, u, T, C, phi = fenics.split(self.solution.leaf_node())
         
         mesh_function = fenics.MeshFunction(
             "size_t", 

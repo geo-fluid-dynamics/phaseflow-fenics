@@ -27,9 +27,7 @@ def test__compositional_convection_coupled_melting_benchmark__amr__regression__c
         
         sim.advance()
     
-    p_fine, u_fine, T_fine, C_fine = fenics.split(sim.solution)
-    
-    phi = sim.semi_phasefield(T = T_fine, C = C_fine)
+    p, u, T, C, phi = fenics.split(sim.solution.leaf_node())
     
     expected_solid_area =  0.7405
     
@@ -96,7 +94,8 @@ class CavityMeltingSimulationWithoutConcentration(phaseflow.cavity_melting_simul
                  "0.", 
                  "0.", 
                  "(T_h - T_c)*(x[0] < x_m0) + T_c", 
-                 "0."),
+                 "0.",
+                 "1. - (x[0] < x_m0)"),
                 T_h = self.hot_wall_temperature, 
                 T_c = self.cold_wall_temperature,
                 x_m0 = 1./2.**(self.initial_hot_wall_refinement_cycles - 1),
@@ -107,7 +106,7 @@ class CavityMeltingSimulationWithoutConcentration(phaseflow.cavity_melting_simul
         
     def adaptive_goal(self):
 
-        u_t, T_t, C_t, phi_t = self.time_discrete_terms()
+        p_t, u_t, T_t, C_t, phi_t = self.time_discrete_terms()
         
         dx = self.integration_measure
         
@@ -124,13 +123,11 @@ def test__cavity_melting_without_concentration__amr__regression__ci__():
     
     for it in range(5):
         
-        sim.solve(goal_tolerance = 4.e-5)
+        sim.solve_with_auto_regularization(goal_tolerance = 4.e-5)
         
         sim.advance()
     
-    p_fine, u_fine, T_fine, C_fine = fenics.split(sim.solution)
-    
-    phi = sim.semi_phasefield(T = T_fine, C = C_fine)
+    p, u, T, C, phi = fenics.split(sim.solution.leaf_node())
     
     solid_area = fenics.assemble(phi*fenics.dx)
     
@@ -161,9 +158,7 @@ def test__deepcopy__ci__():
         
         sim.advance()
     
-    p_fine, u_fine, T_fine, C_fine = fenics.split(sim.solution)
-    
-    phi = sim.semi_phasefield(T = T_fine, C = C_fine)
+    p, u, T, C, phi = fenics.split(sim.solution.leaf_node())
     
     solid_area = fenics.assemble(phi*fenics.dx)
     
@@ -177,7 +172,7 @@ def test__deepcopy__ci__():
         
         sim2.advance()
     
-    p_fine, u_fine, T_fine, C_fine = fenics.split(sim2.solution)
+    p, u, T, C, phi = fenics.split(sim2.solution.leaf_node())
     
     phi = sim2.semi_phasefield(T = T_fine, C = C_fine)
     
@@ -214,9 +209,7 @@ def test__checkpoint__ci__():
         
         sim.advance()
     
-    p_fine, u_fine, T_fine, C_fine = fenics.split(sim.solution)
-    
-    phi = sim.semi_phasefield(T = T_fine, C = C_fine)
+    p, u, T, C, phi = fenics.split(sim.solution.leaf_node())
     
     solid_area = fenics.assemble(phi*fenics.dx)
     
@@ -243,9 +236,7 @@ def test__coarsen__ci__():
         
         sim.advance()
     
-    p_fine, u_fine, T_fine, C_fine = fenics.split(sim.solution)
-    
-    phi = sim.semi_phasefield(T = T_fine, C = C_fine)
+    p, u, T, C = fenics.split(sim.solution.leaf_node())
     
     solid_area = fenics.assemble(phi*fenics.dx)
     
