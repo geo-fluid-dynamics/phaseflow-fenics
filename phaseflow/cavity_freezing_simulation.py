@@ -138,7 +138,8 @@ class CavityFreezingSimulation(
 
             table_file.write(
                 "gamma, mu_S, Ra_T, Ra_C, Pr, Ste, Sc, m_L" + \
-                ", T_m, delta_T, s, h, Delta_t, TimeOrder, t" + \
+                ", T_m, delta_T, s, h, Delta_t, TimeOrder, QuadratureDegree" + \
+                ", t" + \
                 ", A_S, A_phistar, M_C" + \
                 ", p_min, p_max, u_Linf_norm, T_min, T_max, C_min, C_max" + \
                 ", phi_min, phi_max" + \
@@ -163,6 +164,7 @@ class CavityFreezingSimulation(
                 + str(1./float(self.uniform_gridsize)) + ", " \
                 + str(self.timestep_size.__float__()) + ", " \
                 + str(self.time_order) + ", " \
+                + str(self.integration_measure.metadata()["quadrature_degree"]) + ", " \
                 + str(self.time) + ", ")
                 
             solid_area = fenics.assemble(self.solid_area_integrand())
