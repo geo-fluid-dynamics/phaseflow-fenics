@@ -3,7 +3,7 @@ import fenics
 
 
 class CavityMeltingAndRefreezingCycleSimulation(
-        phaseflow.abstract_heated_cavity_phasechange_simulation.AbstractHeatedCavityPhaseChangeSimulation):
+        phaseflow.abstract_phasechange_simulation.AbstractPhaseChangeSimulation):
 
     def __init__(self, 
             time_order = 1, 
@@ -12,6 +12,13 @@ class CavityMeltingAndRefreezingCycleSimulation(
             setup_solver = True):
         
         self.uniform_gridsize = uniform_gridsize
+        
+        
+        self.hot_wall_temperature = fenics.Constant(1., name = "T_h")
+        
+        self.cold_wall_temperature = fenics.Constant(-1., name = "T_c")
+        
+        self.initial_concentration = fenics.Constant(1., name = "C0")
         
         
         self.hot_wall_temperature_during_melting = fenics.Constant(1.)
@@ -32,11 +39,49 @@ class CavityMeltingAndRefreezingCycleSimulation(
         
             integration_measure = fenics.dx(metadata={"quadrature_degree":  8})
         
+        self.hot_wall_temperature = fenics.Constant(1., name = "T_h")
+        
+        self.cold_wall_temperature = fenics.Constant(-0.01, name = "T_c")
+        
+        self.initial_concentration = fenics.Constant(1., name = "C0")
+   
+        class HotWall(fenics.SubDomain):
+
+            def inside(self, x, on_boundary):
+
+                return on_boundary and fenics.near(x[1], 0.)
+                
+        class ColdWall(fenics.SubDomain):
+
+            def inside(self, x, on_boundary):
+
+                return on_boundary and fenics.near(x[1], 1.)
+                
+        class Walls(fenics.SubDomain):
+
+            def inside(self, x, on_boundary):
+
+                return on_boundary
+
+        self._HotWall = HotWall
+        
+        self.hot_wall = self._HotWall()
+       
+        self._ColdWall = ColdWall
+        
+        self.cold_wall = self._ColdWall()
+        
+        self._Walls = Walls
+        
+        self.walls = self._Walls()
+        
+        self.uniform_gridsize = uniform_gridsize
+        
+        
         super().__init__(
             time_order = time_order, 
             integration_measure = integration_measure, 
-            setup_solver = setup_solver,
-            initial_uniform_gridsize = uniform_gridsize)
+            setup_solver = setup_solver)
         
         
         self.hot_wall_temperature.assign(self.hot_wall_temperature_during_melting)
@@ -52,27 +97,48 @@ class CavityMeltingAndRefreezingCycleSimulation(
             
         self.results_table_filepath = self.output_dir + "ResultsTable.txt"
         
-    def initial_mesh(self):
-    
-        return self.coarse_mesh()
+        self.checkpoint_times = (0., 1., 2., 4., 8., 16., 32., 64., 128.)
+        
+    def coarse_mesh(self):
+        
+        M = self.uniform_gridsize
+        
+        return fenics.UnitSquareMesh(M, M)
     
     def initial_values(self):
-    
+        
         initial_values = fenics.interpolate(
             fenics.Expression(
                 ("0.", 
                  "0.", 
                  "0.", 
-                 "(T_c - T_h)*x[1] + T_h", 
+                 "(T_h - T_c)*(x[1] < y_m0) + T_c",
                  "C_0"),
+                y_m0 = 0.1,
                 T_h = self.hot_wall_temperature_during_melting, 
-                T_c = self.cold_wall_temperature_during_freezing,
+                T_c = self.cold_wall_temperature_during_melting,
                 C_0 = self.initial_concentration,
                 element = self.element()),
             self.function_space)
             
         return initial_values
-        
+    
+    def boundary_conditions(self):
+    
+        return [
+            fenics.DirichletBC(
+                self.function_space.sub(1), 
+                (0., 0.), 
+                self.walls),
+            fenics.DirichletBC(
+                self.function_space.sub(2), 
+                self.hot_wall_temperature, 
+                self.hot_wall),
+            fenics.DirichletBC(
+                self.function_space.sub(2), 
+                self.cold_wall_temperature, 
+                self.cold_wall)]
+    
     def setup_melting_problem(self):
     
         self.cold_wall_temperature.assign(self.cold_wall_temperature_during_melting)
@@ -150,7 +216,7 @@ class CavityMeltingAndRefreezingCycleSimulation(
             
             table_file.write("\n")
         
-    def run_until(self, endtime = 1.):
+    def run_until(self, endtime = 1., plot = False, savefigs = False):
     
         time_tolerance = 1.e-8
         
@@ -167,7 +233,7 @@ class CavityMeltingAndRefreezingCycleSimulation(
                 
                 regularization_history_file.write(str(self.regularization_sequence))
             
-            if phaseflow.helpers.float_in(self.time, checkpoint_times):
+            if phaseflow.helpers.float_in(self.time, self.checkpoint_times):
                 
                 self.write_checkpoint(self.output_dir + "checkpoint_t" + str(self.time) + ".h5")
             
@@ -191,6 +257,8 @@ class CavityMeltingAndRefreezingCycleSimulation(
         
         self.max_regularization_attempts = max_regularization_attempts
         
+        self.checkpoint_times = checkpoint_times
+        
         self.setup_melting_problem()
         
         self.assign_initial_values()
@@ -209,9 +277,9 @@ class CavityMeltingAndRefreezingCycleSimulation(
     
             self.plot(savefigs = savefigs)
         
-        self.run_until(endtime = melting_endtime)
+        self.run_until(endtime = melting_endtime, plot = plot, savefigs = savefigs)
         
         self.setup_freezing_problem()
         
-        self.run_until(endtime = freezing_endtime)
-        
+        self.run_until(endtime = freezing_endtime, plot = plot, savefigs = savefigs)
+     
