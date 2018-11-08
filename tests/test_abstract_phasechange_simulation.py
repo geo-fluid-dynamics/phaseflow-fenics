@@ -104,15 +104,15 @@ class LidDrivenCavityBenchmarkSimulation(phaseflow.abstract_phasechange_simulati
             
     def bottom_wall_shear_integrand(self):
     
-        nhat = fenics.FacetNormal(self.mesh)
+        nhat = fenics.FacetNormal(self.solution.leaf_node().function_space().mesh())
     
-        p, u, T, C = fenics.split(self.solution)
+        p, u, T, C = fenics.split(self.solution.leaf_node())
         
         bottom_wall_id = 2
         
         mesh_function = fenics.MeshFunction(
             "size_t", 
-            self.mesh, 
+            self.solution.leaf_node().function_space().mesh(), 
             self.mesh.topology().dim() - 1)
         
         self.bottom_wall.mark(mesh_function, bottom_wall_id)
@@ -120,7 +120,7 @@ class LidDrivenCavityBenchmarkSimulation(phaseflow.abstract_phasechange_simulati
         dot, grad = fenics.dot, fenics.grad
         
         ds = fenics.ds(
-            domain = self.mesh, 
+            domain = self.solution.leaf_node().function_space().mesh(), 
             subdomain_data = mesh_function, 
             subdomain_id = bottom_wall_id)
         
