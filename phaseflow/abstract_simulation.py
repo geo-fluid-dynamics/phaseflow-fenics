@@ -86,7 +86,7 @@ class AbstractSimulation(metaclass = abc.ABCMeta):
     @property
     def mesh(self):
     
-        return self._mesh.leaf_node()
+        return self._mesh
         
     @mesh.setter
     def mesh(self, value):
@@ -100,7 +100,7 @@ class AbstractSimulation(metaclass = abc.ABCMeta):
     @property
     def function_space(self):
     
-        return self._function_space.leaf_node()
+        return self._function_space
         
     @property
     def solution(self):
@@ -173,7 +173,7 @@ class AbstractSimulation(metaclass = abc.ABCMeta):
         
             solver_parameters = self.solver.parameters.copy()
             
-        self.solver = fenics.NonlinearVariationalSolver(problem = self._problem)
+        self.solver = fenics.NonlinearVariationalSolver(self._problem)
             
         if save_parameters:
         
