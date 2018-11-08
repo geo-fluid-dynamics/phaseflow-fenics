@@ -1,2 +1,2 @@
-fenics>=2017.2.0
+fenics==2017.2.0
 setuptools
