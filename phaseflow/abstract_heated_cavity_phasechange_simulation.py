@@ -98,13 +98,13 @@ class AbstractHeatedCavityPhaseChangeSimulation(phaseflow.abstract_phasechange_s
         
     def cold_wall_heat_flux_integrand(self):
     
-        nhat = fenics.FacetNormal(self.mesh.leaf_node())
+        nhat = fenics.FacetNormal(self.mesh)
     
-        p, u, T, C = fenics.split(self.solution.leaf_node())
+        p, u, T, C = fenics.split(self.solution)
         
         mesh_function = fenics.MeshFunction(
             "size_t", 
-            self.mesh.leaf_node(), 
+            self.mesh, 
             self.mesh.topology().dim() - 1)
         
         cold_wall_id = 2
@@ -114,7 +114,7 @@ class AbstractHeatedCavityPhaseChangeSimulation(phaseflow.abstract_phasechange_s
         dot, grad = fenics.dot, fenics.grad
         
         ds = fenics.ds(
-            domain = self.mesh.leaf_node(), 
+            domain = self.mesh, 
             subdomain_data = mesh_function, 
             subdomain_id = cold_wall_id)
         

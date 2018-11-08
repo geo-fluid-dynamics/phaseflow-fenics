@@ -1,5 +1,4 @@
 import fenics
-import matplotlib
 
 
 N = 1

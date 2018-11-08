@@ -3,6 +3,7 @@ including the natural and compositional convection of binary alloys.
 """
 import phaseflow
 import fenics
+import ufl
 import matplotlib
 import math
 import sys
@@ -129,7 +130,7 @@ class AbstractPhaseChangeSimulation(phaseflow.abstract_simulation.AbstractSimula
         """ The regularized semi-phasefield. """
         T_L = delta_T + T_m + m_L*C
         
-        tanh = fenics.tanh
+        tanh = ufl.tanh
         
         return 0.5*(1. + tanh((T_L - T)/s))
         
@@ -537,7 +538,7 @@ class AbstractPhaseChangeSimulation(phaseflow.abstract_simulation.AbstractSimula
        
         for var, label, colorbar, varname in zip(
                 (solution.function_space().mesh().leaf_node(), p, u, T, Cbar, phi),
-                ("$\Omega_h$", "$p$", "$\mathbf{u}$", "$T$", "$\overline{C}$", "$\phi$"),
+                ("$\\Omega_h$", "$p$", "$\\mathbf{u}$", "$T$", "$\\overline{C}$", "$\\phi$"),
                 (False, True, True, True, True, True),
                 ("mesh", "p", "u", "T", "Cbar", "phi")):
             
