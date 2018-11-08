@@ -51,16 +51,16 @@ class AbstractMMSVerificationSimulation(
         
         t = self.time
         
-        div, diff, inner = fenics.div, fenics.diff, fenics.inner
+        div, diff, inner, dot = fenics.div, fenics.diff, fenics.inner, fenics.dot
         
         s_p = div(u_M) - gamma*p_M
         
-        s_u = diff(u_M, t) + inner(u_M, grad(u_M)) + grad(p_M) - \
+        s_u = diff(u_M, t) + dot(u_M, grad(u_M)) + grad(p_M) - \
             2.*div(mu*inner(sym(grad(u_M)), sym(grad(u_M)))) + b
             
-        s_T = diff(T_M, t) + inner(u_M, grad(T_M)) + 1./Pr*div(grad(T_M)) - 1./Ste*diff(phi, t)
+        s_T = diff(T_M, t) + dot(u_M, grad(T_M)) + 1./Pr*div(grad(T_M)) - 1./Ste*diff(phi, t)
         
-        s_C = (1. - phi)*diff(C_M, t) + inner(u_M, grad(C_M)) - 1./Sc*div((1. - phi)*grad(C_M)) - \
+        s_C = (1. - phi)*diff(C_M, t) + dot(u_M, grad(C_M)) - 1./Sc*div((1. - phi)*grad(C_M)) - \
             C_M*diff(phi, t)
     
         return s_p, s_u, s_T, s_C
