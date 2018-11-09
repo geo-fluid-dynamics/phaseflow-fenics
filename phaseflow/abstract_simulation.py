@@ -1,4 +1,4 @@
-""" **simulation.py** provides an abstract class for unsteady adaptive FEM simulations. 
+""" **abstract_simulation.py** provides an abstract class for unsteady adaptive FEM simulations. 
 
 We define a simulation as a sequence of time-dependent initial boundary value problems.
 

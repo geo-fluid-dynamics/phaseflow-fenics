@@ -1,3 +1,4 @@
+""" **cavity_melting_simulation.py** applies Phaseflow to the melting of a binary alloy in a square cavity."""
 import phaseflow
 import fenics
 

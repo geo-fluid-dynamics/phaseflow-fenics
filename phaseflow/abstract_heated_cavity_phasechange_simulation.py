@@ -1,4 +1,4 @@
-""" **heated_cavity_phasechange_simulation.py** applies Phaseflow to benchmark problems 
+""" **abstract_heated_cavity_phasechange_simulation.py** applies Phaseflow to benchmark problems 
 on the unit square with hot and cold vertical walls, and adiabatic horizontal walls. 
 """
 import phaseflow

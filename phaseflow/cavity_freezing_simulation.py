@@ -1,3 +1,4 @@
+""" **cavity_freezing_simulation.py** applies Phaseflow to the freezing of a binary alloy in a square cavity."""
 import phaseflow
 import fenics
 
