@@ -4,15 +4,12 @@ We define a simulation as a sequence of time-dependent initial boundary value pr
 
 This module only provides an abstract base class for simulations. 
 For an example of implementing a specific set of governing equations, 
-see the `phasechange_simulation` module. 
+see the `abstract_phasechange_simulation` module. 
 For examples of implementing instantiable simulation classes,
-see `test_phasechange_simulation` with its variety of benchmark simulations.
-That module contains the core of the research being done as part of this project, 
-whereas this `simulation` module is general,
-and can be used for entirely different problems.
+see e.g. `cavity_melting_simulation` and `cavity_freezing_simulation`.
 
 This module essentially contains many lessons learned by a PhD student* 
-applying FEniCS 2017.2.0 to time-dependent mixed FE problems with goal-oriented AMR.
+applying FEniCS to time-dependent mixed FE problems with goal-oriented AMR.
 If you are not solving time-dependent problems, 
 not using mixed finite elements,
 or not using goal-oriented AMR, 
