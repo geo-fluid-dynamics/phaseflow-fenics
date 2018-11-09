@@ -1,4 +1,4 @@
-""" **phasechange_simulation.py** provides an abstract class for phase-change simulations,
+""" **abstract_phasechange_simulation.py** provides an abstract class for phase-change simulations,
 including the natural and compositional convection of binary alloys. 
 """
 import phaseflow
