@@ -2,7 +2,7 @@
 [![Build Status](https://travis-ci.org/geo-fluid-dynamics/phaseflow-fenics.svg?branch=master)](https://travis-ci.org/geo-fluid-dynamics/phaseflow-fenics)
 [![Documentation Status](https://readthedocs.org/projects/phaseflow/badge/?version=latest)](http://phaseflow.readthedocs.io/?badge=latest)
 
-FYI: The author's latest work on simulating convection-coupled phase-change with mixed finite elements is being captured in [FemPy](https://github.com/geo-fluid-dynamics/fempy).
+FYI: The author's latest work on simulating convection-coupled phase-change with mixed finite elements is being captured in [Sapphire](https://github.com/geo-fluid-dynamics/sapphire).
 
 Now here's an overview of Phaseflow:
 
